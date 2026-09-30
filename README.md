@@ -8,7 +8,6 @@
 
 ---
 
-<!-- HERO BANNER PLACEHOLDER -->
 <p align="center">
   <img src="./Documentation/assets/hero_banner.png" alt="Ventrion Hero Banner" width="100%">
 </p>
@@ -26,13 +25,6 @@ When founders want to bring a real business on-chain today, the only visible opt
 
 **Ventrion replaces this with institutional venture standards on Solana.**  
 Founders mint 100% of their company equity (exactly 1,000,000 shares) directly into an on-chain vault without paying a single dollar. Capital is raised in stable USDC on a fair, flat curve, liquidity is permanently locked, and 75% of funds are guarded by on-chain milestone escrows.
-
----
-
-<!-- COMPARISON INFOGRAPHIC PLACEHOLDER -->
-<p align="center">
-  <img src="./Documentation/assets/meme_vs_ventrion.png" alt="Meme Launchpads vs Ventrion" width="100%">
-</p>
 
 ---
 
@@ -61,13 +53,6 @@ Backers hold real power over escrowed funds:
 
 ---
 
-<!-- LIFECYCLE DIAGRAM PLACEHOLDER -->
-<p align="center">
-  <img src="./Documentation/assets/protocol_lifecycle.png" alt="Ventrion Protocol Lifecycle" width="100%">
-</p>
-
----
-
 ## The Core Numbers
 
 | Feature | Ventrion Standard | What It Means |
@@ -79,13 +64,6 @@ Backers hold real power over escrowed funds:
 | **Veto Threshold** | **33.33% Minority** | One third of primary backers can stop any questionable release. |
 | **Slashing Cap** | **25% Maximum** | Fair time-decaying penalty. You always keep at least 75%. |
 | **Staking Boost** | **1.0x to 3.0x** | Higher dividends for long-term loyal shareholders. |
-
----
-
-<!-- PLATFORM UI PREVIEW PLACEHOLDER -->
-<p align="center">
-  <img src="./Documentation/assets/platform_preview.png" alt="Ventrion Platform Interface" width="100%">
-</p>
 
 ---
 
