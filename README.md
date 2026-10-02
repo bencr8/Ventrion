@@ -50,13 +50,13 @@ When the funding target is reached, capital is distributed atomically in a two-s
 Real businesses require operational certainty, not arbitrary 14-day time windows where anonymous internet trolls can freeze payroll for a $250 bond:
 * **Institutional Contract Synthesis:** Ventrion acts as legal architect, translating founder roadmap commitments into binding corporate contracts (MIDAO DAO LLC Operating Agreement, SAFE, or Token Warrant) countersigned by the CEO.
 * **Decentralized $VENT Staker Approval:** Ventrion Foundation locks 10% of $VENT for 3 years (representing 40% of votes at 15% initial public float). Reaching 50%+ majority requires 10% community alignment to verify the venture, seed 17% DLMM liquidity, and activate primary share redemption. Centralization cannot override decentralization.
-* **Autonomous Delivery:** Completed milestones are submitted on-chain via cryptographic deliverable proof (SHA-256 / Arweave) and release directly under the signed Operating Agreement without griefing delays.
+* **Tranche-Specific Milestone Governance:** Each funding round possesses its own isolated milestone escrow. Only primary backers who funded that specific round hold voting rights. Releases occur via a dual-path trigger: either immediate fast-track payout (>50% active backer vote) or automatic 7-day optimistic release (countering voter apathy, unless >=33.33% of primary shares cast a veto). If rework is needed, founders utilize the cure cycle (`amend_milestone`).
 
 ### 5. Sovereign Founder Flexibility & Institutional Safeguards
 * **Sovereign Token Allocation:** Founders choose whether to lock tokens in linear vesting streams, milestone tranches, or stake directly in the InvestorVault from day one to earn protocol yield alongside community backers.
-* **Milestone Treasury Protection:** Unspent capital remains safely locked in the smart contract escrow. If deliverables are delayed, funds cannot be drained or arbitrarily seized, protecting both founder focus and backer capital.
+* **Tranche-Specific Capital Protection:** Unspent milestone capital remains safely locked in the round-specific `MilestoneEscrow`. Only primary backers of that round can vote on releases or execute a ragequit if deliverables fail.
 * **Continuous Secondary Liquidity:** Investors seeking liquidity do not rely on destructive liquidation triggers; they trade their common shares directly on the 17% permanently locked Meteora DLMM pool.
-* **Orderly Corporate Wind-Down:** In case of formal business cessation under corporate law, remaining unspent milestone funds are unlocked for pro-rata shareholder distribution.
+* **Cure Cycle & Orderly Resolution:** Rework is handled constructively through up to 3 cure attempts (`amend_milestone`). If a venture formally ceases operations under corporate law, unspent escrow funds are returned pro-rata to shareholders.
 * **Constant-Time O(1) Yield:** Stakers lock common shares for flexible horizons (0 to 730 days) to earn **1.0x to 3.0x dividend multipliers** computed in O(1) time via an overflow-safe accumulator scaled by 10^12.
 
 ---
