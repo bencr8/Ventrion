@@ -63,8 +63,8 @@ Ventrion replaces this speculative casino with a structured venture operating sy
 
 * **Fixed Supply from Genesis:** Every company has exactly 1,000,000 common shares. The mint authority is destroyed in the exact genesis transaction. Dilution is impossible.
 * **100% USDC Denominated:** Capital raises, escrows, and payouts run purely on canonical USDC. Operational planning is predictable.
-* **Autonomous Milestone Execution:** Capital does not go to the founder in an uncontrolled lump sum. The team designs its own milestone roadmap (1 to 10 tranches). When goals are achieved, the founder submits on-chain cryptographic delivery proof, releasing funds directly under the signed Operating Agreement.
-* **Milestone Treasury Protection:** Unspent capital remains safely locked in the smart contract escrow. Investors hold liquid secondary shares on Meteora DLMM, and unreleased funds can never be withdrawn without deliverable proof or formal corporate dissolution.
+* **Tranche-Specific Milestone Governance:** Capital does not go to the founder in an uncontrolled lump sum. The team designs its own milestone roadmap (1 to 10 tranches). Release is governed by primary backer consensus through a Dual-Path trigger (>50% active approval or 7-day optimistic window with <33.33% veto).
+* **Milestone Treasury Protection:** Unspent capital remains safely locked in the smart contract escrow. Investors hold liquid secondary shares on Meteora DLMM, and unreleased funds can never be withdrawn without verified primary backer approval or unvetoed optimistic review.
 * **Institutional Multi-Jurisdiction Architecture:** Primary raises operate strictly outside the United States and Germany via a 3-tier geofencing perimeter (IP, VPN filter, forced clickwrap self-certification). German/EU operating companies route rewards via a compliant Swiss Association clearing hub, ensuring 100% tax-deductible marketing expenses without withholding tax friction.
 
 ### 1.3 Core Protocol Metrics at a Glance
@@ -457,7 +457,7 @@ All PDA derivations use static string literals and fixed-width byte components t
 | `MasterLockVault` | `[b"master_lock_vault", venture_key]` | **SPL Token Account**| SPL Token Program | Custody of all 1,000,000 shares |
 | `FounderVesting` | `[b"founder_vesting", venture_key, founder_key]`| **168 Bytes** | Ventrion Core | Custom vesting schedule tracking |
 | `FundingRound` | `[b"funding_round", venture_key, &[round_index]]`| **184 Bytes** | Ventrion Core | Terms and targets for round N |
-| `RoundInvestorRecord`| `[b"round_record", funding_round_key, user_key]`| **96 Bytes** | Ventrion Core | Primary raise contribution receipts |
+| `RoundInvestorRecord`| `[b"investor_record", funding_round_key, user_key]`| **168 Bytes** | Ventrion Core | Primary raise contribution receipts |
 | `MilestoneEscrow` | `[b"milestone_escrow", funding_round_key]` | **808 Bytes** | Ventrion Core | Milestone timeline and delivery state |
 | `MilestoneUsdcVault`| `[b"milestone_usdc_vault", milestone_escrow_key]`| **SPL Token Account**| SPL Token Program | Escrowed milestone USDC funds |
 | `VentureVerificationVote`| `[b"verification_vote", venture_key]` | **96 Bytes** | Ventrion Core | On-chain $VENT staker approval ballot |
@@ -469,15 +469,13 @@ All PDA derivations use static string literals and fixed-width byte components t
 
 ### 6.2 State Machine Progression
 
-Every venture progresses through seven deterministic on-chain states:
+Every venture progresses through five deterministic on-chain states under strict sequential round execution:
 
-1. `GenesisInitialized`: 1,000,000 shares minted into `MasterLockVault`. Mint authority revoked.
-2. `PrimaryRaiseActive`: Meteora flat curve open for USDC deposits and sellbacks outside US/DE.
-3. `CapReached`: Target funding cap reached. Ready for two-step graduation.
-4. `GraduationPending`: Sub-Step 4A finalized (`finalize_round_escrow`). DLMM liquidity seeding in progress (48h timeout guard).
-5. `GraduatedDLMMLive`: Sub-Step 4B verified (`seed_dlmm_liquidity`). 17% LP locked. Unification enabled.
-6. `OperationalMature`: All milestone tranches delivered and released to treasury.
-7. `DissolutionWinddown`: Venture formally dissolved under corporate resolution. Unspent escrow funds unlocked for pro-rata shareholder distribution.
+1. `GenesisInitialized`: 1,000,000 shares minted into `MasterLockVault`. Mint authority revoked. Initial funding round 0 created.
+2. `PrimaryRaiseActive`: Meteora flat curve open for USDC deposits and 100% sellbacks outside US/DE.
+3. `CapReached`: Target funding cap reached. Awaiting $VENT staker legal verification.
+4. `GraduatedDLMMLive`: Atomic graduation executed (`execute_atomic_graduation`): 17% DLMM seeded and locked, legal fee paid, upfront runway transferred, and remaining funds locked in tranche-specific `MilestoneEscrow`.
+5. `OperationalMature`: All milestone tranches for the active round delivered and released. `is_round_active` resets to false, permitting sequential creation of round N+1.
 
 ---
 
@@ -676,17 +674,25 @@ Under $10^{12}$ scaling and `u256` multiplication, maximum intermediate products
 
 | Instruction | Operations Executed | Total Compute Units | Headroom vs 200k Limit |
 | :--- | :--- | :--- | :--- |
-| `claim_investor_dividends` | O(1) Accumulator math + USDC transfer | **~11,300 CU** | 94.3% Headroom |
-| `deposit_investor_shares` | Token custody transfer + Weight update | **~12,600 CU** | 93.7% Headroom |
-| `finalize_round_escrow` | Accounting split + Legal fee + Escrow seed | **~21,500 CU** | 89.2% Headroom |
-| `seed_dlmm_liquidity` | Meteora CPI pool init + Add liquidity | **~135,000 CU** | 32.5% Headroom |
-| `abort_pending_graduation`| 48h timeout verification + Refund unlock | **~14,800 CU** | 92.6% Headroom |
-| `submit_milestone_delivery` | Autonomous deliverable hash recording | **~6,200 CU** | 96.9% Headroom |
+| `initialize_global_config` | Admin setup + Treasury configuration | **~5,400 CU** | 97.3% Headroom |
+| `launch_venture_genesis` | Token mint (1M fixed) + Revoke mint auth | **~38,200 CU** | 80.9% Headroom |
+| `create_funding_round` | Sequential round allocation + Mutex set | **~12,100 CU** | 93.9% Headroom |
+| `contribute_funding_round` | DBC Flat Curve buy + $VENT-R0 receipt mint | **~19,400 CU** | 90.3% Headroom |
+| `cast_verification_vote` | $VENT staker legal approval vote | **~11,200 CU** | 94.4% Headroom |
+| `finalize_verification` | Verification vote tally + Status update | **~9,800 CU** | 95.1% Headroom |
+| `execute_atomic_graduation` | 17% DLMM seed + Legal fee + Escrow funding | **~135,000 CU** | 32.5% Headroom |
+| `redeem_shares` | 1:1 Receipt pull-burn + Common shares claim | **~18,500 CU** | 90.7% Headroom |
+| `redeem_and_stake_shares` | 1:1 Receipt pull-burn + Direct vault stake | **~24,800 CU** | 87.6% Headroom |
+| `founder_claim_vesting` | Linear unlock math + Share transfer | **~14,200 CU** | 92.9% Headroom |
 | `propose_milestone` | Founder milestone submission & 7d window init | **~9,800 CU** | 95.1% Headroom |
 | `vote_milestone` | Primary backer approval / veto cast | **~14,200 CU** | 92.9% Headroom |
-| `execute_milestone_release`| Dual-path verification (>50% or <=33% veto) + payout | **~16,500 CU** | 91.7% Headroom |
+| `execute_milestone_release` | Dual-path verification (>50% or <=33% veto) + payout | **~16,500 CU** | 91.7% Headroom |
 | `amend_milestone` | Founder rework resubmission (up to 3 cure cycles) | **~11,400 CU** | 94.3% Headroom |
-| `ragequit_milestone_escrow`| Tranche-specific pro-rata USDC refund on breach | **~18,200 CU** | 90.9% Headroom |
+| `ragequit_milestone_escrow` | Tranche-specific pro-rata USDC refund on breach | **~18,200 CU** | 90.9% Headroom |
+| `deposit_investor_shares` | Token custody transfer + Weight update | **~12,600 CU** | 93.7% Headroom |
+| `claim_investor_dividends` | O(1) Accumulator math + USDC transfer | **~8,380 CU** | 95.8% Headroom |
+| `unstake_investor_shares` | Vault withdrawal + Final dividend settlement | **~16,100 CU** | 91.9% Headroom |
+| `deposit_ecosystem_fees` | B2B POS fee deposit + O(1) Accumulator bump | **~9,200 CU** | 95.4% Headroom |
 
 ---
 
@@ -697,10 +703,10 @@ Under $10^{12}$ scaling and `u256` multiplication, maximum intermediate products
 * **Hostile Takeover by Competitor:** Competitors who accumulate circulating tokens cannot vote to dissolve the operating business or seize assets. They only own public shares and fee rights.
 * **Founder Day-One Dump:** Founder shares are held in `FounderVesting` with an automated cliff. The code prohibits early transfers.
 * **Liquidity Rugpull:** The 17% Meteora DLMM LP position NFT is custodied in `DlmmCustody` with permanent withdrawal locks.
-* **Milestone Treasury Protection:** Escrowed USDC can only be released upon verified milestone delivery proof under the signed Operating Agreement. Unapproved tranches remain locked in the contract, preventing unauthorized cash dissipation.
+* **Milestone Treasury Protection:** Escrowed USDC can only be released upon on-chain backer consensus (>50% active approval or 7-day optimistic window with <33.33% veto). Unapproved tranches remain locked in the contract, preventing unauthorized cash dissipation.
 * **Continuous Secondary Liquidity:** Investors do not face stranded liquidity or rely on hostile protocol liquidation; 17% of round capital is permanently locked in Meteora DLMM for continuous 24/7 trading.
-* **Orderly Corporate Wind-Down:** In formal business dissolution under corporate law, all remaining unspent milestone funds are unlocked for pro-rata shareholder distribution.
-* **Graduation Deadlock:** The 48-hour graduation timeout allows permissionless rollback via `abort_pending_graduation` if Sub-Step 4B is never executed.
+* **Tranche-Specific Protection on Breach:** If a milestone suffers an unresolvable breach, only unspent funds of that specific round are unlocked for pro-rata refund via `ragequit_milestone_escrow`. Shares return to `MasterLockVault` as treasury equity with zero founder burn.
+* **Sequential Round Isolation:** Funding rounds cannot execute in parallel (`is_round_active` mutex). Seed buyers cannot drain liquidity from Series A or Series B rounds.
 
 ### 7.2 Program Error Code Reference
 
@@ -723,8 +729,8 @@ pub enum VentrionError {
     RoundNotEligibleForRefund,
     #[msg("6007: Milestone is not eligible for release.")]
     MilestoneNotEligibleForRelease,
-    #[msg("6008: Venture is not in formal corporate dissolution status.")]
-    VentureNotDissolved,
+    #[msg("6008: Previous funding round is still active.")]
+    RoundAlreadyActive,
     #[msg("6009: Math overflow occurred during financial precision calculation.")]
     MathOverflow,
     #[msg("6010: Zero claimable rewards available.")]
@@ -735,16 +741,30 @@ pub enum VentrionError {
     Unauthorized,
     #[msg("6013: Position is still within lock commitment period.")]
     LockNotExpired,
-    #[msg("6014: Milestone deliverable proof has not been submitted.")]
-    DeliverableNotSubmitted,
+    #[msg("6014: Milestone is not currently in proposed status.")]
+    MilestoneNotProposed,
     #[msg("6015: Venture has not received legal approval by $VENT stakers.")]
     VentureNotApproved,
     #[msg("6016: Verification vote is currently active.")]
     VerificationVoteActive,
-    #[msg("6017: Graduation is still pending. DLMM liquidity must be seeded first.")]
-    GraduationPending,
-    #[msg("6018: Graduation timeout has not yet elapsed (48 hours required).")]
-    GraduationTimeoutNotElapsed,
+    #[msg("6017: CPI to Meteora DLMM initialize_lb_pair failed.")]
+    DlmmPoolInitFailed,
+    #[msg("6018: CPI to Meteora DLMM add_liquidity_by_strategy failed.")]
+    DlmmLiquiditySeedFailed,
+    #[msg("6019: Upfront working capital percentage out of bounds (10% to 25% allowed).")]
+    InvalidUpfrontCapitalBps,
+    #[msg("6020: Milestones count out of bounds. Exactly 1 to 10 milestone tranches permitted.")]
+    InvalidMilestoneCount,
+    #[msg("6021: Total allocation percentage sum must equal exactly 10,000 basis points.")]
+    InvalidAllocationSum,
+    #[msg("6022: Milestone amendment limit exceeded (maximum 3 revisions allowed).")]
+    AmendmentLimitExceeded,
+    #[msg("6023: Provided Meteora program ID does not match canonical deployment.")]
+    InvalidMeteoraProgram,
+    #[msg("6024: Primary receipt token balance insufficient for share redemption.")]
+    InsufficientReceiptBalance,
+    #[msg("6025: Legal Operating Agreement SHA256 contract hash cannot be empty.")]
+    EmptyLegalContractHash,
 }
 ```
 
@@ -851,20 +871,36 @@ async function runVentrionLifecycle() {
     .signers([investor])
     .rpc();
 
-  console.log("3. Target cap reached. Executing two-step graduation...");
-  // Step 4A: Accounting split, max($3,000, 3%) legal fee, milestone escrow
+  console.log("3. Target cap reached. Executing atomic graduation...");
+  // Atomic graduation: 17% DLMM seed, legal fee, upfront runway, and milestone escrow seed in one TX
   await client.program.methods
-    .finalizeRoundEscrow()
-    .accounts({ venture: venturePda })
+    .executeAtomicGraduation()
+    .accounts({
+      venture: venturePda,
+      fundingRound: fundingRoundPda,
+      globalConfig: globalConfigPda,
+      masterLockVault: masterLockVaultPda,
+      dlmmCustody: dlmmCustodyPda,
+      legalSetupVault: legalSetupVaultPda,
+      escrowUsdcVault: escrowUsdcVaultPda,
+      opcoTreasury: opcoTreasury.publicKey,
+    })
     .rpc();
 
-  // Step 4B: Seed 17% permanent Meteora DLMM pool
+  console.log("4. Backer redeems round receipts 1:1 for common shares...");
   await client.program.methods
-    .seedDlmmLiquidity()
-    .accounts({ venture: venturePda })
+    .redeemShares(new BN(5_000 * 10 ** 6))
+    .accounts({
+      venture: venturePda,
+      fundingRound: fundingRoundPda,
+      userReceiptAccount: userReceiptAta,
+      userSharesAccount: userSharesAta,
+      user: investor.publicKey,
+    })
+    .signers([investor])
     .rpc();
 
-  console.log("4. Backer stakes common shares for 1 Year (2.0x Conviction Multiplier)...");
+  console.log("5. Backer stakes common shares for 1 Year (2.0x Conviction Multiplier)...");
   const [investorVaultPda] = client.getInvestorVaultPda(venturePda, investor.publicKey);
   await client.program.methods
     .depositInvestorShares(new BN(5_000 * 10 ** 6), new BN(365 * 86400))
@@ -876,23 +912,40 @@ async function runVentrionLifecycle() {
     .signers([investor])
     .rpc();
 
-  console.log("5. Founder autonomously submits Milestone 1 delivery proof...");
-  const deliverableHash = Array.from(Buffer.alloc(32, 9)); // SHA256 of Arweave deliverable proof
+  console.log("6. Founder proposes Milestone 0 for governance review (starts 7-day window)...");
   await client.program.methods
-    .submitMilestoneDelivery(0, deliverableHash)
+    .proposeMilestone(0)
     .accounts({
       venture: venturePda,
+      fundingRound: fundingRoundPda,
+      milestoneEscrow: milestoneEscrowPda,
       founder: founder.publicKey,
     })
     .signers([founder])
     .rpc();
 
-  console.log("6. Milestone proof submitted. Releasing tranche to OpCo treasury...");
+  console.log("7. Primary Backer votes YES on Milestone 0 (>50% active approval or <33.33% veto)...");
+  await client.program.methods
+    .voteMilestone(0, true)
+    .accounts({
+      venture: venturePda,
+      fundingRound: fundingRoundPda,
+      milestoneEscrow: milestoneEscrowPda,
+      roundInvestorRecord: roundInvestorRecordPda,
+      investor: investor.publicKey,
+    })
+    .signers([investor])
+    .rpc();
+
+  console.log("8. Milestone approved. Releasing tranche to OpCo treasury...");
   await client.program.methods
     .executeMilestoneRelease(0)
     .accounts({
       venture: venturePda,
-      founder: founder.publicKey,
+      fundingRound: fundingRoundPda,
+      milestoneEscrow: milestoneEscrowPda,
+      escrowUsdcVault: escrowUsdcVaultPda,
+      opcoTreasury: opcoTreasury.publicKey,
     })
     .rpc();
 
