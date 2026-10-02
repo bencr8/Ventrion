@@ -1,4 +1,4 @@
-# Ventrion ($VTRN)
+# Ventrion ($VENT)
 ### Tokenize Real-World Businesses, Startups, and Ventures on Solana.
 
 [![Solana](https://img.shields.io/badge/Blockchain-Solana-blue?style=flat&logo=solana)](https://solana.com)
@@ -42,20 +42,21 @@ Primary financing happens on a flat, near-linear curve powered by Meteora DBC in
 ### 3. Permanent Liquidity & Milestone Escrows
 When the funding target is reached, capital is distributed atomically in a two-step graduation:
 * **17.0%** of raised USDC and round shares seed a permanent, locked Meteora DLMM pool. Liquidity can never be pulled.
-* **max($5,000, 5%)** covers legal corporate setup (MIDAO DAO LLC or Swiss Association registration).
+* **max($3,000, 3%)** covers legal corporate setup (MIDAO DAO LLC or Swiss Association registration).
 * **Upfront Working Capital (Capped at 15%):** Founder-defined initial cash to begin immediate operations.
 * **Milestone Escrow:** The entire remaining capital is locked in an on-chain milestone vault, released only as real deliverables are completed.
 
-### 4. Autonomous Milestones, Optimistic Review & Challenge Bonds
-Founders maintain full operational autonomy without bureaucratic DAO voting:
-* **Autonomous Submission:** The founder submits a deliverable proof (SHA256 hash anchored to Arweave).
-* **14-Day Optimistic Window:** Funds release automatically after 14 days unless formally challenged.
-* **Anti-Trolling Challenge Bond:** To challenge a delivery, a backer must deposit `min($1,000 USDC, 5% of tranche)` with a $250 USDC minimum floor. Disputes are resolved by neutral arbitration oracles (Kleros Resolver / Squads Alumni Guild), preventing competitor veto attacks.
+### 4. Legal Contract Synthesis & $VENT Decentralized Verification
+Real businesses require operational certainty, not arbitrary 14-day time windows where anonymous internet trolls can freeze payroll for a $250 bond:
+* **Institutional Contract Synthesis:** Ventrion acts as legal architect, translating founder roadmap commitments into binding corporate contracts (MIDAO DAO LLC Operating Agreement, SAFE, or Token Warrant) countersigned by the CEO.
+* **Decentralized $VENT Staker Approval:** Ventrion Foundation locks 10% of $VENT for 3 years (representing 40% of votes at 15% initial public float). Reaching 50%+ majority requires 10% community alignment to verify the venture, seed 17% DLMM liquidity, and activate primary share redemption. Centralization cannot override decentralization.
+* **Autonomous Delivery:** Completed milestones are submitted on-chain via cryptographic deliverable proof (SHA-256 / Arweave) and release directly under the signed Operating Agreement without griefing delays.
 
-### 5. Game-Theoretic Safeguards & Smart Staking
-* **Symmetric Founder Equity Burn:** If a milestone fails and backers ragequit, unvested founder shares burn in exact mathematical proportion. Founders can never profit from failure.
+### 5. Sovereign Founder Flexibility & Game-Theoretic Safeguards
+* **Sovereign Token Allocation:** Founders choose whether to lock tokens in linear vesting streams, milestone tranches, or stake directly in the InvestorVault from day one to earn protocol yield alongside community backers.
+* **Symmetric Founder Equity Burn:** If a venture breaches deliverables and backers ragequit, founder shares burn in exact mathematical proportion. Founders can never profit from failure.
 * **Dynamic Escrow Floor Snapshot:** At breach, a fixed floor price is snapshot. Arbitrageurs peg secondary markets to the cash floor, completely preventing bank runs.
-* **Constant-Time O(1) Yield:** Stakers lock common shares for flexible horizons (0 to 730 days) to earn **1.0x to 3.0x dividend multipliers**. Calculations run in O(1) time using an overflow-safe accumulator scaled by 10^12.
+* **Constant-Time O(1) Yield:** Stakers lock common shares for flexible horizons (0 to 730 days) to earn **1.0x to 3.0x dividend multipliers** computed in O(1) time via an overflow-safe accumulator scaled by 10^12.
 
 ---
 
@@ -93,12 +94,12 @@ Under the international **Business Judgment Rule**, founders who act in good fai
 | **Share Supply** | **1,000,000 Fixed** | Fixed forever. Mint authority burned at creation. |
 | **Quote Currency** | **100% USDC** | Real dollar stability for payroll, operations, and rewards. |
 | **Liquidity Seed** | **17.0% Irrevocable** | Permanently locked in Meteora DLMM. Zero rugpull risk. |
-| **Legal Setup Fee** | **max($5,000, 5%)** | Corporate formation and platform infrastructure. |
-| **Upfront Capital** | **Max 15% Cap** | Operational runway while preventing cash-and-dash risks. |
-| **Milestone Review** | **14 Days Optimistic** | Funds unlock automatically unless a formal challenge is lodged. |
-| **Challenge Bond** | **min($1,000, 5%)** | Minimum deposit required to challenge a submission ($250 floor). |
+| **Legal Setup Fee** | **max($3,000, 3%)** | Covers MIDAO DAO LLC setup ($3,000 tier for <$250k funding) and filings. |
+| **Upfront Capital** | **10% to 25% Runway**| Flexible founder runway validated in the $VENT verification vote. |
+| **Venture Verification**| **$VENT Majority (>50%)**| Decentralized mother token approval required for launch activation. |
+| **Founder Sovereignity**| **Full Flexibility** | Linear vesting, milestone tranches, or direct staking from day one. |
 | **Staking Multiplier** | **1.0x to 3.0x** | Higher reward shares for long-term committed token holders. |
-| **Platform Royalty** | **0.5% LP Cut** | Protocol fee routed to Mother Token ($VTRN) stakers. |
+| **Platform Royalty** | **0.5% LP Cut** | Protocol fee routed to Mother Token ($VENT) stakers. |
 
 ---
 

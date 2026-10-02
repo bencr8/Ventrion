@@ -1,4 +1,4 @@
-# Ventrion Protocol ($VTRN)
+# Ventrion Protocol ($VENT)
 ## The Official Protocol Specification and Operating Architecture
 *A decentralized framework for honest capital raises, community-backed businesses, and milestone escrows on Solana.*
 
@@ -11,10 +11,10 @@
   * [1.2 The Ventrion Model: Real Accountability for Retail and Founders](#12-the-ventrion-model-real-accountability-for-retail-and-founders)
   * [1.3 Core Protocol Metrics at a Glance](#13-core-protocol-metrics-at-a-glance)
 * [2. The Five Bundled Pillars of Ventrion](#2-the-five-bundled-pillars-of-ventrion)
-  * [2.1 Pillar 1: The Mother Protocol ($VTRN) & Multi-Jurisdiction Pipeline](#21-pillar-1-the-mother-protocol-vtrn--multi-jurisdiction-pipeline)
+  * [2.1 Pillar 1: The Mother Protocol ($VENT) & Multi-Jurisdiction Pipeline](#21-pillar-1-the-mother-protocol-vtrn--multi-jurisdiction-pipeline)
   * [2.2 Pillar 2: Capital Formation & The Primary Raise Engine](#22-pillar-2-capital-formation--the-primary-raise-engine)
   * [2.3 Pillar 3: Founder Autonomy, Vesting & Skin in the Game](#23-pillar-3-founder-autonomy-vesting--skin-in-the-game)
-  * [2.4 Pillar 4: Autonomous Milestone Delivery, 14-Day Challenge Window & Ragequit](#24-pillar-4-autonomous-milestone-delivery-14-day-challenge-window--ragequit)
+  * [2.4 Pillar 4: Ventrion Legal Structuring, $VENT Staker Approval & Ragequit](#24-pillar-4-ventrion-legal-structuring-vent-staker-approval--ragequit)
   * [2.5 Pillar 5: Holder Staking & The Constant Time Yield Engine](#25-pillar-5-holder-staking--the-constant-time-yield-engine)
 * [3. Step-by-Step Capital Raise and Redistribution Lifecycle](#3-step-by-step-capital-raise-and-redistribution-lifecycle)
   * [3.1 Step 1: Venture Initialization & Mint Authority Revocation](#31-step-1-venture-initialization--mint-authority-revocation)
@@ -75,14 +75,13 @@ Ventrion replaces this speculative casino with a structured venture operating sy
 | **Total Share Supply** | **1,000,000 Shares** | Fixed forever. Mint authority revoked at genesis. |
 | **Quote Currency** | **Canonical USDC** | Pure dollar stability for all raises, escrows, and fees. |
 | **Meteora Liquidity Seed** | **Exactly 17.0%** | 17% of raised USDC and 17% of round shares locked permanently in DLMM. |
-| **Legal Setup Fee** | **max($5,000, 5%)** | Covers corporate formation, registry costs, and Ventrion platform infrastructure. |
-| **Milestone Escrow Share** | **Founder Defined** | Remainder after 17% LP, legal fee, and upfront capital. |
-| **Upfront Working Capital** | **Founder Defined (Max 15%)**| Chosen by founder in manifest (capped at 15% to prevent cash-and-dash default vectors). |
-| **Founder Vesting** | **1 to 3 Years (Flexible)**| Chosen by founder in manifest. 6 to 12 month cliff baseline. |
-| **Milestone Review Window** | **14 Days Optimistic** | Funds unlock automatically unless a formal challenge bond is lodged. |
-| **Challenge Bond** | **min($1,000, 5% Tranche)** | Minimum deposit required to challenge a milestone submission, preventing spam. |
+| **Legal Setup Fee** | **max($3,000, 3%)** | Covers corporate MIDAO DAO LLC formation ($3,000 baseline) and registry costs. |
+| **Milestone Escrow Share** | **Founder Defined** | Remainder after 17% LP, legal fee, and upfront working capital. |
+| **Upfront Working Capital** | **Founder Defined (10% to 25%)**| Flexible runway chosen by founder, validated in the $VENT verification vote. |
+| **Founder Token Sovereignity**| **Full Sovereign Freedom** | Linear vesting, milestone unlocks, or direct staking in InvestorVault from day 1. |
+| **Protocol Verification** | **$VENT Majority Approval** | Ventrion legal contracts + decentralized staker approval (>50% majority). |
 | **Staking Lock Multipliers**| **1.0x to 3.0x** | Stakers locking 0 to 730 days earn up to triple fee yield. |
-| **Ventrion Platform Royalty**| **0.5% on LP Fees** | Small protocol fee routed to Mother Token ($VTRN) stakers. |
+| **Ventrion Platform Royalty**| **0.5% on LP Fees** | Small protocol fee routed to Mother Token ($VENT) stakers. |
 
 ---
 
@@ -95,9 +94,9 @@ The Ventrion architecture is organized into five clean, modular pillars. Each pi
 |                         THE FIVE PILLARS OF VENTRION                        |
 +─────────────────────────────────────────────────────────────────────────────+
 |                                                                             |
-|  PILLAR 1: MOTHER PROTOCOL ($VTRN) & MULTI-JURISDICTION PIPELINE            |
+|  PILLAR 1: MOTHER PROTOCOL ($VENT) & MULTI-JURISDICTION PIPELINE            |
 |  • Platform governance, directory curation, and multi-jurisdiction setup.   |
-|  • Captures max($5,000, 5%) setup fees and routes rewards to $VTRN stakers. |
+|  • Captures max($3,000, 3%) setup fees and routes rewards to $VENT stakers. |
 |                                                                             |
 |  PILLAR 2: CAPITAL FORMATION & FLAT CURVE ENGINE                            |
 |  • Fair-launch primary funding on Meteora Dynamic Bonding Curves.           |
@@ -121,11 +120,16 @@ The Ventrion architecture is organized into five clean, modular pillars. Each pi
 +─────────────────────────────────────────────────────────────────────────────+
 ```
 
-### 2.1 Pillar 1: The Mother Protocol ($VTRN) & Multi-Jurisdiction Pipeline
-The Ventrion Mother Token ($VTRN) governs the overarching protocol. It connects international capital to real ventures.
-* **Automated Corporate Onboarding:** Ventrion coordinates corporate paperwork according to founder domicile. Global and non-EU founders utilize a Marshall Islands DAO LLC via MIDAO; German and EU ventures route corporate clearing through a tax-compliant Swiss Association hub (Zug) or Liechtenstein entity.
-* **The Legal Fee:** A fixed allocation of `max($5,000, 5%)` of raised capital is routed to the Ventrion Legal Setup Wallet upon raise completion. This covers state registration fees, notary costs, registered agent fees, and platform infrastructure. Alternatively, the founder can pay these filing costs directly upfront.
-* **Protocol Value Accrual:** 50% of platform setup fees and a 0.5% cut of all secondary trading fees flow directly to stakers of the parent $VTRN token.
+### 2.1 Pillar 1: The Mother Protocol ($VENT) & Legal Structuring Pipeline
+The Ventrion Mother Token ($VENT) governs the overarching protocol and provides decentralized oversight for new venture onboarding.
+* **Institutional Legal Structuring:** Ventrion acts as the legal architect. It translates the founder's pitch deck, milestone roadmap, and token terms into binding corporate contracts (MIDAO DAO LLC Operating Agreement, SAFE, or Token Warrant). The CEO digital countersigns these legal agreements.
+* **Decentralized $VENT Staker Approval:** The venture cannot launch publicly or graduate liquidity based solely on an anonymous automated timer. Instead, $VENT mother token stakers vote on-chain to verify the venture's legal setup:
+  * Ventrion Foundation holds approximately 10% of $VENT at inception, locked for 3 years in the governance staking pool.
+  * With an initial 15% public float, Ventrion's 10% lock represents 40% of the active voting power (10 / 25).
+  * Ventrion needs only 10% community consensus from independent $VENT stakers to cross the 50%+ absolute majority threshold.
+  * This architecture combines centralized legal drafting with decentralized on-chain checks and balances. Centralization cannot override decentralization.
+* **The Legal Fee:** MIDAO offers a reduced rate of exactly $3,000 USDC for ventures raising under $250,000 (payable in USDC on Solana). A fixed allocation of `max($3,000, 3%)` covers the complete corporate formation, first-year registered agent, and official government filing.
+* **Protocol Value Accrual:** 50% of platform setup fees and a 0.5% cut of all secondary trading fees flow directly to stakers of the parent $VENT token.
 
 ### 2.2 Pillar 2: Capital Formation & The Primary Raise Engine
 Primary financing runs on a flat pricing curve via Meteora Dynamic Bonding Curves (DBC):
@@ -139,23 +143,16 @@ Ventrion respects founder autonomy. The protocol does not dictate how a founder 
 * **Linear Predictability:** Following the cliff, shares unlock gradually on-chain. The founder cannot dump their entire allocation on retail buyers on day one.
 * **Clear Role Boundaries:** Locked founder shares carry zero political veto rights over escrow payouts and do not dilute backer staking pools.
 
-### 2.4 Pillar 4: Autonomous Milestone Delivery, 14-Day Challenge Window & Ragequit
-Every business has unique capital requirements. A software app may only need 10% upfront for cloud servers, while a restaurant or manufacturing startup might need up to 15% upfront for commercial kitchen equipment and lease deposits.
+### 2.4 Pillar 4: Ventrion Legal Structuring, $VENT Staker Approval & Ragequit
+Real businesses require operational predictability, not arbitrary 14-day time windows where anonymous internet trolls can freeze company payroll for a $250 bond. Ventrion eliminates this flaw:
 * **Founder Designs the Roadmap:** At launch, the founder explicitly defines:
-  1. The upfront working capital percentage (capped at 15% to eliminate cash-and-dash exploits).
-  2. The number of milestones (1 to 10), the USDC amount allocated to each, and concrete delivery goals.
-  3. Realistic delivery timelines.
-* **Zero Bureaucratic Petitions:** The founder does not petition or ask permission from a voting committee. Instead, when a milestone is completed, the founder autonomously submits proof of completion on-chain (`submit_milestone_delivery`) with a cryptographic deliverable hash (SHA-256 / Arweave proof link).
-* **Optimistic 14-Day Disbursement:** Submitting proof triggers an automated 14-day review window. If no valid challenge is raised within 14 days, the tranche release can be claimed permissionlessly via `execute_milestone_release` directly to the OpCo operating treasury.
-* **Challenge Bond & 3-Tier Dispute Resolution:**
-  1. To prevent competitors or trolls from freezing business operations, lodging an objection requires posting a Challenge Bond of `min($1,000 USDC, 5% of tranche value)` with a minimum floor of $250 USDC via `challenge_milestone`.
-  2. Disputes are strictly not decided by token-weighted voting (preventing founders or hostile whales from buying up secondary tokens to steal bonds).
-  3. Resolution follows a clean 3-stage process:
-     * Stage 1: Payout is paused for 14 days.
-     * Stage 2: The founder has 14 days to provide counter-evidence or rectify the deliverable.
-     * Stage 3: Independent decentralized arbitration (e.g. Kleros Court or Squads Protocol Guild of verified alumni) adjudicates.
-  4. If fraud or deliberate non-delivery is confirmed: the challenge bond is returned plus a whistleblower bounty, the milestone enters `Breached`, and unspent funds unlock for ragequit. If the objection was frivolous trolling: the bond is forfeited to the staker yield pool.
-* **The Ragequit Right:** If a milestone deadline expires without delivery, or if arbitration confirms breach, share holders can call `ragequit_milestone_escrow` to withdraw their exact pro-rata share of remaining unspent USDC.
+  1. The upfront working capital percentage (flexible between 10% for pure digital software up to 25% for physical retail/gastro requiring equipment and lease deposits).
+  2. The milestone schedule (1 to 10 tranches) and target delivery dates.
+  3. The founder token allocation model (linear vesting stream, milestone-tied lump sums, or direct staking in the InvestorVault from day one).
+* **Institutional Contract Synthesis:** Ventrion translates the roadmap into an enforceable corporate contract countersigned by the CEO.
+* **Decentralized $VENT Staker Verification:** The milestone schedule and venture genesis are verified by an on-chain vote of $VENT stakers. Once approved, the venture is verified (`is_verified = true`), liquidity is seeded, and primary receipts unlock 1:1.
+* **Autonomous Milestone Release:** When a milestone is completed, the founder submits proof on-chain (`submit_milestone_delivery`) with a cryptographic deliverable hash (SHA-256 / Arweave proof link). Because the contract terms are legally binding under the signed Operating Agreement, funds release directly to the OpCo treasury without being held hostage by anonymous griefing bonds.
+* **The Ragequit Right:** If a founder defaults, vanishes for over 60 days, or breaches agreed deliverables, the venture enters `BreachedRefundActive`. Common share holders can call `ragequit_milestone_escrow` to withdraw their exact pro-rata share of remaining unspent escrow USDC at the snapshot floor price.
 
 ### 2.5 Pillar 5: Holder Staking & The Constant Time Yield Engine
 Retail buyers on the secondary market can choose between holding liquid tokens or locking them for rewards:
@@ -173,7 +170,7 @@ Retail buyers on the secondary market can choose between holding liquid tokens o
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Total Raised Capital: 100% USDC                                             │
 │                                                                             │
-│ ├── 1. LEGAL SETUP ALLOCATION: max($5,000, 5%)                              │
+│ ├── 1. LEGAL SETUP ALLOCATION: max($3,000, 3%)                              │
 │ │   • Sent to Ventrion Legal Setup Wallet                                   │
 │ │   • Funds entity incorporation, registry fees, and registered agent       │
 │ │                                                                           │
@@ -210,8 +207,8 @@ When the raise reaches its target cap, graduation executes across two atomic tra
 
 #### Sub-Step 4A: Accounting and Escrow Partitioning (`finalize_round_escrow`)
 1. Transacts within ~21,500 Compute Units.
-2. **The Legal Fee:** Exactly `max($5,000, 5% of total raise)` in USDC is transferred to the Ventrion Legal Setup Wallet (unless prepaid).
-3. **Upfront Operational Disbursement:** The founder's pre-defined upfront percentage (maximum 15% of escrowed USDC) transfers directly to the founder's corporate OpCo wallet.
+2. **The Legal Fee:** Exactly `max($3,000, 3% of total raise)` in USDC is transferred to the Ventrion Legal Setup Wallet (unless prepaid).
+3. **Upfront Operational Disbursement:** The founder's pre-defined upfront percentage (founder-defined 10% to 25% of escrowed USDC) transfers directly to the founder's corporate OpCo wallet.
 4. **Milestone Escrow:** The remaining USDC balance is locked into `MilestoneEscrow`.
 5. **State Progression:** Venture transitions to `GraduationPending`.
 
@@ -249,11 +246,12 @@ Ventrion strictly separates founder locks from backer staking. These two groups 
 +─────────────────────────────────────┴───────────────────────────────────────+
 ```
 
-### 4.1 Founder Locking: Flexible Multi-Year Vesting Schedules
-* The founder's equity (e.g. 700,000 shares) is placed inside the `FounderVesting` vault.
-* The founder selects their duration (12 to 36 months) and cliff (6 to 12 months) in the launch manifest.
-* During the cliff period, zero tokens can be claimed or sold. Following the cliff, shares unlock linearly.
-* The founder cannot claim investor reward pools with locked vesting shares.
+### 4.1 Founder Locking: Sovereign Allocation and Staking Flexibility
+Founders and CEOs enjoy complete sovereign flexibility over how they structure their token equity:
+* **Option A: Linear Vesting Stream:** Traditional vesting over 12 to 36 months with an optional 6 to 12 month cliff. Following the cliff, tokens unlock linearly.
+* **Option B: Milestone-Tied Tranches:** Equity unlocks in tranches matching the completion of business milestones.
+* **Option C: Direct Holder Staking from Day 1:** The founder can immediately lock their shares into the `InvestorVault` alongside community backers. By committing tokens for 1 to 3 years, the founder earns protocol rewards and POS marketing fees as a long-term stakeholder.
+* **Operational Control:** The founder maintains exclusive authority over operational company decisions, milestone delivery submissions, and voluntary dividend allocations.
 
 ### 4.2 Backer Staking: Voluntary Time-Locks and Fee Capture
 Secondary buyers and primary backers can deposit their common shares into their personal `InvestorVault`:
@@ -451,7 +449,7 @@ All PDA derivations use static string literals and fixed-width byte components t
 | `RoundInvestorRecord`| `[b"round_record", funding_round_key, user_key]`| **96 Bytes** | Ventrion Core | Primary raise contribution receipts |
 | `MilestoneEscrow` | `[b"milestone_escrow", funding_round_key]` | **806 Bytes** | Ventrion Core | Milestone timeline and delivery state |
 | `MilestoneUsdcVault`| `[b"milestone_usdc_vault", milestone_escrow_key]`| **SPL Token Account**| SPL Token Program | Escrowed milestone USDC funds |
-| `ChallengeBondRecord`| `[b"challenge_bond", milestone_escrow_key, &[milestone_id]]`| **96 Bytes** | Ventrion Core | Escrow custody of backer challenge bond |
+| `VentureVerificationVote`| `[b"verification_vote", venture_key]` | **96 Bytes** | Ventrion Core | On-chain $VENT staker approval ballot |
 | `InvestorVault` | `[b"investor_vault", venture_key, investor_key]` | **184 Bytes** | Ventrion Core | Staking vault and dividend ledger |
 | `DlmmCustody` | `[b"dlmm_custody", venture_key]` | **SPL Token Account**| Ventrion Core | Permanent locked LP position custody |
 | `LegalSetupVault` | `[b"legal_setup_vault", venture_key]` | **SPL Token Account**| SPL Token Program | Holds legal setup fee until entity confirmation |
@@ -482,12 +480,12 @@ All structs enforce exact byte counts including the 8-byte Anchor discriminator:
 pub struct GlobalConfig {
     pub admin: Pubkey,                       // 32 bytes
     pub fee_treasury: Pubkey,                // 32 bytes
+    pub vent_staking_pool: Pubkey,           // 32 bytes: Mother token governance pool
     pub protocol_fee_bps: u16,               // 2 bytes: e.g. 50 (0.5%)
-    pub challenge_bond_min_usdc: u64,        // 8 bytes: e.g. 250 * 10^6
-    pub challenge_bond_bps: u16,             // 2 bytes: e.g. 500 (5.0%)
+    pub min_approval_bps: u16,               // 2 bytes: e.g. 5000 (50.0% majority)
     pub graduation_timeout_seconds: i64,     // 8 bytes: 172,800 (48 hours)
     pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 27],                 // 27 bytes: Alignment padding
+    pub _reserved: [u8; 3],                  // 3 bytes: Alignment padding (Total 112B fields)
 }
 ```
 
@@ -581,7 +579,7 @@ pub struct FundingRound {
     pub round_index: u8,                     // 1 byte
     pub target_cap_usdc: u64,                // 8 bytes
     pub total_raised_usdc: u64,              // 8 bytes
-    pub upfront_working_capital_bps: u16,    // 2 bytes: max 1500 (15%)
+    pub upfront_working_capital_bps: u16,    // 2 bytes: e.g. 1500 to 2500 (15% to 25%)
     pub round_status: u8,                    // 1 byte
     pub graduation_initiated_ts: i64,        // 8 bytes: Timestamp of Step 4A
     pub bump: u8,                            // 1 byte
@@ -602,18 +600,18 @@ pub struct RoundInvestorRecord {
 }
 ```
 
-#### 7. Challenge Bond Record (`ChallengeBondRecord`: 96 Bytes = 8B Disc + 88B Fields)
+#### 7. Venture Verification Vote (`VentureVerificationVote`: 96 Bytes = 8B Disc + 88B Fields)
 ```rust
 #[account]
-pub struct ChallengeBondRecord {
-    pub milestone_escrow: Pubkey,            // 32 bytes
-    pub challenger: Pubkey,                  // 32 bytes
-    pub bond_amount_usdc: u64,               // 8 bytes
-    pub challenge_timestamp: i64,            // 8 bytes
-    pub milestone_id: u8,                    // 1 byte
-    pub is_resolved: bool,                   // 1 byte
+pub struct VentureVerificationVote {
+    pub venture: Pubkey,                     // 32 bytes
+    pub for_weight: u64,                     // 8 bytes: $VENT staker yes-votes
+    pub against_weight: u64,                 // 8 bytes: $VENT staker no-votes
+    pub voting_end_timestamp: i64,           // 8 bytes: Voting deadline
+    pub is_finalized: bool,                  // 1 byte
+    pub is_approved: bool,                   // 1 byte
     pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 5],                  // 5 bytes: Alignment padding
+    pub _reserved: [u8; 29],                 // 29 bytes: Alignment padding (Total 88B fields)
 }
 ```
 
@@ -718,12 +716,12 @@ pub enum VentrionError {
     Unauthorized,
     #[msg("6013: Position is still within lock commitment period.")]
     LockNotExpired,
-    #[msg("6014: Milestone review window is currently active.")]
-    ReviewWindowActive,
-    #[msg("6015: Challenge bond deposit amount is insufficient.")]
-    InsufficientChallengeBond,
-    #[msg("6016: Milestone is already disputed by an active challenge.")]
-    MilestoneAlreadyDisputed,
+    #[msg("6014: Milestone deliverable proof has not been submitted.")]
+    DeliverableNotSubmitted,
+    #[msg("6015: Venture has not received legal approval by $VENT stakers.")]
+    VentureNotApproved,
+    #[msg("6016: Verification vote is currently active.")]
+    VerificationVoteActive,
     #[msg("6017: Graduation is still pending. DLMM liquidity must be seeded first.")]
     GraduationPending,
     #[msg("6018: Graduation timeout has not yet elapsed (48 hours required).")]
@@ -830,7 +828,7 @@ async function runVentrionLifecycle() {
     .signers([founder])
     .rpc();
 
-  console.log("2. Primary Backer deposits $5,000 USDC on the Flat Curve...");
+  console.log("2. Primary Backer deposits $3,000 USDC on the Flat Curve...");
   // contributePrimaryRound is a typed SDK wrapper around the Meteora Dynamic Bonding Curve (DBC) swap CPI
   await client.program.methods
     .contributePrimaryRound(new BN(5_000 * 10 ** 6))
@@ -894,5 +892,5 @@ runVentrionLifecycle().catch(console.error);
 
 ---
 
-*Ventrion Protocol ($VTRN): The Sovereign Decentralized Equity Operating System on Solana.*  
+*Ventrion Protocol ($VENT): The Sovereign Decentralized Equity Operating System on Solana.*  
 *Official Release Specification (October 2026).*
