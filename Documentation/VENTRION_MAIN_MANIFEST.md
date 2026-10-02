@@ -202,29 +202,19 @@ Retail buyers on the secondary market can choose between holding liquid tokens o
 3. Backers deposit canonical USDC and receive tranche tokens at flat, fair pricing.
 4. If a backer wants to exit before the round concludes, they can sell their tokens directly back to the curve for USDC.
 
-### 3.4 Step 4: Atomic Two-Step Redistribution (17% LP, Legal Fee, Milestone Vault)
-When the raise reaches its target cap, graduation executes across two atomic transactions with a 48-hour graduation timeout guard:
+### 3.4 Step 4: Atomic Graduation (17% Permanent DLMM LP, Legal Fee, Milestone Escrow)
+When the raise reaches its target cap and is verified by $VENT stakers, graduation executes in a single permissionless atomic transaction (`execute_atomic_graduation`):
 
-#### Sub-Step 4A: Accounting and Escrow Partitioning (`finalize_round_escrow`)
-1. Transacts within ~21,500 Compute Units.
-2. **The Legal Fee:** Exactly `max($3,000, 3% of total raise)` in USDC is transferred to the Ventrion Legal Setup Wallet (unless prepaid).
-3. **Upfront Operational Disbursement:** The founder's pre-defined upfront percentage (founder-defined 10% to 25% of escrowed USDC) transfers directly to the founder's corporate OpCo wallet.
-4. **Milestone Escrow:** The remaining USDC balance is locked into `MilestoneEscrow`.
-5. **State Progression:** Venture transitions to `GraduationPending`.
+1. **Permanent DLMM Seeding:** Exactly 17.0% of total raised USDC and 17.0% of round shares seed the Meteora DLMM pool via CPI (`initialize_lb_pair` and `add_liquidity_by_strategy`). The LP position NFT is locked inside `DlmmCustody` permanently.
+2. **The Legal Fee:** Exactly `max($3,000, 3% of total raise)` in USDC is transferred to the `LegalSetupVault` for MIDAO corporate registration.
+3. **Upfront Operational Disbursement:** The founder's pre-defined upfront runway (10% to 25% of round USDC) transfers directly to the corporate OpCo treasury wallet.
+4. **Milestone Escrow:** The remaining USDC balance (60% to 73%) is locked into the tranche-specific `MilestoneEscrow`.
+5. **State Progression:** Venture transitions atomically from `CapReached` to `GraduatedDLMMLive`. There is no intermediate pending state and no 48-hour timeout deadlock.
 
-#### Sub-Step 4B: Permanent DLMM Pool Seeding (`seed_dlmm_liquidity`)
-1. Transacts within ~135,000 Compute Units via CPI to Meteora DLMM (`initialize_lb_pair` and `add_liquidity_by_strategy`).
-2. Exactly 17% of total raised USDC and 17% of round shares are permanently committed to the pool.
-3. The LP position NFT is locked inside `DlmmCustody` permanently. Nobody can pull this liquidity.
-4. **State Progression:** Venture transitions to `GraduatedDLMMLive`.
-
-#### Graduation Timeout and Rollback Guard (`abort_pending_graduation`)
-If Sub-Step 4B fails to execute within 48 hours following Sub-Step 4A (e.g. due to Meteora bin array rent shortage or caller abandonment), any backer can permissionlessly call `abort_pending_graduation`. This unlocks the remaining escrowed funds for immediate pro-rata refund, preventing permanent capital lockups.
-
-### 3.5 Step 5: Receipt Token Redemption (1:1 Unified Shares)
-* **Race Condition Guard:** While Sub-Step 4A is confirmed but Sub-Step 4B is pending, the venture remains in the `GraduationPending` state. The redemption instruction `unify_impregnated_tokens` is strictly locked until `seed_dlmm_liquidity` confirms on-chain. This prevents illiquid ghost shares from entering circulation before the Meteora DLMM pool is fully funded and active.
-* **1:1 Unified Shares:** Once graduation is fully confirmed (`GraduatedDLMMLive`), backers call `unify_impregnated_tokens` to convert their tranche tokens 1:1 into canonical, freely tradeable common shares.
-* **Secondary Market Open:** Secondary market trading opens immediately on Meteora DLMM.
+### 3.5 Step 5: Receipt Token Redemption (1:1 Common Shares via `redeem_shares`)
+* **1:1 Share Swap:** Once graduation confirms (`GraduatedDLMMLive`), backers call `redeem_shares` to burn their round receipts ($VENT-RN) and pull their canonical common shares 1:1 from the `MasterLockVault` (< 20,000 Compute Units).
+* **Direct Staking Option:** Alternatively, backers can call `redeem_and_stake_shares` to atomar swap and stake into their personal `InvestorVault` in a single transaction.
+* **Secondary Market Open:** Secondary market trading opens immediately on Meteora DLMM. Unlocked common shares can be freely traded or staked for O(1) dividend yield.
 
 ---
 
