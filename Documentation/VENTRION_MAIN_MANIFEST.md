@@ -14,7 +14,7 @@
   * [2.1 Pillar 1: The Mother Protocol ($VENT) & Multi-Jurisdiction Pipeline](#21-pillar-1-the-mother-protocol-vtrn--multi-jurisdiction-pipeline)
   * [2.2 Pillar 2: Capital Formation & The Primary Raise Engine](#22-pillar-2-capital-formation--the-primary-raise-engine)
   * [2.3 Pillar 3: Founder Autonomy, Vesting & Skin in the Game](#23-pillar-3-founder-autonomy-vesting--skin-in-the-game)
-  * [2.4 Pillar 4: Ventrion Legal Structuring, $VENT Staker Approval & Ragequit](#24-pillar-4-ventrion-legal-structuring-vent-staker-approval--ragequit)
+  * [2.4 Pillar 4: Autonomous Milestone Escrows, Capital Protection & Orderly Wind-Down](#24-pillar-4-autonomous-milestone-escrows-capital-protection--orderly-wind-down)
   * [2.5 Pillar 5: Holder Staking & The Constant Time Yield Engine](#25-pillar-5-holder-staking--the-constant-time-yield-engine)
 * [3. Step-by-Step Capital Raise and Redistribution Lifecycle](#3-step-by-step-capital-raise-and-redistribution-lifecycle)
   * [3.1 Step 1: Venture Initialization & Mint Authority Revocation](#31-step-1-venture-initialization--mint-authority-revocation)
@@ -25,8 +25,7 @@
 * [4. Staking, Vesting and Game-Theoretic Safeguards](#4-staking-vesting-and-game-theoretic-safeguards)
   * [4.1 Founder Locking: Flexible Multi-Year Vesting Schedules](#41-founder-locking-flexible-multi-year-vesting-schedules)
   * [4.2 Backer Staking: Voluntary Time-Locks and Fee Capture](#42-backer-staking-voluntary-time-locks-and-fee-capture)
-  * [4.3 The Symmetric Founder Equity Burn (No Equity Inflation Paradox)](#43-the-symmetric-founder-equity-burn-no-equity-inflation-paradox)
-  * [4.4 Dynamic Escrow Floor Price (Eliminating the Dead Escrow Trap)](#44-dynamic-escrow-floor-price-eliminating-the-dead-escrow-trap)
+  * [4.3 Milestone Escrow Treasury Security & Orderly Corporate Wind-Down](#43-milestone-escrow-treasury-security--orderly-corporate-wind-down)
   * [4.5 Complete Hostile Takeover Immunity](#45-complete-hostile-takeover-immunity)
 * [5. Legal Architecture, Geofencing and Tax-Compliant Clearing](#5-legal-architecture-geofencing-and-tax-compliant-clearing)
   * [5.1 Geofencing, Active Marketing Ban and Reverse Solicitation](#51-geofencing-active-marketing-ban-and-reverse-solicitation)
@@ -64,8 +63,8 @@ Ventrion replaces this speculative casino with a structured venture operating sy
 
 * **Fixed Supply from Genesis:** Every company has exactly 1,000,000 common shares. The mint authority is destroyed in the exact genesis transaction. Dilution is impossible.
 * **100% USDC Denominated:** Capital raises, escrows, and payouts run purely on canonical USDC. Operational planning is predictable.
-* **Autonomous Milestone Execution:** Capital does not go to the founder in an uncontrolled lump sum. The team designs its own milestone roadmap. When goals are achieved, the founder submits on-chain delivery proof with an automated 14-day review window.
-* **Guaranteed Ragequit:** If a founder fails to deliver or misses deadlines, backers can pull their remaining unspent money out of the escrow directly.
+* **Autonomous Milestone Execution:** Capital does not go to the founder in an uncontrolled lump sum. The team designs its own milestone roadmap (1 to 10 tranches). When goals are achieved, the founder submits on-chain cryptographic delivery proof, releasing funds directly under the signed Operating Agreement.
+* **Milestone Treasury Protection:** Unspent capital remains safely locked in the smart contract escrow. Investors hold liquid secondary shares on Meteora DLMM, and unreleased funds can never be withdrawn without deliverable proof or formal corporate dissolution.
 * **Institutional Multi-Jurisdiction Architecture:** Primary raises operate strictly outside the United States and Germany via a 3-tier geofencing perimeter (IP, VPN filter, forced clickwrap self-certification). German/EU operating companies route rewards via a compliant Swiss Association clearing hub, ensuring 100% tax-deductible marketing expenses without withholding tax friction.
 
 ### 1.3 Core Protocol Metrics at a Glance
@@ -107,10 +106,10 @@ The Ventrion architecture is organized into five clean, modular pillars. Each pi
 |  • Founder designs their own vesting schedule (1 to 3 years, custom cliff). |
 |  • Retains equity without fear of sudden hostile token takeovers.           |
 |                                                                             |
-|  PILLAR 4: AUTONOMOUS MILESTONES, OPTIMISTIC REVIEW & RAGEQUIT              |
-|  • Founder sets upfront working capital (max 15%) and milestone tranches.   |
-|  • Autonomous delivery submissions with 14-day optimistic disbursement.    |
-|  • Backers can ragequit unspent funds if milestones are breached.           |
+|  PILLAR 4: AUTONOMOUS MILESTONES, TREASURY ESCROW & ORDERLY WIND-DOWN       |
+|  • Unspent capital safely locked in milestone escrow (1 to 10 tranches).    |
+|  • Founder sovereign flexibility (vesting, milestone releases, or staking). |
+|  • No hostile auto-liquidation: delays keep cash safe; 24/7 DLMM liquidity. |
 |                                                                             |
 |  PILLAR 5: HOLDER STAKING & CONSTANT-TIME YIELD                             |
 |  • Secondary token holders stake for 0 to 2 years (1.0x to 3.0x yield).     |
@@ -143,16 +142,18 @@ Ventrion respects founder autonomy. The protocol does not dictate how a founder 
 * **Linear Predictability:** Following the cliff, shares unlock gradually on-chain. The founder cannot dump their entire allocation on retail buyers on day one.
 * **Clear Role Boundaries:** Locked founder shares carry zero political veto rights over escrow payouts and do not dilute backer staking pools.
 
-### 2.4 Pillar 4: Ventrion Legal Structuring, $VENT Staker Approval & Ragequit
-Real businesses require operational predictability, not arbitrary 14-day time windows where anonymous internet trolls can freeze company payroll for a $250 bond. Ventrion eliminates this flaw:
+### 2.4 Pillar 4: Autonomous Milestone Escrows, Capital Protection & Orderly Wind-Down
+Real businesses operate in dynamic environments where development challenges, supply chain delays, or strategic pivots occur. A company cannot be arbitrarily liquidated by a smart contract simply because a milestone takes longer than initially projected. Ventrion replaces toxic auto-liquidation mechanics with institutional venture safeguards:
 * **Founder Designs the Roadmap:** At launch, the founder explicitly defines:
   1. The upfront working capital percentage (flexible between 10% for pure digital software up to 25% for physical retail/gastro requiring equipment and lease deposits).
-  2. The milestone schedule (1 to 10 tranches) and target delivery dates.
+  2. The milestone schedule (1 to 10 tranches) and target delivery milestones.
   3. The founder token allocation model (linear vesting stream, milestone-tied lump sums, or direct staking in the InvestorVault from day one).
 * **Institutional Contract Synthesis:** Ventrion translates the roadmap into an enforceable corporate contract countersigned by the CEO.
-* **Decentralized $VENT Staker Verification:** The milestone schedule and venture genesis are verified by an on-chain vote of $VENT stakers. Once approved, the venture is verified (`is_verified = true`), liquidity is seeded, and primary receipts unlock 1:1.
-* **Autonomous Milestone Release:** When a milestone is completed, the founder submits proof on-chain (`submit_milestone_delivery`) with a cryptographic deliverable hash (SHA-256 / Arweave proof link). Because the contract terms are legally binding under the signed Operating Agreement, funds release directly to the OpCo treasury without being held hostage by anonymous griefing bonds.
-* **The Ragequit Right:** If a founder defaults, vanishes for over 60 days, or breaches agreed deliverables, the venture enters `BreachedRefundActive`. Common share holders can call `ragequit_milestone_escrow` to withdraw their exact pro-rata share of remaining unspent escrow USDC at the snapshot floor price.
+* **Decentralized $VENT Staker Verification:** The milestone schedule and venture genesis are verified by an on-chain vote of $VENT stakers (>50% majority). Once approved, the venture is verified (`is_verified = true`), 17% DLMM liquidity is permanently seeded, and primary receipts unlock 1:1.
+* **Autonomous Milestone Release:** When a milestone is completed, the founder submits proof on-chain (`submit_milestone_delivery`) with a cryptographic deliverable hash (SHA-256 / Arweave proof link). Funds release directly to the OpCo treasury without intermediary gatekeepers or griefing bonds.
+* **Treasury Escrow Security:** If a milestone is delayed, unspent capital simply remains safely locked in the smart contract escrow. It is not dissipated or exposed to unauthorized withdrawal.
+* **Continuous Secondary Market Liquidity:** Investors who wish to exit or reallocate capital do not rely on hostile liquidation protocols; they trade their common shares directly on the permanently liquid Meteora DLMM pool.
+* **Orderly Corporate Wind-Down:** If a venture formally terminates operations under corporate law, the founder or board initiates an orderly treasury dissolution (`initiate_voluntary_winddown`), releasing all remaining unspent escrow USDC pro-rata to shareholders.
 
 ### 2.5 Pillar 5: Holder Staking & The Constant Time Yield Engine
 Retail buyers on the secondary market can choose between holding liquid tokens or locking them for rewards:
@@ -240,7 +241,7 @@ Ventrion strictly separates founder locks from backer staking. These two groups 
 +─────────────────────────────────────┼───────────────────────────────────────+
 | • Purpose: Long-term commitment     | • Purpose: Fee capture & advocacy     |
 | • Structure: 1 to 3 Years (Custom)  | • Structure: 0 to 730 Days Flexible   |
-| • Political Control: 0 Escrow Votes | • Escrow Recourse: Challenge & Ragequit|
+| • Political Control: 0 Escrow Votes | • Protection: Milestone Escrow Safe   |
 | • Dividend Yield: Strictly 0 yield  | • Dividend Yield: 100% of DLMM fees   |
 | • Early Exit: Impossible            | • Protocol Rewards: B2B Advocacy Fees |
 +─────────────────────────────────────┴───────────────────────────────────────+
@@ -263,25 +264,14 @@ Secondary buyers and primary backers can deposit their common shares into their 
 
 Stakers receive their proportional share of all Meteora DLMM trading fees and verified B2B Ecosystem Marketing Rewards paid by the operating business.
 
-### 4.3 The Symmetric Founder Equity Burn (No Equity Inflation Paradox)
-In standard token refund mechanisms, burning backer tokens creates a dangerous mathematical flaw: if 150,000 backer tokens are burned after a failed milestone, the founder's 700,000 locked tokens would automatically jump from 70.0% to 82.35% of total remaining shares. The founder would end up owning a higher percentage of the company after failing than before the raise.
+### 4.3 Milestone Escrow Treasury Security & Orderly Corporate Wind-Down
+In traditional business ventures, operational hurdles and roadmap revisions are standard realities. Forcing an automated on-chain liquidation of a company treasury because an arbitrary deadline passed is antithetical to real-world business building.
 
-Ventrion completely neutralizes this flaw through **Symmetric Equity Burning**:
-* When milestone failure occurs and backers execute a ragequit, unvested founder shares locked in `FounderVesting` are automatically burned in exact symmetry:
-$$\text{Burn}_{\text{Founder}} = \text{Burn}_{\text{Backer}} \times \left( \frac{\text{Founder Shares}}{\text{Public Shares}} \right)$$
-* Under this invariant, the founder's relative cap-table percentage remains strictly constant or decreases:
-$$Q_1 = \frac{S_{F,0} \left(1 - \frac{B_P}{S_{P,0}}\right)}{(S_{F,0} + S_{P,0}) \left(1 - \frac{B_P}{S_{P,0}}\right)} = Q_0 \equiv 70.0\%$$
-* **Vested Clawback Governance:** If a default occurs after the cliff period and remaining unvested tokens do not cover the full symmetric burn, 100% of remaining unvested shares are burned, and any already-claimed founder tokens contractually forfeit future dividend and governance rights.
-
-### 4.4 Dynamic Escrow Floor Price (Eliminating the Dead Escrow Trap)
-A critical issue in milestone protocols occurs when primary backers sell their tokens on the secondary market. If ragequit rights were tied strictly to an initial primary receipt PDA, the seller would hold a useless receipt while the secondary buyer holds tokens without refund rights. In a default, unspent escrow capital would become trapped forever.
-
-Ventrion solves this via **Fixed Snapshot Escrow Floor Backing**:
-* At the exact moment a venture transitions to `BreachedRefundActive`, the contract computes and immutably records the fixed liquidation price:
-$$\text{Floor Price}_{\text{fixed}} = \frac{\text{Escrow USDC at Breach}}{\text{Circulating Eligible Shares at Breach}}$$
-* Any holder of circulating common shares can ragequit and burn their shares at this guaranteed snapshot price:
-  1. It prevents bank runs because late claimers receive the exact same price per share as early claimers.
-  2. It creates an automated floor price on secondary markets. If market panic pushes the token price on Meteora below its cash liquidation value, arbitrageurs purchase tokens from the pool and burn them for net escrow USDC until the pool price matches the cash floor.
+Ventrion establishes institutional corporate treasury mechanics:
+* **Escrow Funds Remain Protected:** Unreleased milestone capital stays in the `MilestoneEscrow` vault. The founder cannot withdraw unapproved tranches, ensuring backer capital is preserved.
+* **Secondary Market Exit Over Forced Liquidation:** If an investor loses conviction in a company's timeline, they do not need to trigger a destructive company liquidation. They simply sell their liquid shares on the Meteora DLMM pool, which is backed by permanent 17% liquidity.
+* **Orderly Corporate Dissolution:** In the event that a venture formally decides to cease operations under its Operating Agreement, the founder or board executes a voluntary wind-down on-chain (`initiate_voluntary_winddown`).
+* **Pro-Rata Treasury Distribution:** Upon voluntary dissolution, all remaining unspent milestone escrow USDC is unlocked for pro-rata distribution to shareholders, while unvested founder allocations are cancelled cleanly in the company vault without complex burn theatrics.
 
 ### 4.5 Complete Hostile Takeover Immunity
 A fatal vulnerability in conventional DAO token models is that a hostile competitor or short-seller can accumulate 51% of circulating tokens on an open DEX and vote to dissolve the company, seize intellectual property, or fire the leadership.
@@ -291,7 +281,7 @@ Ventrion completely eliminates this attack vector:
 * Token holders do not vote on day-to-day operations or firing the founder.
 * Backer recourse is strictly confined to the **smart contract escrow**:
   * Unreleased milestone cash belongs to the escrow, not the founder.
-  * If the founder fails or stops communicating, backers ragequit their remaining cash.
+  * If a venture does not achieve its milestones, unspent escrow capital remains locked and protected from unauthorized withdrawal, preserving backer funds.
   * But a hostile whale cannot force the founder out of their own business or seize physical company equipment.
 * The entrepreneur retains full operating sovereignty while backers enjoy full financial downside protection.
 
@@ -401,7 +391,7 @@ Ventrion natively supports two distinct business archetypes:
 | • Lack of customer demand or sales  | • Forged invoices or fake receipts    |
 | • Cost overruns, supplier delays    | • Fabricated milestone proof links    |
 | • Good-faith attempts to pivot      | • Funneling cash to personal luxury   |
-| • Open, transparent communication   | • Intentional ghosting (>60 days dark)|
+| • Open, transparent communication   | • Intentional fraud or embezzlement   |
 | • Funds spent on real operations    | • Refusal to provide bank records     |
 +─────────────────────────────────────┼───────────────────────────────────────+
 | LEGAL & PROTOCOL CONSEQUENCE:       | LEGAL & PROTOCOL CONSEQUENCE:         |
@@ -415,7 +405,7 @@ Ventrion natively supports two distinct business archetypes:
 #### The Honest Failure Safe Harbor
 * Governed by the **Business Judgment Rule (BJR)**.
 * If a founder works in good faith, updates the community, and spends funds on legitimate business activities, they are **fully protected from personal liability**.
-* When an honest failure occurs, remaining unspent milestone cash in the escrow is released directly for 100% pro-rata backer ragequit.
+* When an honest failure occurs and the company executes an orderly corporate wind-down, remaining unspent milestone cash in the escrow is unlocked for 100% pro-rata distribution to shareholders.
 * The company winds down cleanly without personal bankruptcy or legal harassment.
 
 #### Actionable Fraud & Embezzlement
@@ -429,7 +419,7 @@ Founders often fear that tokenizing their business means risking their personal 
 
 * **Founder Retains Core IP and Accounts:** The founder's personal social media accounts, proprietary technology, and primary company assets remain 100% their own.
 * **No Hostile Confiscation:** Ventrion does not confiscate trademarks or personal handles in an honest failure. If a venture fails to reach profitability, the owner simply winds down operations; anonymous internet users do not seize their name.
-* **Malicious Abandonment Exception:** A transfer of official company-created project assets (such as an official project GitHub repository or project-specific website domain) only occurs if a founder commits verified, malicious abandonment (taking funds, severing all communication for over 60 days, and refusing to return unspent capital). In all normal business outcomes, the founder's property is untouchable.
+* **Malicious Embezzlement Exception:** A transfer of official company-created project assets (such as an official project GitHub repository or project-specific website domain) only occurs if a founder commits verified, intentional fraud or embezzlement under corporate law. In all normal business outcomes, the founder's property is untouchable.
 
 ---
 
@@ -447,7 +437,7 @@ All PDA derivations use static string literals and fixed-width byte components t
 | `FounderVesting` | `[b"founder_vesting", venture_key, founder_key]`| **168 Bytes** | Ventrion Core | Custom vesting schedule tracking |
 | `FundingRound` | `[b"funding_round", venture_key, &[round_index]]`| **184 Bytes** | Ventrion Core | Terms and targets for round N |
 | `RoundInvestorRecord`| `[b"round_record", funding_round_key, user_key]`| **96 Bytes** | Ventrion Core | Primary raise contribution receipts |
-| `MilestoneEscrow` | `[b"milestone_escrow", funding_round_key]` | **806 Bytes** | Ventrion Core | Milestone timeline and delivery state |
+| `MilestoneEscrow` | `[b"milestone_escrow", funding_round_key]` | **808 Bytes** | Ventrion Core | Milestone timeline and delivery state |
 | `MilestoneUsdcVault`| `[b"milestone_usdc_vault", milestone_escrow_key]`| **SPL Token Account**| SPL Token Program | Escrowed milestone USDC funds |
 | `VentureVerificationVote`| `[b"verification_vote", venture_key]` | **96 Bytes** | Ventrion Core | On-chain $VENT staker approval ballot |
 | `InvestorVault` | `[b"investor_vault", venture_key, investor_key]` | **184 Bytes** | Ventrion Core | Staking vault and dividend ledger |
@@ -466,7 +456,7 @@ Every venture progresses through seven deterministic on-chain states:
 4. `GraduationPending`: Sub-Step 4A finalized (`finalize_round_escrow`). DLMM liquidity seeding in progress (48h timeout guard).
 5. `GraduatedDLMMLive`: Sub-Step 4B verified (`seed_dlmm_liquidity`). 17% LP locked. Unification enabled.
 6. `OperationalMature`: All milestone tranches delivered and released to treasury.
-7. `BreachedRefundActive`: Milestone deadline breached or fraud confirmed. Fixed snapshot ragequit floor active.
+7. `DissolutionWinddown`: Venture formally dissolved under corporate resolution. Unspent escrow funds unlocked for pro-rata shareholder distribution.
 
 ---
 
@@ -529,7 +519,7 @@ pub struct FounderVesting {
 }
 ```
 
-#### 4. Milestone Escrow Account (`MilestoneEscrow`: 806 Bytes = 8B Disc + 798B Fields)
+#### 4. Milestone Escrow Account (`MilestoneEscrow`: 808 Bytes = 8B Disc + 800B Fields)
 ```rust
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 #[repr(u8)]
@@ -538,8 +528,6 @@ pub enum MilestoneStatus {
     Pending = 0,
     Delivered = 1,
     Released = 2,
-    Disputed = 3,
-    Breached = 4,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default, Debug)]
@@ -561,13 +549,13 @@ pub struct MilestoneEscrow {
     pub escrow_usdc_vault: Pubkey,           // 32 bytes
     pub total_allocated_usdc: u64,           // 8 bytes
     pub total_released_usdc: u64,            // 8 bytes
-    pub total_ragequit_usdc: u64,            // 8 bytes
-    pub floor_price_snapshot_usdc: u64,      // 8 bytes: Immutable snapshot at breach
+    pub total_dissolution_claimed_usdc: u64, // 8 bytes: Claimed during corporate wind-down
+    pub is_dissolved: bool,                  // 1 byte: Marked upon formal voluntary dissolution
     pub current_milestone_index: u8,         // 1 byte
     pub milestones_count: u8,                // 1 byte
     pub bump: u8,                            // 1 byte
     pub milestones: [MilestoneItem; 10],     // 640 bytes
-    pub _reserved: [u8; 27],                 // 27 bytes: Exact alignment padding
+    pub _reserved: [u8; 36],                 // 36 bytes: Exact 8-byte BPF alignment padding (800B fields)
 }
 ```
 
@@ -665,9 +653,9 @@ Under $10^{12}$ scaling and `u256` multiplication, maximum intermediate products
 | `seed_dlmm_liquidity` | Meteora CPI pool init + Add liquidity | **~135,000 CU** | 32.5% Headroom |
 | `abort_pending_graduation`| 48h timeout verification + Refund unlock | **~14,800 CU** | 92.6% Headroom |
 | `submit_milestone_delivery` | Autonomous deliverable hash recording | **~6,200 CU** | 96.9% Headroom |
-| `execute_milestone_release`| Optimistic tranche payout to OpCo treasury| **~13,500 CU** | 93.2% Headroom |
-| `challenge_milestone` | Challenge bond custody + Status to Disputed | **~14,200 CU** | 92.9% Headroom |
-| `ragequit_milestone_escrow`| Fixed snapshot floor refund + Symmetric burn | **~18,500 CU** | 90.7% Headroom |
+| `execute_milestone_release`| Autonomous tranche payout to OpCo treasury| **~13,500 CU** | 93.2% Headroom |
+| `initiate_voluntary_winddown` | Corporate dissolution verification + Escrow unlock | **~16,000 CU** | 92.0% Headroom |
+| `claim_dissolution_share` | Pro-rata escrow USDC withdrawal on dissolution | **~14,500 CU** | 92.7% Headroom |
 
 ---
 
@@ -678,9 +666,9 @@ Under $10^{12}$ scaling and `u256` multiplication, maximum intermediate products
 * **Hostile Takeover by Competitor:** Competitors who accumulate circulating tokens cannot vote to dissolve the operating business or seize assets. They only own public shares and fee rights.
 * **Founder Day-One Dump:** Founder shares are held in `FounderVesting` with an automated cliff. The code prohibits early transfers.
 * **Liquidity Rugpull:** The 17% Meteora DLMM LP position NFT is custodied in `DlmmCustody` with permanent withdrawal locks.
-* **Milestone Cash Grab:** Escrowed USDC can only be released upon milestone delivery verification. If deadlines lapse, primary backers pull their funds via ragequit.
-* **Equity Inflation on Default:** When backers ragequit, unvested founder tokens are burned in exact mathematical proportion, preventing founder enrichment from project failure.
-* **Dead Escrow Lockup:** Token holders can burn shares to claim net remaining escrow funds at the fixed snapshot price, creating an arbitrage floor and preventing stranded liquidity.
+* **Milestone Treasury Protection:** Escrowed USDC can only be released upon verified milestone delivery proof under the signed Operating Agreement. Unapproved tranches remain locked in the contract, preventing unauthorized cash dissipation.
+* **Continuous Secondary Liquidity:** Investors do not face stranded liquidity or rely on hostile protocol liquidation; 17% of round capital is permanently locked in Meteora DLMM for continuous 24/7 trading.
+* **Orderly Corporate Wind-Down:** In formal business dissolution under corporate law, all remaining unspent milestone funds are unlocked for pro-rata shareholder distribution.
 * **Graduation Deadlock:** The 48-hour graduation timeout allows permissionless rollback via `abort_pending_graduation` if Sub-Step 4B is never executed.
 
 ### 7.2 Program Error Code Reference
@@ -704,13 +692,13 @@ pub enum VentrionError {
     RoundNotEligibleForRefund,
     #[msg("6007: Milestone is not eligible for release.")]
     MilestoneNotEligibleForRelease,
-    #[msg("6008: Milestone deadline has not been breached.")]
-    MilestoneNotBreached,
+    #[msg("6008: Venture is not in formal corporate dissolution status.")]
+    VentureNotDissolved,
     #[msg("6009: Math overflow occurred during financial precision calculation.")]
     MathOverflow,
     #[msg("6010: Zero claimable rewards available.")]
     NoDividendsOwed,
-    #[msg("6011: Global supply invariant violated. Total shares must equal 1,000,000 minus total burned.")]
+    #[msg("6011: Global supply invariant violated. Total shares must equal 1,000,000.")]
     SupplyInvariantViolated,
     #[msg("6012: Caller lacks required authority for this instruction.")]
     Unauthorized,
@@ -768,13 +756,6 @@ export class VentrionClient {
   public getMilestoneEscrowPda(fundingRound: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("milestone_escrow"), fundingRound.toBuffer()],
-      this.program.programId
-    );
-  }
-
-  public getChallengeBondPda(milestoneEscrow: PublicKey, milestoneId: number): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("challenge_bond"), milestoneEscrow.toBuffer(), Buffer.from([milestoneId])],
       this.program.programId
     );
   }
@@ -840,7 +821,7 @@ async function runVentrionLifecycle() {
     .rpc();
 
   console.log("3. Target cap reached. Executing two-step graduation...");
-  // Step 4A: Accounting split, max($5000, 5%) legal fee, milestone escrow
+  // Step 4A: Accounting split, max($3,000, 3%) legal fee, milestone escrow
   await client.program.methods
     .finalizeRoundEscrow()
     .accounts({ venture: venturePda })
@@ -875,7 +856,7 @@ async function runVentrionLifecycle() {
     .signers([founder])
     .rpc();
 
-  console.log("6. 14-day optimistic window passes without dispute. Executing release...");
+  console.log("6. Milestone proof submitted. Releasing tranche to OpCo treasury...");
   await client.program.methods
     .executeMilestoneRelease(0)
     .accounts({
@@ -884,7 +865,7 @@ async function runVentrionLifecycle() {
     })
     .rpc();
 
-  console.log("Ventrion lifecycle active: 17% LP locked, milestones protected, zero takeover risk.");
+  console.log("Ventrion lifecycle active: 17% LP locked, milestone escrow secured, orderly corporate governance.");
 }
 
 runVentrionLifecycle().catch(console.error);

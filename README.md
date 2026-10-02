@@ -25,7 +25,7 @@ When founders want to bring a real business on-chain today, the only visible opt
 * **The SOL volatility trap:** Denominating operating budgets in volatile gas tokens makes payroll and real budgeting impossible.
 
 **Ventrion replaces this with institutional venture standards on Solana.**  
-Founders mint 100% of their company equity (exactly 1,000,000 shares) directly into an on-chain vault without paying a single dollar. Capital is raised in canonical USDC on a flat, fair bonding curve powered by Meteora DBC. Liquidity is permanently locked, and unspent capital is guarded by on-chain milestone escrows with optimistic review and ragequit protection.
+Founders mint 100% of their company equity (exactly 1,000,000 shares) directly into an on-chain vault without paying a single dollar. Capital is raised in canonical USDC on a flat, fair bonding curve powered by Meteora DBC. Liquidity is permanently locked in Meteora DLMM, and unspent capital is guarded by on-chain milestone escrows protecting both founder operational focus and backer capital.
 
 ---
 
@@ -52,10 +52,11 @@ Real businesses require operational certainty, not arbitrary 14-day time windows
 * **Decentralized $VENT Staker Approval:** Ventrion Foundation locks 10% of $VENT for 3 years (representing 40% of votes at 15% initial public float). Reaching 50%+ majority requires 10% community alignment to verify the venture, seed 17% DLMM liquidity, and activate primary share redemption. Centralization cannot override decentralization.
 * **Autonomous Delivery:** Completed milestones are submitted on-chain via cryptographic deliverable proof (SHA-256 / Arweave) and release directly under the signed Operating Agreement without griefing delays.
 
-### 5. Sovereign Founder Flexibility & Game-Theoretic Safeguards
+### 5. Sovereign Founder Flexibility & Institutional Safeguards
 * **Sovereign Token Allocation:** Founders choose whether to lock tokens in linear vesting streams, milestone tranches, or stake directly in the InvestorVault from day one to earn protocol yield alongside community backers.
-* **Symmetric Founder Equity Burn:** If a venture breaches deliverables and backers ragequit, founder shares burn in exact mathematical proportion. Founders can never profit from failure.
-* **Dynamic Escrow Floor Snapshot:** At breach, a fixed floor price is snapshot. Arbitrageurs peg secondary markets to the cash floor, completely preventing bank runs.
+* **Milestone Treasury Protection:** Unspent capital remains safely locked in the smart contract escrow. If deliverables are delayed, funds cannot be drained or arbitrarily seized, protecting both founder focus and backer capital.
+* **Continuous Secondary Liquidity:** Investors seeking liquidity do not rely on destructive liquidation triggers; they trade their common shares directly on the 17% permanently locked Meteora DLMM pool.
+* **Orderly Corporate Wind-Down:** In case of formal business cessation under corporate law, remaining unspent milestone funds are unlocked for pro-rata shareholder distribution.
 * **Constant-Time O(1) Yield:** Stakers lock common shares for flexible horizons (0 to 730 days) to earn **1.0x to 3.0x dividend multipliers** computed in O(1) time via an overflow-safe accumulator scaled by 10^12.
 
 ---
@@ -83,7 +84,7 @@ Real-world businesses cannot wire corporate capital to anonymous internet wallet
 * **Programmatic Staker Distribution:** The ecosystem association programmatically disburses collected fees to on-chain staking vaults, turning merchant cash flow into legitimate token rewards.
 
 ### 4. Honest Failure Safe Harbor
-Under the international **Business Judgment Rule**, founders who act in good faith, communicate openly, and spend raised capital on legitimate operational costs are shielded from personal liability. If a venture honestly fails, remaining unspent milestone escrow cash is automatically unlocked for 100% pro-rata backer ragequit, enabling clean, orderly corporate wind-downs without predatory litigation.
+Under the international **Business Judgment Rule**, founders who act in good faith, communicate openly, and spend raised capital on legitimate operational costs are shielded from personal liability. If a venture honestly fails, an orderly corporate wind-down (`initiate_voluntary_winddown`) unlocks remaining unspent milestone escrow cash for 100% pro-rata shareholder distribution, enabling clean, peaceful corporate wind-downs without predatory litigation.
 
 ---
 
@@ -91,7 +92,7 @@ Under the international **Business Judgment Rule**, founders who act in good fai
 
 | Feature | Ventrion Standard | What It Means |
 | :--- | :--- | :--- |
-| **Share Supply** | **1,000,000 Fixed** | Fixed forever. Mint authority burned at creation. |
+| **Share Supply** | **1,000,000 Fixed** | Fixed forever. Mint authority permanently revoked at creation. |
 | **Quote Currency** | **100% USDC** | Real dollar stability for payroll, operations, and rewards. |
 | **Liquidity Seed** | **17.0% Irrevocable** | Permanently locked in Meteora DLMM. Zero rugpull risk. |
 | **Legal Setup Fee** | **max($3,000, 3%)** | Covers MIDAO DAO LLC setup ($3,000 tier for <$250k funding) and filings. |
