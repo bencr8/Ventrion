@@ -21,11 +21,11 @@ export async function GET() {
     protocolRoyaltyBps: 50, // 0.5%
     canonicalUsdcMint: DEVNET_USDC_MINT,
     stakingMultipliers: [
-      { days: 0, label: "0 Tage (Liquid)", multiplier: 1.0, boost: "0%" },
-      { days: 90, label: "90 Tage", multiplier: 1.25, boost: "+25%" },
-      { days: 180, label: "180 Tage", multiplier: 1.5, boost: "+50%" },
-      { days: 365, label: "365 Tage (1 Jahr)", multiplier: 2.0, boost: "Double Rewards" },
-      { days: 730, label: "730 Tage (2 Jahre)", multiplier: 3.0, boost: "Triple Rewards" },
+      { days: 0, label: "0 Days (Liquid)", multiplier: 1.0, boost: "0%" },
+      { days: 90, label: "90 Days", multiplier: 1.25, boost: "+25%" },
+      { days: 180, label: "180 Days", multiplier: 1.5, boost: "+50%" },
+      { days: 365, label: "365 Days (1 Year)", multiplier: 2.0, boost: "Double Rewards" },
+      { days: 730, label: "730 Days (2 Years)", multiplier: 3.0, boost: "Triple Rewards" },
     ],
   };
 

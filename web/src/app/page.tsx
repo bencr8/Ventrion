@@ -49,10 +49,10 @@ export default function Home() {
             <WithVentrionSection />
           </section>
 
-          {/* WHY SOLANA NEEDS VENTRION (OFFICIAL ANNOUNCEMENT VIDEO - UNBLURRED) */}
+          {/* Official announcement video */}
           <WhyVentrionVideo />
 
-          {/* $VENT PROTOCOL TOKEN SECTION (WITH venttokens.jpg BACKGROUND) */}
+          {/* $VENT mother token staking & fee calculation section */}
           <VentTokenSection />
 
           {/* SOCIALS & ECOSYSTEM COMMUNITY */}

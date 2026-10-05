@@ -1174,7 +1174,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                           ${(selectedMilestone.amountUsdc / 1000).toFixed(1)}k <span className="text-[#FF5C18]">USDC</span>
                         </div>
                         <p className="text-xs text-[#7A7672]">
-                          Tranche #{selectedMilestone.id} • {selectedMilestone.title}
+                          Milestone #{selectedMilestone.id} • {selectedMilestone.title}
                         </p>
                       </div>
 
@@ -1242,10 +1242,10 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                   <div className="lg:col-span-4 p-5 rounded-xl bg-white border border-black/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3 font-mono text-xs">
                     <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.06]">
                       <span className="font-bold text-[#111113] text-xs uppercase tracking-wider">
-                        Tranche Schedule
+                        Milestones
                       </span>
                       <span className="text-[11px] text-[#7A7672]">
-                        {venture.milestones.length} Tranches
+                        {venture.milestones.length} Milestones
                       </span>
                     </div>
 
@@ -1268,7 +1268,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                           >
                             <div className="space-y-0.5">
                               <span className="font-bold text-[#111113] block">
-                                Tranche #{m.id}
+                                Milestone #{m.id}
                               </span>
                               <span className="text-[10px] text-[#7A7672] block truncate max-w-[140px]">
                                 {m.title}

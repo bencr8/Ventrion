@@ -100,7 +100,7 @@ export function WhyVentrionVideo() {
             )}
           </AnimatePresence>
 
-          {/* Bottom Sound Control: Pure crisp white icon (not orange!), with tactile click */}
+          {/* Audio volume control */}
           <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
             <button
               onClick={(e) => {
@@ -109,7 +109,7 @@ export function WhyVentrionVideo() {
               }}
               className="p-3 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 shadow-md cursor-pointer outline-none active:scale-95 hover:scale-105 transition-all duration-200"
               aria-label={isMuted ? "Unmute video" : "Mute video"}
-              title={isMuted ? "Audio an" : "Audio aus"}
+              title={isMuted ? "Unmute audio" : "Mute audio"}
             >
               {isMuted ? (
                 <VolumeX className="w-5 h-5 text-white" />

@@ -148,24 +148,30 @@ export default function DividendsPage() {
     setVisible(true);
   };
 
-  const vaultRows: VaultRow[] = [
-    {
-      id: "qcmp",
-      name: "QuantumCompute Systems",
-      symbol: "QCMP",
-      ticker: "$QCMP",
-      mint: PILOT_VENTURE_2_QCMP_MINT,
-      claimableUsdc: qcmpClaimable,
-    },
-    {
-      id: "pvent",
-      name: "Ventrion Apparel Genesis",
-      symbol: "PVENT",
-      ticker: "$PVENT",
-      mint: PILOT_VENTURE_1_PVENT_MINT,
-      claimableUsdc: pventClaimable,
-    },
-  ];
+  const vaultRows: VaultRow[] = useMemo(() => {
+    const list: VaultRow[] = [];
+    if (qcmpClaimable > 0) {
+      list.push({
+        id: "qcmp",
+        name: "QuantumCompute Systems",
+        symbol: "QCMP",
+        ticker: "$QCMP",
+        mint: PILOT_VENTURE_2_QCMP_MINT,
+        claimableUsdc: qcmpClaimable,
+      });
+    }
+    if (pventClaimable > 0) {
+      list.push({
+        id: "pvent",
+        name: "Ventrion Apparel Genesis",
+        symbol: "PVENT",
+        ticker: "$PVENT",
+        mint: PILOT_VENTURE_1_PVENT_MINT,
+        claimableUsdc: pventClaimable,
+      });
+    }
+    return list;
+  }, [qcmpClaimable, pventClaimable]);
 
   // Dynamic Cumulative Yield Curve based on totalClaimable
   const currentChartPoints: ChartPoint[] = useMemo(() => {
@@ -464,6 +470,25 @@ export default function DividendsPage() {
               >
                 Connect Wallet
               </button>
+            </div>
+          ) : vaultRows.length === 0 ? (
+            <div className="bg-white border border-black/[0.08] rounded-2xl p-10 text-center shadow-xs space-y-4">
+              <Coins className="w-8 h-8 text-[#8E8B88] mx-auto opacity-40" />
+              <div className="space-y-1">
+                <div className="font-semibold text-sm text-[#111113]">
+                  No accrued dividends in wallet
+                </div>
+                <p className="text-xs text-[#7A7672] max-w-sm mx-auto">
+                  Stake company shares in on-chain dividend vaults to earn constant-time revenue distributions.
+                </p>
+              </div>
+              <Link
+                href="/ventures"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#111113] text-white text-xs font-semibold hover:bg-[#FF5C18] transition-colors"
+              >
+                <span>Explore Ventures</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           ) : (
             <div className="bg-white border border-black/[0.08] rounded-2xl overflow-hidden shadow-xs">

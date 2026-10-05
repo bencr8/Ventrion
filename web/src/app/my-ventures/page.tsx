@@ -25,39 +25,12 @@ interface FounderVentureItem {
   isUserCreated?: boolean;
 }
 
-const BASELINE_FOUNDER_VENTURES: FounderVentureItem[] = [
-  {
-    id: "qcmp",
-    name: "Quantum Compute MPC",
-    symbol: "QCMP",
-    ticker: "$QCMP",
-    mintAddress: "QCMPvEntr1onM1nt1111111111111111111111111111",
-    sharePriceUsdc: 10.0,
-    founderLockedShares: 800000,
-    impliedValuationUsdc: 8000000,
-    fundingTargetUsdc: 50000,
-    status: "Genesis Active",
-  },
-  {
-    id: "pvent",
-    name: "Ventrion Apparel Genesis",
-    symbol: "VENT",
-    ticker: "$PVENT",
-    mintAddress: "PVENTRION1111111111111111111111111111111111",
-    sharePriceUsdc: 0.1,
-    founderLockedShares: 800000,
-    impliedValuationUsdc: 80000,
-    fundingTargetUsdc: 16000,
-    status: "Genesis Active",
-  },
-];
-
 export default function MyVenturesPage() {
   const { connection } = useConnection();
   const { publicKey, connected } = useWallet();
   const { setVisible } = useWalletModal();
 
-  const [founderVentures, setFounderVentures] = useState<FounderVentureItem[]>(BASELINE_FOUNDER_VENTURES);
+  const [founderVentures, setFounderVentures] = useState<FounderVentureItem[]>([]);
 
   // Live DLMM Prices cache
   const [livePrices, setLivePrices] = useState<Record<string, number>>({
@@ -112,12 +85,12 @@ export default function MyVenturesPage() {
             isUserCreated: true,
           }));
 
-          setFounderVentures([...mapped, ...BASELINE_FOUNDER_VENTURES]);
+          setFounderVentures(mapped);
           return;
         }
       }
     } catch {}
-    setFounderVentures(BASELINE_FOUNDER_VENTURES);
+    setFounderVentures([]);
   }, []);
 
   useEffect(() => {

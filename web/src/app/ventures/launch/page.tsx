@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
-  Upload,
-  Check,
   ChevronRight,
   Plus,
   Trash2,
+  Image as ImageIcon,
+  Upload,
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Navbar } from "../../../components/common/Navbar";
@@ -22,6 +22,7 @@ const USER_VENTURES_STORAGE_KEY = "ventrion_user_created_ventures_v1";
 interface TrancheItem {
   id: string;
   name: string;
+  scope: string;
   percent: number;
 }
 
@@ -32,30 +33,50 @@ export default function LaunchVenturePage() {
   // Navigation steps
   const [activeStep, setActiveStep] = useState<"identity" | "capital" | "milestones">("identity");
 
-  // SECTION 1: Company Identity
+  // SECTION 1: Company Identity & Media
   const [name, setName] = useState("Aura Dynamics Labs");
   const [symbol, setSymbol] = useState("AURA");
   const [description, setDescription] = useState(
-    "Next-generation decentralized compute & inference infrastructure with commercial revenue distribution."
+    "Next-generation decentralized compute & inference infrastructure with commercial revenue dividend waterfall."
   );
+
+  // Logo & Banner
   const [logoPreview, setLogoPreview] = useState<string | null>(
     "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&h=200&fit=crop&q=80"
   );
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(
+    "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=1200&q=80"
+  );
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [metadataUri, setMetadataUri] = useState<string>("/ventrion/metadata/aura_metadata.json");
 
-  // SECTION 2: Capital Formation (Strictly 1% - 49% for Sale per Manifest)
+  // SECTION 2: Capital Formation (1% - 49% for Sale per Manifest)
   const [equitySalePercent, setEquitySalePercent] = useState<number>(20); // 20%
   const [fundingTargetUsdc, setFundingTargetUsdc] = useState<number>(50000); // $50k USDC
   const [upfrontRunwayPercent, setUpfrontRunwayPercent] = useState<number>(15); // 15% upfront
   const [vestingCliffMonths, setVestingCliffMonths] = useState<number>(6); // 6 months
   const [vestingDurationYears, setVestingDurationYears] = useState<number>(2); // 2 years
 
-  // SECTION 3: Milestone Tranches
+  // SECTION 3: Milestone Tranches (1 to 10 Tranches, fully customizable)
   const [tranches, setTranches] = useState<TrancheItem[]>([
-    { id: "1", name: "Core Autonomous Protocol Engine & Devnet Sandbox", percent: 40 },
-    { id: "2", name: "Security Verification & Multi-Sig Escrow Infrastructure", percent: 35 },
-    { id: "3", name: "Commercial Revenue Feed & Meteora DLMM Integration", percent: 25 },
+    {
+      id: "1",
+      name: "Milestone #1",
+      scope: "Deployment of smart contracts, audit report publication, and developer SDK sandbox release.",
+      percent: 40,
+    },
+    {
+      id: "2",
+      name: "Milestone #2",
+      scope: "External third-party pen-test, validator consensus integration, and backer voting testing.",
+      percent: 35,
+    },
+    {
+      id: "3",
+      name: "Milestone #3",
+      scope: "Integration of first 50 corporate clients, live revenue dividends routing, and pool graduation.",
+      percent: 25,
+    },
   ]);
 
   // Derived Token & Financial Metrics
@@ -106,69 +127,120 @@ export default function LaunchVenturePage() {
     return Math.max(0, fundingTargetUsdc - dlmmSeedUsdc - legalFeeUsdc - upfrontUsdc);
   }, [fundingTargetUsdc, dlmmSeedUsdc, legalFeeUsdc, upfrontUsdc]);
 
-  // Refs for tactile container clicking
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Milestone sum check
+  const totalTranchePercent = useMemo(() => {
+    return tranches.reduce((sum, t) => sum + (Number(t.percent) || 0), 0);
+  }, [tranches]);
+
+  // Refs for tactile clicking
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const symbolInputRef = useRef<HTMLInputElement>(null);
   const descInputRef = useRef<HTMLTextAreaElement>(null);
   const targetInputRef = useRef<HTMLInputElement>(null);
 
-  // In-Browser Logo Upload & Metadata Generation
-  const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Sync to backend metadata API
+  const syncMetadata = async (logoData?: string, bannerData?: string) => {
+    setIsUploadingMedia(true);
+    try {
+      const res = await fetch("/ventrion/api/ventures/upload-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          name,
+          description,
+          logoDataUrl: logoData || logoPreview,
+          bannerDataUrl: bannerData || bannerPreview,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.uri) setMetadataUri(json.uri);
+      } else {
+        setMetadataUri(`/ventrion/metadata/${symbol.toLowerCase()}_metadata.json`);
+      }
+    } catch {
+      setMetadataUri(`/ventrion/metadata/${symbol.toLowerCase()}_metadata.json`);
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setIsUploadingLogo(true);
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       setLogoPreview(dataUrl);
-
-      // Attempt to push to server upload endpoint if available
-      try {
-        const res = await fetch("/ventrion/api/ventures/upload-metadata", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            symbol,
-            name,
-            description,
-            logoDataUrl: dataUrl,
-          }),
-        });
-
-        if (res.ok) {
-          const json = await res.json();
-          if (json.uri) {
-            setMetadataUri(json.uri);
-          }
-        } else {
-          setMetadataUri(`/ventrion/metadata/${symbol.toLowerCase()}_metadata.json`);
-        }
-      } catch {
-        setMetadataUri(`/ventrion/metadata/${symbol.toLowerCase()}_metadata.json`);
-      } finally {
-        setIsUploadingLogo(false);
-      }
+      syncMetadata(dataUrl, undefined);
     };
     reader.readAsDataURL(file);
   };
 
-  // Launch State
+  const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setBannerPreview(dataUrl);
+      syncMetadata(undefined, dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Milestone modifications
+  const handleAddTranche = () => {
+    if (tranches.length >= 10) return;
+    const remaining = Math.max(0, 100 - totalTranchePercent);
+    const newTranche: TrancheItem = {
+      id: String(Date.now()),
+      name: `Milestone #${tranches.length + 1}`,
+      scope: "",
+      percent: remaining,
+    };
+    setTranches([...tranches, newTranche]);
+  };
+
+  const handleDeleteTranche = (idx: number) => {
+    if (tranches.length <= 1) return;
+    const updated = tranches.filter((_, i) => i !== idx);
+    setTranches(updated);
+  };
+
+  const handleAllocateRemaining = (idx: number) => {
+    const otherSum = tranches.reduce((sum, t, i) => (i === idx ? sum : sum + (Number(t.percent) || 0)), 0);
+    const remaining = Math.max(0, 100 - otherSum);
+    const updated = [...tranches];
+    updated[idx].percent = remaining;
+    setTranches(updated);
+  };
+
+  // Launch state
   const [isLaunching, setIsLaunching] = useState(false);
-  const [launchProgress, setLaunchProgress] = useState<string | null>(null);
-  const [confirmedTx, setConfirmedTx] = useState<string | null>(null);
+  const [launchStepIndex, setLaunchStepIndex] = useState(0);
 
   const handleLaunchGenesis = async () => {
+    if (totalTranchePercent !== 100) {
+      alert(`Milestone percentages must sum up to exactly 100% (currently ${totalTranchePercent}%).`);
+      return;
+    }
+
     setIsLaunching(true);
-    setLaunchProgress("MINTING 1,000,000 SHARES & REVOKING MINT AUTHORITY");
-    await new Promise((r) => setTimeout(r, 800));
-
-    setLaunchProgress("CREATING MIDAO DAO LLC JURISDICTIONAL REGISTRATION");
-    await new Promise((r) => setTimeout(r, 800));
-
-    setLaunchProgress("INITIALIZING FLAT METEORA BONDING CURVE");
+    setLaunchStepIndex(1); // Minting 1,000,000 shares
     await new Promise((r) => setTimeout(r, 900));
+
+    setLaunchStepIndex(2); // Establishing MIDAO DAO LLC
+    await new Promise((r) => setTimeout(r, 900));
+
+    setLaunchStepIndex(3); // Deploying Meteora Dynamic Bonding Curve
+    await new Promise((r) => setTimeout(r, 1000));
+
+    setLaunchStepIndex(4); // Finalizing genesis
 
     const fakeChars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
     let mockTx = "";
@@ -176,7 +248,6 @@ export default function LaunchVenturePage() {
     for (let i = 0; i < 64; i++) mockTx += fakeChars.charAt(Math.floor(Math.random() * fakeChars.length));
     for (let i = 0; i < 44; i++) mockMint += fakeChars.charAt(Math.floor(Math.random() * fakeChars.length));
 
-    // Save to user created ventures
     try {
       const newVenture = {
         id: symbol.toLowerCase(),
@@ -189,6 +260,8 @@ export default function LaunchVenturePage() {
         fundingTargetUsdc,
         status: "Genesis Active",
         tx: mockTx,
+        logoUrl: logoPreview,
+        bannerUrl: bannerPreview,
         createdAt: new Date().toISOString(),
       };
 
@@ -198,17 +271,108 @@ export default function LaunchVenturePage() {
       localStorage.setItem(USER_VENTURES_STORAGE_KEY, JSON.stringify(list));
     } catch {}
 
-    setConfirmedTx(mockTx);
-    setIsLaunching(false);
-    setLaunchProgress(null);
+    await new Promise((r) => setTimeout(r, 600));
+
+    // Redirect directly to the launched venture terminal
+    const targetUrl = `/ventures/${symbol.toLowerCase()}`;
+    router.push(targetUrl);
+    setTimeout(() => {
+      window.location.href = `/ventrion/ventures/${symbol.toLowerCase()}/`;
+    }, 400);
   };
 
   return (
     <div className="min-h-screen w-full bg-[#FAF7F2] flex flex-col justify-between selection:bg-[#FF5C18]/15 font-jakarta antialiased">
       <Navbar activeTab="my-ventures" />
 
+      {/* FULLSCREEN CINEMATIC GENESIS LOADING & REDIRECT SCREEN */}
+      <AnimatePresence>
+        {isLaunching && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-[#FAF7F2] flex flex-col items-center justify-center p-6 text-center select-none"
+          >
+            <div className="w-full max-w-md space-y-8 font-mono">
+              {/* Venture Icon */}
+              <div className="w-20 h-20 mx-auto rounded-3xl bg-white border border-black/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.06)] flex items-center justify-center overflow-hidden">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-bold text-xl text-[#111113]">{symbol.slice(0, 3)}</span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold font-jakarta text-[#111113] tracking-tight">
+                  Launching {name}
+                </h2>
+                <div className="text-xs text-[#7A7672]">
+                  ${symbol} Genesis Issuance on Solana Devnet
+                </div>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="p-5 rounded-2xl bg-white border border-black/[0.06] shadow-xs text-xs space-y-3 text-left">
+                {[
+                  { step: 1, text: "Minting 1,000,000 shares & revoking mint authority" },
+                  { step: 2, text: "Registering MIDAO DAO LLC corporate wrapper" },
+                  { step: 3, text: "Deploying Meteora flat bonding curve" },
+                  { step: 4, text: "Genesis confirmed. Opening terminal..." },
+                ].map((s) => {
+                  const isDone = launchStepIndex > s.step;
+                  const isCurrent = launchStepIndex === s.step;
+                  return (
+                    <div
+                      key={s.step}
+                      className={`flex items-center gap-3 transition-opacity ${
+                        isDone
+                          ? "text-[#111113]"
+                          : isCurrent
+                          ? "text-[#111113] font-bold"
+                          : "text-[#7A7672]/40"
+                      }`}
+                    >
+                      <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                        {isDone ? (
+                          <div className="w-2 h-2 rounded-full bg-[#111113]" />
+                        ) : isCurrent ? (
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#FF5C18] animate-ping" />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full bg-black/15" />
+                        )}
+                      </div>
+                      <span>{s.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="h-1.5 w-full bg-black/[0.05] rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-[#111113]"
+                  initial={{ width: "15%" }}
+                  animate={{
+                    width:
+                      launchStepIndex === 1
+                        ? "35%"
+                        : launchStepIndex === 2
+                        ? "65%"
+                        : launchStepIndex === 3
+                        ? "90%"
+                        : "100%",
+                  }}
+                  transition={{ duration: 0.6 }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 py-8 sm:py-12 z-10 space-y-8">
-        {/* Terminal Header */}
+        {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-6 border-b border-black/[0.06]">
           <div className="space-y-1">
             <Link
@@ -223,25 +387,30 @@ export default function LaunchVenturePage() {
             </h1>
           </div>
 
-          {/* Stepper Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-black/[0.04] rounded-2xl border border-black/[0.04]">
+          {/* Stepper Tabs with sliding pill */}
+          <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] inline-flex items-center gap-1">
             {[
-              { id: "identity", label: "Identity" },
-              { id: "capital", label: "Capital Structure" },
-              { id: "milestones", label: "Milestones" },
+              { id: "identity", label: "01 Identity & Media" },
+              { id: "capital", label: "02 Capital Structure" },
+              { id: "milestones", label: "03 Milestones" },
             ].map((step) => {
               const isActive = activeStep === step.id;
               return (
                 <button
                   key={step.id}
                   onClick={() => setActiveStep(step.id as any)}
-                  className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-white text-[#111113] shadow-sm border border-black/[0.04]"
-                      : "text-[#7A7672] hover:text-[#111113]"
+                  className={`relative px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                    isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
                   }`}
                 >
-                  {step.label}
+                  {isActive && (
+                    <motion.div
+                      layoutId="launchStepPill"
+                      className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                      transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{step.label}</span>
                 </button>
               );
             })}
@@ -252,7 +421,7 @@ export default function LaunchVenturePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT 7 COLUMNS: CONFIGURATION WORKSPACE */}
           <div className="lg:col-span-7 space-y-6">
-            {/* STEP 1: IDENTITY & METAPLEX */}
+            {/* STEP 1: IDENTITY & MEDIA */}
             {activeStep === "identity" && (
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
@@ -260,47 +429,79 @@ export default function LaunchVenturePage() {
                 className="space-y-6"
               >
                 <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6">
-                  {/* Logo Upload Box */}
-                  <div className="space-y-2">
+                  {/* Media Uploads Grid: Logo & Banner */}
+                  <div className="space-y-4">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-[#7A7672] block">
-                      Enterprise Logo
+                      Decentralized Media Assets (Metaplex Standard)
                     </span>
+
                     <input
-                      ref={fileInputRef}
+                      ref={logoInputRef}
                       type="file"
                       accept="image/*"
-                      onChange={handleLogoFileSelect}
+                      onChange={handleLogoSelect}
+                      className="hidden"
+                    />
+                    <input
+                      ref={bannerInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBannerSelect}
                       className="hidden"
                     />
 
+                    {/* Banner Upload Box */}
                     <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-6 rounded-2xl bg-[#F7F5F0]/60 border border-dashed border-black/[0.12] hover:border-black/[0.3] transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6"
+                      onClick={() => bannerInputRef.current?.click()}
+                      className="group relative w-full h-36 sm:h-44 rounded-2xl bg-[#F7F5F0]/60 border border-dashed border-black/[0.12] hover:border-black/[0.3] overflow-hidden transition-all duration-200 cursor-pointer flex items-center justify-center"
                     >
-                      <div className="w-16 h-16 rounded-2xl bg-white border border-black/[0.08] shadow-xs flex items-center justify-center overflow-hidden shrink-0">
+                      {bannerPreview ? (
+                        <>
+                          <img
+                            src={bannerPreview}
+                            alt="Banner Preview"
+                            className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold backdrop-blur-xs">
+                            Click to change Banner
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 text-[#7A7672]">
+                          <ImageIcon className="w-6 h-6" />
+                          <span className="text-xs font-semibold">Upload Enterprise Banner (Wide Header)</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Logo Upload Box */}
+                    <div
+                      onClick={() => logoInputRef.current?.click()}
+                      className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-dashed border-black/[0.12] hover:border-black/[0.3] transition-all duration-200 cursor-pointer flex items-center gap-4"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-white border border-black/[0.08] shadow-xs flex items-center justify-center overflow-hidden shrink-0">
                         {logoPreview ? (
                           <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
                         ) : (
-                          <Upload className="w-6 h-6 text-[#7A7672]" />
+                          <Upload className="w-5 h-5 text-[#7A7672]" />
                         )}
                       </div>
-
-                      <div className="space-y-1 text-center sm:text-left">
+                      <div className="space-y-0.5">
                         <div className="text-xs font-semibold text-[#111113]">
-                          {isUploadingLogo ? "Uploading and generating metadata..." : "Click to upload SVG, PNG, or JPG"}
+                          {isUploadingMedia ? "Indexing metadata on server..." : "Upload Brand Avatar / Token Icon"}
                         </div>
                         <p className="text-[11px] text-[#7A7672]">
-                          Saved and indexed on-chain via Metaplex Token Metadata Standard.
+                          Permanent off-chain Metaplex metadata indexed for wallet displays.
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Company Name & Symbol */}
+                  {/* Company Name & Symbol with Luminous Focus Effect */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div
                       onClick={() => nameInputRef.current?.focus()}
-                      className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:border-black focus-within:scale-[1.01] transition-all cursor-text space-y-1"
+                      className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:bg-white focus-within:border-[#111113] focus-within:shadow-[0_0_0_2px_rgba(17,17,19,0.08),0_4px_20px_rgba(255,92,24,0.06)] focus-within:scale-[1.01] transition-all duration-200 cursor-text space-y-1"
                     >
                       <span className="text-[10px] uppercase font-mono tracking-wider text-[#7A7672] block">
                         Company Legal Name
@@ -317,7 +518,7 @@ export default function LaunchVenturePage() {
 
                     <div
                       onClick={() => symbolInputRef.current?.focus()}
-                      className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:border-black focus-within:scale-[1.01] transition-all cursor-text space-y-1"
+                      className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:bg-white focus-within:border-[#111113] focus-within:shadow-[0_0_0_2px_rgba(17,17,19,0.08),0_4px_20px_rgba(255,92,24,0.06)] focus-within:scale-[1.01] transition-all duration-200 cursor-text space-y-1"
                     >
                       <span className="text-[10px] uppercase font-mono tracking-wider text-[#7A7672] block">
                         Ticker Symbol
@@ -334,10 +535,10 @@ export default function LaunchVenturePage() {
                     </div>
                   </div>
 
-                  {/* Description */}
+                  {/* Description with Luminous Focus Effect */}
                   <div
                     onClick={() => descInputRef.current?.focus()}
-                    className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:border-black focus-within:scale-[1.01] transition-all cursor-text space-y-1"
+                    className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:bg-white focus-within:border-[#111113] focus-within:shadow-[0_0_0_2px_rgba(17,17,19,0.08),0_4px_20px_rgba(255,92,24,0.06)] focus-within:scale-[1.01] transition-all duration-200 cursor-text space-y-1"
                   >
                     <span className="text-[10px] uppercase font-mono tracking-wider text-[#7A7672] block">
                       Enterprise Overview &amp; Thesis
@@ -375,7 +576,10 @@ export default function LaunchVenturePage() {
                   {/* Equity for Sale Slider (1% - 49%) */}
                   <div className="p-5 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] space-y-4">
                     <div className="flex items-center justify-between text-xs font-jakarta">
-                      <span className="font-semibold text-[#111113]">Equity Offered for Sale</span>
+                      <div>
+                        <span className="font-semibold text-[#111113] block">Equity Offered for Sale</span>
+                        <span className="text-[11px] text-[#7A7672]">Strictly capped between 1% and 49% per Manifest</span>
+                      </div>
                       <span className="font-mono font-bold text-base text-[#111113] tabular-nums">
                         {equitySalePercent}% ({formatCompactShares(offeredShares)} shares)
                       </span>
@@ -391,28 +595,36 @@ export default function LaunchVenturePage() {
                       className="w-full accent-[#111113] cursor-pointer"
                     />
 
-                    {/* Presets */}
-                    <div className="flex items-center gap-2 font-jakarta">
-                      {[10, 15, 20, 25, 30, 40].map((preset) => (
-                        <button
-                          key={preset}
-                          onClick={() => setEquitySalePercent(preset)}
-                          className={`px-3 py-1 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                            equitySalePercent === preset
-                              ? "bg-[#111113] text-white"
-                              : "bg-black/[0.04] text-[#7A7672] hover:text-[#111113]"
-                          }`}
-                        >
-                          {preset}%
-                        </button>
-                      ))}
+                    {/* Presets in visual pill container with sliding effect */}
+                    <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] inline-flex items-center gap-1">
+                      {[10, 15, 20, 25, 30, 40].map((preset) => {
+                        const isActive = equitySalePercent === preset;
+                        return (
+                          <button
+                            key={preset}
+                            onClick={() => setEquitySalePercent(preset)}
+                            className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                              isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
+                            }`}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="equityPresetPill"
+                                className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                                transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                              />
+                            )}
+                            <span className="relative z-10">{preset}%</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Funding Target in USDC */}
+                  {/* Funding Target in USDC with Luminous Focus Effect */}
                   <div
                     onClick={() => targetInputRef.current?.focus()}
-                    className="p-5 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:border-black focus-within:scale-[1.01] transition-all cursor-text space-y-2"
+                    className="p-5 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:bg-white focus-within:border-[#111113] focus-within:shadow-[0_0_0_2px_rgba(17,17,19,0.08),0_4px_24px_rgba(255,92,24,0.06)] focus-within:scale-[1.01] transition-all duration-200 cursor-text space-y-3"
                   >
                     <div className="flex items-center justify-between text-xs text-[#7A7672]">
                       <span>Primary Funding Target</span>
@@ -437,92 +649,122 @@ export default function LaunchVenturePage() {
                       <span className="text-xs text-[#7A7672] font-normal">USDC</span>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-1 font-jakarta">
-                      {[25000, 50000, 100000, 250000].map((preset) => (
-                        <button
-                          key={preset}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFundingTargetUsdc(preset);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
-                            fundingTargetUsdc === preset
-                              ? "bg-[#111113] text-white"
-                              : "bg-black/[0.04] text-[#7A7672] hover:text-[#111113]"
-                          }`}
-                        >
-                          ${preset / 1000}k
-                        </button>
-                      ))}
+                    {/* Presets in visual pill container with sliding effect */}
+                    <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] inline-flex items-center gap-1 font-jakarta">
+                      {[25000, 50000, 100000, 250000].map((preset) => {
+                        const isActive = fundingTargetUsdc === preset;
+                        return (
+                          <button
+                            key={preset}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFundingTargetUsdc(preset);
+                            }}
+                            className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                              isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
+                            }`}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="targetPresetPill"
+                                className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                                transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                              />
+                            )}
+                            <span className="relative z-10">${preset / 1000}k</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Upfront Runway Selection */}
-                  <div className="space-y-2 font-jakarta">
+                  {/* Upfront Runway Selection with sliding pill */}
+                  <div className="p-4 rounded-2xl bg-[#F7F5F0]/40 border border-black/[0.04] space-y-2 font-jakarta">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-[#111113]">Upfront Working Capital Runway</span>
                       <span className="font-mono text-[#7A7672]">{upfrontRunwayPercent}% ({formatCompactUsdc(upfrontUsdc)})</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[10, 15, 20, 25].map((u) => (
-                        <button
-                          key={u}
-                          onClick={() => setUpfrontRunwayPercent(u)}
-                          className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                            upfrontRunwayPercent === u
-                              ? "bg-[#111113] text-white shadow-xs"
-                              : "bg-[#F7F5F0] text-[#7A7672] hover:text-[#111113]"
-                          }`}
-                        >
-                          {u}%
-                        </button>
-                      ))}
+
+                    <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] grid grid-cols-4 gap-1">
+                      {[10, 15, 20, 25].map((u) => {
+                        const isActive = upfrontRunwayPercent === u;
+                        return (
+                          <button
+                            key={u}
+                            onClick={() => setUpfrontRunwayPercent(u)}
+                            className={`relative py-2 text-center text-xs font-semibold transition-colors cursor-pointer ${
+                              isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
+                            }`}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="runwayPill"
+                                className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                                transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                              />
+                            )}
+                            <span className="relative z-10">{u}%</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Founder Vesting Settings */}
-                  <div className="space-y-3 pt-2 font-jakarta">
-                    <span className="text-xs font-semibold text-[#111113] block">
-                      Founder Lock Duration &amp; Cliff
-                    </span>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-mono text-[#7A7672]">Cliff Period</span>
-                        <div className="grid grid-cols-2 gap-2">
-                          {[6, 12].map((m) => (
+                  {/* Founder Vesting Settings with sliding pills */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-jakarta">
+                    {/* Cliff Period */}
+                    <div className="p-4 rounded-2xl bg-[#F7F5F0]/40 border border-black/[0.04] space-y-2">
+                      <span className="text-xs font-semibold text-[#111113] block">Cliff Period</span>
+                      <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] grid grid-cols-2 gap-1">
+                        {[6, 12].map((m) => {
+                          const isActive = vestingCliffMonths === m;
+                          return (
                             <button
                               key={m}
                               onClick={() => setVestingCliffMonths(m)}
-                              className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                vestingCliffMonths === m
-                                  ? "bg-[#111113] text-white shadow-xs"
-                                  : "bg-[#F7F5F0] text-[#7A7672] hover:text-[#111113]"
+                              className={`relative py-2 text-center text-xs font-semibold transition-colors cursor-pointer ${
+                                isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
                               }`}
                             >
-                              {m} Months
+                              {isActive && (
+                                <motion.div
+                                  layoutId="cliffPill"
+                                  className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                                  transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">{m} Months</span>
                             </button>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
+                    </div>
 
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-mono text-[#7A7672]">Total Lock Duration</span>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[1, 2, 3].map((y) => (
+                    {/* Total Lock Duration */}
+                    <div className="p-4 rounded-2xl bg-[#F7F5F0]/40 border border-black/[0.04] space-y-2">
+                      <span className="text-xs font-semibold text-[#111113] block">Total Lock Duration</span>
+                      <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] grid grid-cols-3 gap-1">
+                        {[1, 2, 3].map((y) => {
+                          const isActive = vestingDurationYears === y;
+                          return (
                             <button
                               key={y}
                               onClick={() => setVestingDurationYears(y)}
-                              className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                vestingDurationYears === y
-                                  ? "bg-[#111113] text-white shadow-xs"
-                                  : "bg-[#F7F5F0] text-[#7A7672] hover:text-[#111113]"
+                              className={`relative py-2 text-center text-xs font-semibold transition-colors cursor-pointer ${
+                                isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
                               }`}
                             >
-                              {y} {y === 1 ? "Year" : "Years"}
+                              {isActive && (
+                                <motion.div
+                                  layoutId="lockDurationPill"
+                                  className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                                  transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">{y} {y === 1 ? "Yr" : "Yrs"}</span>
                             </button>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -546,7 +788,7 @@ export default function LaunchVenturePage() {
               </motion.div>
             )}
 
-            {/* STEP 3: MILESTONE TRANCHES */}
+            {/* STEP 3: MILESTONE TRANCHES (UP TO 10, FULLY CUSTOMIZABLE, SCROLLABLE) */}
             {activeStep === "milestones" && (
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
@@ -554,95 +796,141 @@ export default function LaunchVenturePage() {
                 className="space-y-6"
               >
                 <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
-                  <div className="flex items-center justify-between font-jakarta">
-                    <div>
-                      <h2 className="text-base font-bold text-[#111113]">Milestone Tranches</h2>
-                      <p className="text-xs text-[#7A7672]">
-                        Capital released upon primary backer affirmative consensus.
-                      </p>
+                  {/* Milestones Header with Allocation Sum Status */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-black/[0.06] font-jakarta">
+                    <h2 className="text-base font-bold text-[#111113]">Milestones ({tranches.length}/10)</h2>
+
+                    <div className="flex items-center gap-3">
+                      <div className={`px-3 py-1 rounded-full text-xs font-mono font-bold ${
+                        totalTranchePercent === 100
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : totalTranchePercent < 100
+                          ? "bg-amber-50 text-amber-700 border border-amber-200"
+                          : "bg-red-50 text-red-700 border border-red-200"
+                      }`}>
+                        {totalTranchePercent}% / 100%
+                      </div>
+
+                      {tranches.length < 10 && (
+                        <button
+                          onClick={handleAddTranche}
+                          className="px-3 py-1.5 rounded-xl bg-[#111113] text-white text-xs font-semibold hover:bg-black transition-transform active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Milestone</span>
+                        </button>
+                      )}
                     </div>
-                    <span className="font-mono text-xs text-[#7A7672]">
-                      {formatCompactUsdc(escrowVaultUsdc)} Escrow Total
-                    </span>
                   </div>
 
-                  {/* Tranches List */}
-                  <div className="space-y-3">
+                  {/* Scrollable Milestones Container (Up to 10 Tranches) */}
+                  <div className="max-h-[380px] overflow-y-auto pr-1.5 space-y-3">
                     {tranches.map((t, idx) => {
-                      const trancheUsdc = (escrowVaultUsdc * t.percent) / 100;
+                      const trancheUsdc = (escrowVaultUsdc * (Number(t.percent) || 0)) / 100;
                       return (
                         <div
                           key={t.id}
-                          className="p-4 rounded-2xl bg-[#F7F5F0]/50 border border-black/[0.04] space-y-2"
+                          className="p-4 rounded-2xl bg-[#F7F5F0]/60 border border-black/[0.06] hover:border-black/[0.15] focus-within:bg-white focus-within:border-[#111113] focus-within:shadow-[0_0_0_2px_rgba(17,17,19,0.08),0_4px_20px_rgba(255,92,24,0.06)] transition-all duration-200 space-y-3"
                         >
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-[#111113]">Tranche #{idx + 1} ({t.percent}%)</span>
-                            <span className="tabular-nums font-semibold text-[#111113]">
-                              {formatCompactUsdc(trancheUsdc)}
-                            </span>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-[#111113]">
+                                Milestone #{idx + 1}
+                              </span>
+                              <span className="text-[11px] font-mono text-[#7A7672] tabular-nums">
+                                · {formatCompactUsdc(trancheUsdc)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {/* Percentage input */}
+                              <div className="flex items-center gap-1 bg-black/[0.04] px-2.5 py-1 rounded-xl">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={t.percent}
+                                  onChange={(e) => {
+                                    const updated = [...tranches];
+                                    updated[idx].percent = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                    setTranches(updated);
+                                  }}
+                                  className="w-12 bg-transparent text-right font-bold text-xs text-[#111113] outline-none tabular-nums"
+                                />
+                                <span className="text-xs text-[#7A7672]">%</span>
+                              </div>
+
+                              {/* Allocate Remaining Button */}
+                              <button
+                                onClick={() => handleAllocateRemaining(idx)}
+                                title="Assign all unallocated percentage to this milestone"
+                                className="px-2 py-1 rounded-lg bg-black/[0.04] hover:bg-black/[0.08] text-[10px] font-semibold text-[#111113] transition-colors cursor-pointer"
+                              >
+                                Set Remaining
+                              </button>
+
+                              {/* Delete button */}
+                              {tranches.length > 1 && (
+                                <button
+                                  onClick={() => handleDeleteTranche(idx)}
+                                  className="p-1 text-[#7A7672] hover:text-red-600 transition-colors cursor-pointer"
+                                  title="Remove milestone"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <input
-                            type="text"
-                            value={t.name}
-                            onChange={(e) => {
-                              const updated = [...tranches];
-                              updated[idx].name = e.target.value;
-                              setTranches(updated);
-                            }}
-                            className="w-full bg-transparent text-xs text-[#111113] font-jakarta outline-none border-b border-black/[0.06] pb-1"
-                          />
+
+                          {/* Milestone Title Input */}
+                          <div className="space-y-1">
+                            <input
+                              type="text"
+                              value={t.name}
+                              onChange={(e) => {
+                                const updated = [...tranches];
+                                updated[idx].name = e.target.value;
+                                setTranches(updated);
+                              }}
+                              placeholder="Milestone Deliverable Title"
+                              className="w-full bg-transparent text-xs font-semibold text-[#111113] font-jakarta outline-none"
+                            />
+                          </div>
+
+                          {/* Milestone Scope Textarea */}
+                          <div className="space-y-1">
+                            <textarea
+                              value={t.scope}
+                              onChange={(e) => {
+                                const updated = [...tranches];
+                                updated[idx].scope = e.target.value;
+                                setTranches(updated);
+                              }}
+                              rows={2}
+                              placeholder="Detailed scope, technical benchmarks, and verification deliverables..."
+                              className="w-full bg-transparent text-[11px] text-[#7A7672] font-jakarta outline-none resize-none leading-relaxed"
+                            />
+                          </div>
                         </div>
                       );
                     })}
                   </div>
 
                   {/* Action / Launch Button */}
-                  <div className="pt-4 border-t border-black/[0.06] space-y-4 font-jakarta">
-                    {confirmedTx ? (
-                      <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3 font-mono">
-                        <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
-                          <Check className="w-4 h-4 text-emerald-600" />
-                          <span>Venture Genesis Broadcast Confirmed</span>
-                        </div>
-                        <div className="text-[11px] text-emerald-800 break-all space-y-1">
-                          <div>Tx Signature: {confirmedTx}</div>
-                        </div>
-                        <div className="pt-2 flex items-center gap-3">
-                          <Link
-                            href={`/ventures/${symbol.toLowerCase()}`}
-                            className="px-4 py-2 rounded-xl bg-[#111113] text-white text-xs font-semibold hover:bg-black inline-flex items-center gap-1.5"
-                          >
-                            <span>Open Trading Terminal</span>
-                            <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
-                          </Link>
-                          <Link
-                            href="/my-ventures"
-                            className="text-xs text-[#111113] hover:underline"
-                          >
-                            View in Founder Cockpit
-                          </Link>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {isLaunching && (
-                          <div className="p-4 rounded-2xl bg-[#F7F5F0] border border-black/[0.04] space-y-2 font-mono text-xs">
-                            <div className="flex items-center gap-2 text-[#111113]">
-                              <div className="w-2 h-2 rounded-full bg-[#FF5C18] animate-ping" />
-                              <span>{launchProgress}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <button
-                          onClick={handleLaunchGenesis}
-                          disabled={isLaunching}
-                          className="w-full py-4 rounded-2xl bg-[#111113] hover:bg-black text-white text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] shadow-md hover:shadow-black/20 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
-                        >
-                          <span>{isLaunching ? "Broadcasting Genesis..." : "Launch Venture Genesis"}</span>
-                        </button>
-                      </div>
-                    )}
+                  <div className="pt-4 border-t border-black/[0.06] font-jakarta">
+                    <button
+                      onClick={handleLaunchGenesis}
+                      disabled={isLaunching || totalTranchePercent !== 100}
+                      className="w-full py-4 rounded-2xl bg-[#111113] hover:bg-black text-white text-sm font-semibold transition-all hover:scale-[1.005] active:scale-[0.995] shadow-md hover:shadow-black/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <span>
+                        {isLaunching
+                          ? "Broadcasting Genesis..."
+                          : totalTranchePercent !== 100
+                          ? `Allocate Exactly 100% (${totalTranchePercent}%)`
+                          : "Launch Venture Genesis"}
+                      </span>
+                    </button>
                   </div>
 
                   <div className="flex justify-start pt-2 font-jakarta">
