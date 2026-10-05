@@ -1,0 +1,34 @@
+{
+  "name": "@ventrion/sdk",
+  "version": "1.0.0",
+  "description": "Official TypeScript SDK for the Ventrion Protocol on Solana",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.3",
+    "@solana/spl-token": "^0.4.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "keywords": [
+    "solana",
+    "anchor",
+    "ventrion",
+    "venture-capital",
+    "tokenization",
+    "meteora",
+    "dlmm"
+  ],
+  "author": "Ventrion Protocol Foundation",
+  "license": "Apache-2.0"
+}

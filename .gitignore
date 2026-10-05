@@ -10,17 +10,28 @@ build/
 out/
 target/
 *.tsbuildinfo
+*.tar.gz
+
+# Solana / Anchor Local Test Artifacts
+test-ledger/
+.anchor/
 
 # Solana / Anchor Keystores & Credentials (CRITICAL SECURITY)
 *.json
 !package.json
 !tsconfig.json
 !anchor/package.json
+!anchor/package-lock.json
 !sdk/package.json
 !web/package.json
+!web/package-lock.json
 !anchor/Anchor.toml
+!**/idl/*.json
+!**/*.idl.json
+!anchor/tests/fixtures/*.json
 id.json
 keypair.json
+*-keypair.json
 *.pem
 *.key
 .env

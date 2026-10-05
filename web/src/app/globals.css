@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F9F4EE;
+  --foreground: #111113;
+}
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('/ventrion/fonts/HankenGrotesk.ttf') format('truetype'),
+       url('/fonts/HankenGrotesk.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/ventrion/fonts/PlusJakartaSans.ttf') format('truetype'),
+       url('/fonts/PlusJakartaSans.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/ventrion/fonts/Satoshi-Bold.ttf') format('truetype'),
+       url('/fonts/Satoshi-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('/ventrion/fonts/GeneralSans-Bold.ttf') format('truetype'),
+       url('/fonts/GeneralSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+.font-hanken {
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.font-jakarta {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.font-satoshi {
+  font-family: 'Satoshi', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+body {
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #FAF6F0 0%, #F8F3EC 40%, #EBE4DC 80%, #E2DBD1 100%) fixed;
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F6F4EE;
+}
+::-webkit-scrollbar-thumb {
+  background: #D3CDC0;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B4ACA0;
+}
+
+/* Glassmorphic border illumination with subtle top light sheen */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.85), 0 8px 32px rgba(0, 0, 0, 0.04);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.95), 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+/* 3D Glass Light Sweep Animation */
+@keyframes lightSweepAnim {
+  0% {
+    transform: translateX(-160%) rotate(28deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.95;
+  }
+  60% {
+    opacity: 0.95;
+  }
+  85% {
+    transform: translateX(360%) rotate(28deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(360%) rotate(28deg);
+    opacity: 0;
+  }
+}
+
+.animate-light-sweep {
+  animation: lightSweepAnim 5s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+}
+
+.animate-light-sweep-delayed {
+  animation: lightSweepAnim 5s cubic-bezier(0.4, 0.0, 0.2, 1) 0.6s infinite;
+}
+
+/* Skeleton Shimmer Animation */
+@keyframes shimmerAnim {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #EDE8E1 0%, #FAF8F5 50%, #EDE8E1 100%);
+  background-size: 200% 100%;
+  animation: shimmerAnim 1.4s ease-in-out infinite;
+}
+
+@keyframes skeletonWaveAnim {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.animate-skeleton-wave {
+  animation: skeletonWaveAnim 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Button Specular Gleam Animation */
+@keyframes specularSweepAnim {
+  0% {
+    transform: translateX(-160%) skewX(-25deg);
+  }
+  40%, 100% {
+    transform: translateX(460%) skewX(-25deg);
+  }
+}
+
+.animate-specular-sweep {
+  animation: specularSweepAnim 4.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Live Radar Pulse for Devnet Indicator */
+@keyframes radarPulseAnim {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 7px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.animate-radar-pulse {
+  animation: radarPulseAnim 2.2s infinite;
+}
+
+/* Ambient Studio Light Breath */
+@keyframes ambientBreathAnim {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+.animate-ambient-breath {
+  animation: ambientBreathAnim 9s ease-in-out infinite;
+}
+
+
+

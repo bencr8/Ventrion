@@ -1,0 +1,28 @@
+[package]
+name = "ventrion_protocol"
+version = "1.0.0"
+description = "Ventrion Protocol: flat-curve escrow raises, 14-day $VENT governance gate and permanently locked Meteora DLMM liquidity"
+edition = "2021"
+# Solana platform-tools v1.41 (Anchor 0.30.1 / Solana 1.18.26) ship rustc 1.75.
+rust-version = "1.75"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ventrion_protocol"
+
+[features]
+default = ["testing"]
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+# Enforces the canonical mainnet USDC mint in `initialize_global_config`.
+mainnet = []
+testing = []
+
+[dependencies]
+anchor-lang = { version = "=0.30.1", features = ["init-if-needed"] }
+anchor-spl = { version = "=0.30.1" }
+uint = { version = "0.9.5", default-features = false }

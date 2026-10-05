@@ -1,951 +1,328 @@
 # Ventrion Protocol ($VENT)
-## The Official Protocol Specification and Operating Architecture
-*A decentralized framework for honest capital raises, community-backed businesses, and milestone escrows on Solana.*
+## The Official Main Protocol Specification and Operating Architecture
+*The institutional standard for real-world business tokenization, honest governance, and sustainable equity on Solana.*
 
 ---
 
-# Table of Contents
+## Executive Summary & Abstract
 
-* [1. The Problem with Crypto Launches](#1-the-problem-with-crypto-launches)
-  * [1.1 Why Standard Launchpads Fail Real Businesses](#11-why-standard-launchpads-fail-real-businesses)
-  * [1.2 The Ventrion Model: Real Accountability for Retail and Founders](#12-the-ventrion-model-real-accountability-for-retail-and-founders)
-  * [1.3 Core Protocol Metrics at a Glance](#13-core-protocol-metrics-at-a-glance)
-* [2. The Five Bundled Pillars of Ventrion](#2-the-five-bundled-pillars-of-ventrion)
-  * [2.1 Pillar 1: The Mother Protocol ($VENT) & Multi-Jurisdiction Pipeline](#21-pillar-1-the-mother-protocol-vtrn--multi-jurisdiction-pipeline)
-  * [2.2 Pillar 2: Capital Formation & The Primary Raise Engine](#22-pillar-2-capital-formation--the-primary-raise-engine)
-  * [2.3 Pillar 3: Founder Autonomy, Vesting & Skin in the Game](#23-pillar-3-founder-autonomy-vesting--skin-in-the-game)
-  * [2.4 Pillar 4: Tranche-Specific Milestone Escrows, Dual-Path Release & Cure Cycle](#24-pillar-4-tranche-specific-milestone-escrows-dual-path-release--cure-cycle)
-  * [2.5 Pillar 5: Holder Staking & The Constant Time Yield Engine](#25-pillar-5-holder-staking--the-constant-time-yield-engine)
-* [3. Step-by-Step Capital Raise and Redistribution Lifecycle](#3-step-by-step-capital-raise-and-redistribution-lifecycle)
-  * [3.1 Step 1: Venture Initialization & Mint Authority Revocation](#31-step-1-venture-initialization--mint-authority-revocation)
-  * [3.2 Step 2: Corporate Setup Execution & Fee Allocation](#32-step-2-corporate-setup-execution--fee-allocation)
-  * [3.3 Step 3: Seed Capital Collection & Sellback on the Flat Curve](#33-step-3-seed-capital-collection--sellback-on-the-flat-curve)
-  * [3.4 Step 4: Atomic Two-Step Redistribution (17% LP, Legal Fee, Milestone Vault)](#34-step-4-atomic-two-step-redistribution-17-lp-legal-fee-milestone-vault)
-  * [3.5 Step 5: Receipt Token Redemption (1:1 Unified Shares)](#35-step-5-receipt-token-redemption-11-unified-shares)
-* [4. Staking, Vesting and Game-Theoretic Safeguards](#4-staking-vesting-and-game-theoretic-safeguards)
-  * [4.1 Founder Locking: Flexible Multi-Year Vesting Schedules](#41-founder-locking-flexible-multi-year-vesting-schedules)
-  * [4.2 Backer Staking: Voluntary Time-Locks and Fee Capture](#42-backer-staking-voluntary-time-locks-and-fee-capture)
-  * [4.3 Tranche-Specific Milestone Governance, Dual-Path Release & Ragequit](#43-tranche-specific-milestone-governance-dual-path-release--ragequit)
-  * [4.5 Complete Hostile Takeover Immunity](#45-complete-hostile-takeover-immunity)
-* [5. Legal Architecture, Geofencing and Tax-Compliant Clearing](#5-legal-architecture-geofencing-and-tax-compliant-clearing)
-  * [5.1 Geofencing, Active Marketing Ban and Reverse Solicitation](#51-geofencing-active-marketing-ban-and-reverse-solicitation)
-  * [5.2 Tax-Compliant Triple-Entity Clearing Architecture](#52-tax-compliant-triple-entity-clearing-architecture)
-  * [5.3 Tech Startups vs. Decentralized Gastro & Retail Brands](#53-tech-startups-vs-decentralized-gastro--retail-brands)
-  * [5.4 Clear Distinction: Honest Failure vs. Willful Fraud](#54-clear-distinction-honest-failure-vs-willful-fraud)
-  * [5.5 Precision on Asset Protection and Brand Ownership](#55-precision-on-asset-protection-and-brand-ownership)
-* [6. Technical Specifications and Solana Anchor Layouts](#6-technical-specifications-and-solana-anchor-layouts)
-  * [6.1 Program Derived Address (PDA) Matrix](#61-program-derived-address-pda-matrix)
-  * [6.2 State Machine Progression](#62-state-machine-progression)
-  * [6.3 Exact Account Memory Layouts](#63-exact-account-memory-layouts)
-  * [6.4 Constant-Time O(1) Yield Math (Overflow-Safe u256)](#64-constant-time-o1-yield-math-overflow-safe-u256)
-  * [6.5 Compute Unit Profile and Zero-Loop Guarantee](#65-compute-unit-profile-and-zero-loop-guarantee)
-* [7. Security Rules and Error Codes](#7-security-rules-and-error-codes)
-  * [7.1 Attack Vectors and Built-In Defenses](#71-attack-vectors-and-built-in-defenses)
-  * [7.2 Program Error Code Reference](#72-program-error-code-reference)
-* [8. Developer Implementation and Integration](#8-developer-implementation-and-integration)
-  * [8.1 SDK Overview](#81-sdk-overview)
-  * [8.2 Complete End-to-End TypeScript Lifecycle](#82-complete-end-to-end-typescript-lifecycle)
+When founders want to bring a legitimate company, startup, or revenue-generating business on-chain today, the existing ecosystem offers only speculative meme-coin launchpads and casino platforms. These mechanisms were engineered for hyper-speculative token flipping, suffering from critical structural vulnerabilities:
+
+1. **Ephemeral Lifespans:** Tokens launch on aggressive exponential curves, get front-run by sniper bots in block zero, dump on retail participants, and collapse within hours.
+2. **Founder Exploitation:** Founders do not own their company equity at genesis. To retain control, they must purchase their own tokens on a steep public bonding curve using personal capital against MEV arbitrageurs.
+3. **Zero Milestone Accountability:** 100% of raised capital is routed instantly to the creator's personal wallet with zero roadmaps, zero verifiable milestone escrow, and zero refund paths.
+4. **The Volatility Trap:** Raising operating capital in volatile gas tokens (such as SOL) makes predictable budgeting, commercial payroll, inventory purchasing, and real-world compliance impossible.
+
+**Ventrion establishes an institutional venture operating standard on Solana:**
+* **Fixed 1,000,000 Common Shares:** Minted directly into an on-chain `MasterLockVault` at genesis. The mint authority is permanently and irrevocably revoked in the exact same atomic transaction. Inflation and dilution are mathematically impossible.
+* **100% Canonical USDC Denomination:** All primary capital formation, milestone escrows, and dividend disbursements operate exclusively in canonical 6-decimal USDC.
+* **Flat-Curve Primary Escrow:** Primary capital is raised on a fair, constant-price flat curve. Early and late contributors pay the exact same fair price per share, eliminating MEV sandwich attacks, with 100% sellback guarantees prior to cap closure.
+* **14-Day Decentralized $VENT Verification Gate:** When the funding cap is met, the curve freezes and mother-token ($VENT) stakers vote on company verification. Approval unlocks secondary graduation; rejection or timeout enables 100% pro-rata USDC refunds to primary backers.
+* **17.0% Permanent Meteora DLMM Liquidity:** Upon graduation, 17.0% of raised USDC and 17.0% of round shares seed a permanent Meteora Dynamic Liquidity Market Maker (DLMM) pool. The liquidity position is held by `DlmmCustody` without removal instructions—zero rugpull risk forever.
+* **Tranche-Specific Milestone Escrows & Backer Ragequit:** Unspent capital remains locked in an isolated `MilestoneEscrow`. Capital releases follow a Dual-Path mechanism (>50% active approval or 7-day optimistic release with <33.33% veto). If milestones are breached, primary backers can execute a `ragequit_milestone_escrow` to recover unspent funds.
+* **O(1) Constant-Time Dividend Engine:** Token stakers lock shares for 0 to 730 days to earn 1.0x to 3.0x dividend multipliers computed in O(1) time via an overflow-safe accumulator scaled by $10^{12}$ with intermediate 256-bit math (`u256`).
 
 ---
 
-# 1. The Problem with Crypto Launches
+# Live Solana Devnet Deployment & Cryptographic Proofs
 
-### 1.1 Why Standard Launchpads Fail Real Businesses
-Token launches on Solana currently follow a broken pattern designed exclusively for speculation. When an entrepreneur tries to launch a legitimate company, digital product, or local business on standard launchpads, they encounter structural flaws:
+The Ventrion Protocol is fully deployed, initialized, and cryptographically verified on **Solana Devnet** with real on-chain integrations with **Meteora DLMM v2** (`LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo`) and **Metaplex Token Metadata**.
 
-* **Predatory Bonding Curves:** Tokens launch on steep exponential curves. Automated sniper bots buy up the initial supply in the first millisecond and dump on real community members seconds later.
-* **Immediate Capital Drain:** When a raise completes, 100% of the funds transfer directly to the creator's personal wallet without any milestone checks or roadmaps.
-* **The SOL Volatility Trap:** Capital is raised and held in SOL. If the market drops 30%, the business can no longer cover real-world payroll, inventory, or rent.
-* **Founder Penalization:** Founders do not own their own company at launch. They must spend their personal savings to buy their own tokens off a public bonding curve while competing against MEV bots.
-
-### 1.2 The Ventrion Model: Real Accountability for Retail and Founders
-Ventrion replaces this speculative casino with a structured venture operating system:
-
-* **Fixed Supply from Genesis:** Every company has exactly 1,000,000 common shares. The mint authority is destroyed in the exact genesis transaction. Dilution is impossible.
-* **100% USDC Denominated:** Capital raises, escrows, and payouts run purely on canonical USDC. Operational planning is predictable.
-* **Tranche-Specific Milestone Governance:** Capital does not go to the founder in an uncontrolled lump sum. The team designs its own milestone roadmap (1 to 10 tranches). Release is governed by primary backer consensus through a Dual-Path trigger (>50% active approval or 7-day optimistic window with <33.33% veto).
-* **Milestone Treasury Protection:** Unspent capital remains safely locked in the smart contract escrow. Investors hold liquid secondary shares on Meteora DLMM, and unreleased funds can never be withdrawn without verified primary backer approval or unvetoed optimistic review.
-* **Institutional Multi-Jurisdiction Architecture:** Primary raises operate strictly outside the United States and Germany via a 3-tier geofencing perimeter (IP, VPN filter, forced clickwrap self-certification). German/EU operating companies route rewards via a compliant Swiss Association clearing hub, ensuring 100% tax-deductible marketing expenses without withholding tax friction.
-
-### 1.3 Core Protocol Metrics at a Glance
-
-| Parameter | Standard Value | Description |
-| :--- | :--- | :--- |
-| **Total Share Supply** | **1,000,000 Shares** | Fixed forever. Mint authority revoked at genesis. |
-| **Quote Currency** | **Canonical USDC** | Pure dollar stability for all raises, escrows, and fees. |
-| **Meteora Liquidity Seed** | **Exactly 17.0%** | 17% of raised USDC and 17% of round shares locked permanently in DLMM. |
-| **Legal Setup Fee** | **max($3,000, 3%)** | Covers corporate MIDAO DAO LLC formation ($3,000 baseline) and registry costs. |
-| **Milestone Escrow Share** | **Founder Defined** | Remainder after 17% LP, legal fee, and upfront working capital. |
-| **Upfront Working Capital** | **Founder Defined (10% to 25%)**| Flexible runway chosen by founder, validated in the $VENT verification vote. |
-| **Founder Token Sovereignity**| **Full Sovereign Freedom** | Linear vesting, milestone unlocks, or direct staking in InvestorVault from day 1. |
-| **Protocol Verification** | **$VENT Majority Approval** | Ventrion legal contracts + decentralized staker approval (>50% majority). |
-| **Staking Lock Multipliers**| **1.0x to 3.0x** | Stakers locking 0 to 730 days earn up to triple fee yield. |
-| **Ventrion Platform Royalty**| **0.5% on LP Fees** | Small protocol fee routed to Mother Token ($VENT) stakers. |
+### 1. Core Protocol Deployment
+* **Network:** Solana Devnet (`https://api.devnet.solana.com`)
+* **Canonical Program ID:** [`37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8`](https://explorer.solana.com/address/37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8?cluster=devnet)
+* **Mother-Token ($VENT) Mint:** [`5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ`](https://explorer.solana.com/address/5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ?cluster=devnet)
+* **Settlement USDC Mint (Devnet):** [`5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt`](https://explorer.solana.com/address/5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt?cluster=devnet)
+* **Global Config PDA:** [`9W5BqZ32GkZyhbs6KqhfWCNwi1KXNiZemBerMsb2n57M`](https://explorer.solana.com/address/9W5BqZ32GkZyhbs6KqhfWCNwi1KXNiZemBerMsb2n57M?cluster=devnet)
+* **$VENT Staking Vault PDA:** [`64JBeV2b8XTHJqgeaLoD93Z5zH4Afic98idfGbBaVkd6`](https://explorer.solana.com/address/64JBeV2b8XTHJqgeaLoD93Z5zH4Afic98idfGbBaVkd6?cluster=devnet)
+* **Meteora DLMM Preset Parameter:** [`4vP4DFDJLRz85NBCfJALYPNdieWwzQSstrUuTms1gekn`](https://explorer.solana.com/address/4vP4DFDJLRz85NBCfJALYPNdieWwzQSstrUuTms1gekn?cluster=devnet)
 
 ---
 
-# 2. The Five Bundled Pillars of Ventrion
+### 2. Live Pioneer Venture 1: Ventrion Pioneer ($PVENT)
+* **Venture State PDA:** [`GsPUAiuzCcr1PnrkxSXQYosJMYLroDy8tnfcF8YfWSmG`](https://explorer.solana.com/address/GsPUAiuzCcr1PnrkxSXQYosJMYLroDy8tnfcF8YfWSmG?cluster=devnet)
+* **Venture Share Mint ($PVENT):** [`5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn`](https://explorer.solana.com/address/5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn?cluster=devnet)
+* **Funding Round 0 PDA:** [`ofPFE4gdAg7wkS3NLLPh4vZBMfh7SY5qtuuXq8kJ6ZZ`](https://explorer.solana.com/address/ofPFE4gdAg7wkS3NLLPh4vZBMfh7SY5qtuuXq8kJ6ZZ?cluster=devnet)
+* **Primary Receipt Mint ($PVENT-R0):** [`GWyp7KVHoyGZFxsSWMVsDZcpLemPZgsNJAno7X5myKY9`](https://explorer.solana.com/address/GWyp7KVHoyGZFxsSWMVsDZcpLemPZgsNJAno7X5myKY9?cluster=devnet)
+* **Milestone Escrow PDA:** [`9oHnjiAfiPj645NyEKVzsveKgNDou8mLADMpgHmzPmdb`](https://explorer.solana.com/address/9oHnjiAfiPj645NyEKVzsveKgNDou8mLADMpgHmzPmdb?cluster=devnet)
+* **Live Meteora DLMM LB Pair:** [`Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h`](https://app.meteora.ag/dlmm/Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h) | [Solscan](https://solscan.io/account/Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h?cluster=devnet)
+* **Permanent DLMM Position PDA:** [`CZe7nkMMrZUFKzKeQeNhwCLprehRvh4MP8gC2JZ3guZk`](https://explorer.solana.com/address/CZe7nkMMrZUFKzKeQeNhwCLprehRvh4MP8gC2JZ3guZk?cluster=devnet)
 
-The Ventrion architecture is organized into five clean, modular pillars. Each pillar handles a distinct component of the lifecycle:
+---
+
+### 3. Live Venture 2: QuantumCompute Systems ($QCMP) with Metaplex Metadata
+* **Company Mint ($QCMP):** [`Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E`](https://explorer.solana.com/address/Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E?cluster=devnet)
+* **Metaplex Metadata PDA:** [`AAJwDz75nu3oxL23xQzxTUgQYdR7T5F1b9YU5s4b8GzH`](https://explorer.solana.com/address/AAJwDz75nu3oxL23xQzxTUgQYdR7T5F1b9YU5s4b8GzH?cluster=devnet)
+* **Metadata URI:** [`https://files.catbox.moe/ofu899.json`](https://files.catbox.moe/ofu899.json)
+* **Meteora DLMM Pool:** [`CKfSPXBoLq2Xp5KNPDdp6wKYRBMX5FtMYja8HJKQEvDh`](https://explorer.solana.com/address/CKfSPXBoLq2Xp5KNPDdp6wKYRBMX5FtMYja8HJKQEvDh?cluster=devnet)
+
+---
+
+### 4. Verified On-Chain Transaction Evidence Matrix
+
+| Lifecycle Stage | Action | Verified Devnet Transaction Signature | Explorer Link |
+| :--- | :--- | :--- | :--- |
+| **Genesis** | Company Genesis (1M Shares, Mint Authority Revoked) | `5A5ADXfw4EW1oYfMJYLfarnUgRn3EmtpXF8ZqpUUdoW9g4UQM759RXNKL7A5uFHLp2PKy7F4Y8ob1GBNoW83mrVe` | [View Tx](https://explorer.solana.com/tx/5A5ADXfw4EW1oYfMJYLfarnUgRn3EmtpXF8ZqpUUdoW9g4UQM759RXNKL7A5uFHLp2PKy7F4Y8ob1GBNoW83mrVe?cluster=devnet) |
+| **Genesis + Metaplex** | Genesis Launch with Metaplex Token Metadata | `4ux1PPsJqvDrkcEX2SXbJmcAMA7hfyqte83x2gfurYiGzoZxEJRvAW1QnrpM7KiVUm7sPuRRTxbTxRm4ejduQf2e` | [View Tx](https://explorer.solana.com/tx/4ux1PPsJqvDrkcEX2SXbJmcAMA7hfyqte83x2gfurYiGzoZxEJRvAW1QnrpM7KiVUm7sPuRRTxbTxRm4ejduQf2e?cluster=devnet) |
+| **Roadmap** | Commit 1–10 Milestone Roadmap | `5DA2cnt2LabSfinh3GKw4Eg83H2CWu9fG1gP4FjdqdDjXBnEd6wrU6todBetJ7bxkPBxU9gsnYfSM9YfGXEj6Mb4` | [View Tx](https://explorer.solana.com/tx/5DA2cnt2LabSfinh3GKw4Eg83H2CWu9fG1gP4FjdqdDjXBnEd6wrU6todBetJ7bxkPBxU9gsnYfSM9YfGXEj6Mb4?cluster=devnet) |
+| **Primary Raise** | Flat-Curve Contribution ($50,000 USDC) | `mrPkjZyX7daiRxvkYn1KYUPSTSxSEPcsb1pCYfHpbfmi547cvPFx5MNKw29R1oyTNVngwBe3z5S3VaUjCH6qHnC` | [View Tx](https://explorer.solana.com/tx/mrPkjZyX7daiRxvkYn1KYUPSTSxSEPcsb1pCYfHpbfmi547cvPFx5MNKw29R1oyTNVngwBe3z5S3VaUjCH6qHnC?cluster=devnet) |
+| **Governance** | $VENT Staker Verification Approval Vote | `3d6g6jTZePA5Y7rUe5ysk8LZnQJ6X4ora1nU5Du9HeXcde3jCtPSQHvCS13HMpyiSVKpDQEr96V68mVJQ3URrxw1` | [View Tx](https://explorer.solana.com/tx/3d6g6jTZePA5Y7rUe5ysk8LZnQJ6X4ora1nU5Du9HeXcde3jCtPSQHvCS13HMpyiSVKpDQEr96V68mVJQ3URrxw1?cluster=devnet) |
+| **Verification** | Verification Finalization (>50% Majority) | `3fm2x3VE3UMebi57XnSMMBgHwhBDJEVHKQoavcQmhnrJCY78tUzxvXTPiQJ9jUvAtxmXnpo5G6KkJGEPeuchDmmb` | [View Tx](https://explorer.solana.com/tx/3fm2x3VE3UMebi57XnSMMBgHwhBDJEVHKQoavcQmhnrJCY78tUzxvXTPiQJ9jUvAtxmXnpo5G6KkJGEPeuchDmmb?cluster=devnet) |
+| **Graduation Prep** | Meteora DLMM Active Bin Alignment & Prep | `2bGqEvTvfwpCRNjqFYiJnHDRpxE3v5h5dmxP2oadeXpPXrFE2qRLZQxGZ9kAqG4AbW7GTTi7NcBJCFJUWWw4oie6` | [View Tx](https://explorer.solana.com/tx/2bGqEvTvfwpCRNjqFYiJnHDRpxE3v5h5dmxP2oadeXpPXrFE2qRLZQxGZ9kAqG4AbW7GTTi7NcBJCFJUWWw4oie6?cluster=devnet) |
+| **Graduation** | Atomic DLMM Seeding (17%), Legal Fee & Escrow | `3vkMwW1pFMh9qAbvq1yc2cK8ZqcwYABMjfoLSk317poBgt3NeeVKKoHxC2k6ke2TDtHK4DJkGUPCUwRfpE8bPfNx` | [View Tx](https://explorer.solana.com/tx/3vkMwW1pFMh9qAbvq1yc2cK8ZqcwYABMjfoLSk317poBgt3NeeVKKoHxC2k6ke2TDtHK4DJkGUPCUwRfpE8bPfNx?cluster=devnet) |
+| **Redemption** | 1:1 Primary Receipt to Common Share Swap | `TqUDYSeE7R5TJ1zvyzEkBqEqA9HSCoYSdwqWBUhRBVQFPH6BRp6XiarMXYDzHaLJqzVs4MpfzUgfjpFaANEXBFH` | [View Tx](https://explorer.solana.com/tx/TqUDYSeE7R5TJ1zvyzEkBqEqA9HSCoYSdwqWBUhRBVQFPH6BRp6XiarMXYDzHaLJqzVs4MpfzUgfjpFaANEXBFH?cluster=devnet) |
+| **DLMM Trading** | Secondary Market Buy: 100 USDC -> 900.23 $PVENT | `5dXRvK1t1g7qDFvHiiVnteRihYP53dQTrybExkBvzj6VephxYFJstXbSx4EvKU3fD1apo5yqiq5nPfy2VZrTrKjE` | [View Tx](https://explorer.solana.com/tx/5dXRvK1t1g7qDFvHiiVnteRihYP53dQTrybExkBvzj6VephxYFJstXbSx4EvKU3fD1apo5yqiq5nPfy2VZrTrKjE?cluster=devnet) |
+| **DLMM Trading** | Secondary Market Sell: 500 $PVENT -> 44.98 USDC | `5fRtyfKkFVWTo4KQdZXXgGVXazdYZbvX5YqAoEqby9meXd6sCVZwwer2mcgkZuDy5vRL1g39cgxU1TRKLfULShwx` | [View Tx](https://explorer.solana.com/tx/5fRtyfKkFVWTo4KQdZXXgGVXazdYZbvX5YqAoEqby9meXd6sCVZwwer2mcgkZuDy5vRL1g39cgxU1TRKLfULShwx?cluster=devnet) |
+| **Milestones** | Fast-Track Release Tranche 0 ($9,300 USDC) | `rHwJe2VZrvZBJud2Vj2Pc2Hw5aLSGvy24GHM8FNAaykQUWwkDjAeHLHgWD42wyMzH1YLVwhCQjmTmdzWrRpZHTu` | [View Tx](https://explorer.solana.com/tx/rHwJe2VZrvZBJud2Vj2Pc2Hw5aLSGvy24GHM8FNAaykQUWwkDjAeHLHgWD42wyMzH1YLVwhCQjmTmdzWrRpZHTu?cluster=devnet) |
+| **Governance** | Milestone Cure & Amendment Cycle Test | `4decRgJ3yq9FDykkDzn9yWDhYicnqfa7dZHbaEF4tXWbtQdSWtp4rtTRvVk5FHB745Y2qgLjV8qCyjpMUVqsCHBt` | [View Tx](https://explorer.solana.com/tx/4decRgJ3yq9FDykkDzn9yWDhYicnqfa7dZHbaEF4tXWbtQdSWtp4rtTRvVk5FHB745Y2qgLjV8qCyjpMUVqsCHBt?cluster=devnet) |
+| **Staking** | Holder Staking with Time-Lock Multiplier | `48sCimcSvGzTLeumnU1qocWv8wmrYbYQHKYsFn4PofBymSxkiqgngwhknWdCmknENs5VR2ooyddG3G5DM2uaJmV1` | [View Tx](https://explorer.solana.com/tx/48sCimcSvGzTLeumnU1qocWv8wmrYbYQHKYsFn4PofBymSxkiqgngwhknWdCmknENs5VR2ooyddG3G5DM2uaJmV1?cluster=devnet) |
+| **Dividends** | OpCo B2B Revenue Inflow Deposit | `d6VRZCU4fP9ZHRfwfqfqhwcqvPoH1gn7yo1MXY8cYo7kwqX3p53Z2ftbj9ymqLkg2YRvVCoBPGkh5VuRazm4EvS` | [View Tx](https://explorer.solana.com/tx/d6VRZCU4fP9ZHRfwfqfqhwcqvPoH1gn7yo1MXY8cYo7kwqX3p53Z2ftbj9ymqLkg2YRvVCoBPGkh5VuRazm4EvS?cluster=devnet) |
+| **Dividends** | O(1) Constant-Time Dividend Claim ($89.14 USDC) | `47rih44Cn39VLgo6v4RFKXWZ8tMsB4xumMYcm6QBbuy7ETvT2LFp9wVbC69NmXTzyYybeBycndCfERxB9x3ZEx29` | [View Tx](https://explorer.solana.com/tx/47rih44Cn39VLgo6v4RFKXWZ8tMsB4xumMYcm6QBbuy7ETvT2LFp9wVbC69NmXTzyYybeBycndCfERxB9x3ZEx29?cluster=devnet) |
+| **Ragequit** | Breached Milestone Floor-Price Ragequit Refund | `2rrjaRorUZQVXobH1jSRyRvafi7BFyfEVw3TcirMEZ8wFrqoRfdbfMMivjUZh4vaBhzrAyLJvxWgHKqGtySKsxFL` | [View Tx](https://explorer.solana.com/tx/2rrjaRorUZQVXobH1jSRyRvafi7BFyfEVw3TcirMEZ8wFrqoRfdbfMMivjUZh4vaBhzrAyLJvxWgHKqGtySKsxFL?cluster=devnet) |
+
+---
+
+# The Five Bundled Pillars of Ventrion
 
 ```
 +─────────────────────────────────────────────────────────────────────────────+
 |                         THE FIVE PILLARS OF VENTRION                        |
 +─────────────────────────────────────────────────────────────────────────────+
 |                                                                             |
-|  PILLAR 1: MOTHER PROTOCOL ($VENT) & MULTI-JURISDICTION PIPELINE            |
-|  • Platform governance, directory curation, and multi-jurisdiction setup.   |
-|  • Captures max($3,000, 3%) setup fees and routes rewards to $VENT stakers. |
+|  PILLAR 1: MOTHER PROTOCOL ($VENT) & LEGAL STRUCTURING                      |
+|  • Platform governance, directory curation, and corporate wrapper synthesis |
+|  • Captures max($3,000, 3%) setup fees and routes rewards to $VENT stakers  |
 |                                                                             |
 |  PILLAR 2: CAPITAL FORMATION & FLAT CURVE ENGINE                            |
-|  • Fair-launch primary funding on Meteora Dynamic Bonding Curves.           |
-|  • Full buy and sell liquidity on curve prior to graduation.                |
-|  • Flat pricing prevents sandwich bots and MEV exploitation.                |
+|  • Fair-launch primary funding on a flat, constant-price bonding curve      |
+|  • 100% two-way liquidity (buy and sell) prior to cap completion            |
+|  • Zero slippage and zero front-running bot exploitation                    |
 |                                                                             |
-|  PILLAR 3: FOUNDER AUTONOMY, VESTING & COMMITMENT                           |
-|  • Founder designs their own vesting schedule (1 to 3 years, custom cliff). |
-|  • Retains equity without fear of sudden hostile token takeovers.           |
+|  PILLAR 3: FOUNDER AUTONOMY, VESTING & SKIN IN THE GAME                     |
+|  • Sovereign vesting schedule (1 to 3 years with 6 to 12 month cliff)       |
+|  • Option to stake in InvestorVault alongside backers from day one          |
+|  • Complete protection against predatory hostile takeovers                  |
 |                                                                             |
 |  PILLAR 4: TRANCHE-SPECIFIC MILESTONE ESCROWS & DUAL-PATH RELEASE           |
-|  • Escrow bound to round; Primary Backers hold exclusive voting power.      |
-|  • Dual-path release: Fast-track (>50% YES) or 7-day optimistic (<=33% veto)|
-|  • Cure cycle for revisions & tranche-specific ragequit on breach.          |
+|  • Escrow bound strictly to round; Primary Backers hold exclusive votes     |
+|  • Dual-path release: Fast-track (>50% YES) or 7-day optimistic (<33% veto) |
+|  • Up to 3 cure cycles & backer floor-price ragequit upon breach            |
 |                                                                             |
-|  PILLAR 5: HOLDER STAKING & CONSTANT-TIME YIELD                             |
-|  • Secondary token holders stake for 0 to 2 years (1.0x to 3.0x yield).     |
-|  • 100% of Meteora LP trading fees distributed in O(1) constant time.       |
-|  • Receives verified B2B Ecosystem Marketing Rewards from partner OpCos.    |
+|  PILLAR 5: HOLDER STAKING & CONSTANT-TIME YIELD ENGINE                      |
+|  • Common share holders stake for 0 to 730 days (1.0x to 3.0x multiplier)   |
+|  • 100% of Meteora DLMM LP trading fees harvested and distributed          |
+|  • Direct B2B merchant payment clearing via Solana Pay                      |
 |                                                                             |
 +─────────────────────────────────────────────────────────────────────────────+
 ```
 
-### 2.1 Pillar 1: The Mother Protocol ($VENT) & Legal Structuring Pipeline
-The Ventrion Mother Token ($VENT) governs the overarching protocol and provides decentralized oversight for new venture onboarding.
-* **Institutional Legal Structuring:** Ventrion acts as the legal architect. It translates the founder's pitch deck, milestone roadmap, and token terms into binding corporate contracts (MIDAO DAO LLC Operating Agreement, SAFE, or Token Warrant). The CEO digital countersigns these legal agreements.
-* **Decentralized $VENT Staker Approval:** The venture cannot launch publicly or graduate liquidity based solely on an anonymous automated timer. Instead, $VENT mother token stakers vote on-chain to verify the venture's legal setup:
-  * Ventrion Foundation holds approximately 10% of $VENT at inception, locked for 3 years in the governance staking pool.
-  * With an initial 15% public float, Ventrion's 10% lock represents 40% of the active voting power (10 / 25).
-  * Ventrion needs only 10% community consensus from independent $VENT stakers to cross the 50%+ absolute majority threshold.
-  * This architecture combines centralized legal drafting with decentralized on-chain checks and balances. Centralization cannot override decentralization.
-* **The Legal Fee:** MIDAO offers a reduced rate of exactly $3,000 USDC for ventures raising under $250,000 (payable in USDC on Solana). A fixed allocation of `max($3,000, 3%)` covers the complete corporate formation, first-year registered agent, and official government filing.
-* **Protocol Value Accrual:** 50% of platform setup fees and a 0.5% cut of all secondary trading fees flow directly to stakers of the parent $VENT token.
+### Pillar 1: Mother Protocol ($VENT) & Legal Structuring
+* **Decentralized Verification Gate:** At `CapReached`, the flat curve freezes. $VENT stakers vote on company verification during a 14-day voting window. To graduate to secondary trading, a strict majority (>50%) is required.
+* **Corporate Entity Architecture:** Ventrion integrates plug-and-play legal wrappers:
+  * Marshall Islands DAO LLC (MIDAO) for offshore web3 entities ($3,000 baseline tier).
+  * Swiss Verein / Cayman Foundation SPVs for European OECD operating companies.
+* **Protocol Royalty:** 50 bps (0.5%) of harvested secondary DLMM trading fees flow to the $VENT fee treasury.
 
-### 2.2 Pillar 2: Capital Formation & The Primary Raise Engine
-Primary financing runs on a flat pricing curve via Meteora Dynamic Bonding Curves (DBC):
-* **No Price Squeezing:** Unlike meme launchpads where early buyers get 100x cheaper tokens than late buyers, Ventrion uses a flat, near-linear curve. The first contributor and the last contributor pay the same fair price.
-* **Full Two-Way Curve Liquidity:** During the active raise, buyers can sell their tokens back to the bonding curve at any time if they change their mind before graduation. There is no forced lock-in while the raise is open.
-* **Receipt Token Mechanics:** When the target cap is reached, tranche tokens seamlessly convert 1:1 into canonical market-circulating common shares.
+### Pillar 2: Capital Formation & Flat Curve Engine
+* **Constant Price per Share:** Shares sell at a constant price (e.g. 0.10 USDC = 100,000 USDC atoms). The first dollar and the last dollar pay identical prices.
+* **Two-Way Secondary Exits Prior to Cap:** If a primary backer decides to withdraw before the cap is filled, they can call `sell_primary_round` to redeem 100% of their deposited USDC in exchange for burning their receipts.
+* **Non-Transferable Receipts:** Primary backers receive $VENT-RN receipt tokens that cannot be traded on secondary DEXes or dumped before graduation.
 
-### 2.3 Pillar 3: Founder Autonomy, Vesting & Skin in the Game
-Ventrion respects founder autonomy. The protocol does not dictate how a founder must structure their personal equity:
-* **Founder Sets the Horizon:** The founder decides how long their shares remain locked (between 12 and 36 months, with a chosen 6 to 12 month cliff). A founder who commits to a 3-year lock sends a powerful trust signal to backers, while shorter locks offer flexibility.
-* **Linear Predictability:** Following the cliff, shares unlock gradually on-chain. The founder cannot dump their entire allocation on retail buyers on day one.
-* **Clear Role Boundaries:** Locked founder shares carry zero political veto rights over escrow payouts and do not dilute backer staking pools.
+### Pillar 3: Founder Autonomy & Predictable Vesting
+* **Sovereign Equity Choice:** Founders configure linear vesting schedules (12–36 months, 6–12 month cliff).
+* **Direct Staking Access:** Founders can stake unlocked shares directly in the `InvestorVault` from day one, earning pro-rata trading fees and POS revenues as a long-term stakeholder.
+* **No Hostile Governance Hijacking:** Locked founder shares carry zero votes in milestone escrow releases, preventing founder self-voting.
 
-### 2.4 Pillar 4: Tranche-Specific Milestone Escrows, Dual-Path Release & Cure Cycle
-Passive investors often forget to vote, which can paralyze a company's budget, while purely automated releases leave backers unprotected. Ventrion solves this with an institutional, tranche-specific milestone architecture:
-* **Tranche-Specific Binding:** Each funding round possesses its own isolated `MilestoneEscrow` (`seeds = [b"milestone_escrow", funding_round]`). Escrowed capital belongs strictly to the specific round that funded it.
-* **Primary Backer Voting Provenance:** Only wallets that contributed fresh capital to that specific round (`PrimaryBackerReceipt`) hold voting and veto rights over its milestones. Secondary market buyers on Meteora DLMM and locked founder tokens have strictly zero votes in the milestone escrow.
-* **The Dual-Path Release Mechanism:**
-  1. **Path A (The Fast Track):** When the founder finishes a milestone ahead of schedule, they invoke `propose_milestone`. If **more than 50% of eligible primary backer shares vote YES**, the tranche releases immediately to the company treasury without waiting.
-  2. **Path B (The Regular Track & Anti-Apathy):** When the target deadline arrives or upon submission, a **7-day veto window** opens automatically:
-     * If **less than 33.33%** of primary backer shares vote to veto: the deliverable is accepted, and funds release automatically (preventing voter apathy from starving the business).
-     * If **33.33% or more** of primary shares cast a veto: the release is halted.
-* **The Cure Cycle (`amend_milestone`):** If a milestone receives a veto, the venture does not collapse. The CEO can address backer feedback and resubmit via `amend_milestone` (up to 3 cure attempts permitted), resetting vote counters for a fresh review.
-* **Tranche-Specific Ragequit:** If a milestone is permanently breached, overdue without delivery, or vetoed across all cure attempts, primary backers of that round can call `ragequit_milestone_escrow` to withdraw their pro-rata share of remaining unspent escrow USDC.
+### Pillar 4: Tranche-Specific Milestone Escrows & Dual-Path Governance
+* **Tranche Isolation:** Each round maintains its own isolated `MilestoneEscrow` (`seeds = [b"milestone_escrow", funding_round]`). Funds cannot be commingled.
+* **Primary Backer Provenance:** Only contributors holding round receipts or redeemed shares can vote on milestone deliverables. Secondary DEX traders have zero escrow votes.
+* **Dual-Path Release Mechanism:**
+  1. **Fast-Track Path:** When the founder submits milestone proof, if **>50% of active backer voting weight votes YES**, funds release immediately.
+  2. **Optimistic Path:** Alternatively, a **7-day review window** opens. If **<33.33% of shares vote VETO**, funds release automatically upon deadline expiry (preventing voter apathy).
+* **Cure Cycle & Backer Ragequit:** If a veto occurs, the founder can amend the milestone up to 3 times (`amend_milestone`). If permanently breached, backers can call `ragequit_milestone_escrow` to return their shares and claim their pro-rata portion of unspent escrow USDC.
 
-### 2.5 Pillar 5: Holder Staking & The Constant Time Yield Engine
-Retail buyers on the secondary market can choose between holding liquid tokens or locking them for rewards:
-* **Trading Fee Distribution:** The permanent Meteora DLMM pool generates continuous trading fees. 100% of these fees go directly to stakers in the `InvestorVault`.
-* **Protocol Performance Rewards:** When an operating business generates revenue via the Solana Pay POS terminal, it remits an Ecosystem Marketing & Advocacy Fee (e.g. 2.5% of Gross Merchandise Volume) through the compliant clearing hub directly into the vault.
-* **Constant Time Accounting:** Reward calculations execute in O(1) time using an overflow-safe $10^{12}$ scaled accumulator computed with intermediate 256-bit math (`u256`). Claiming rewards costs roughly 11,300 Compute Units, well below Solana's 200,000 limit.
+### Pillar 5: Holder Staking & Constant-Time O(1) Yield Engine
+* **Yield Boost Multipliers:**
+  * 0 Days: 1.0x (10,000 bps)
+  * 90 Days: 1.25x (12,500 bps)
+  * 180 Days: 1.5x (15,000 bps)
+  * 365 Days: 2.0x (20,000 bps)
+  * 730 Days: 3.0x (30,000 bps)
+* **Overflow-Safe O(1) Math:** The accumulator is scaled by $10^{12} \times 10,000$, using 256-bit unsigned integers (`u256`) to guarantee zero truncation error and zero overflow risk.
 
 ---
 
-# 3. Step-by-Step Capital Raise and Redistribution Lifecycle
+# Capital Allocation Breakdown
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       CAPITAL ALLOCATION BREAKDOWN                          │
+│                    DETERMINISTIC CAPITAL ALLOCATION (100% USDC)             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Total Raised Capital: 100% USDC                                             │
 │                                                                             │
-│ ├── 1. LEGAL SETUP ALLOCATION: max($3,000, 3%)                              │
-│ │   • Sent to Ventrion Legal Setup Wallet                                   │
-│ │   • Funds entity incorporation, registry fees, and registered agent       │
-│ │                                                                           │
-│ ├── 2. PERMANENT LIQUIDITY POOL: Exactly 17.0%                              │
-│ │   • 17% of USDC + 17% of Round Shares                                     │
-│ │   • Permanently deposited into Meteora DLMM pool (Locked LP NFT)          │
-│ │                                                                           │
-│ └── 3. OPERATING & MILESTONE ESCROW: Remaining Balance                      │
-│     ├── Upfront Working Capital (Founder Defined: max 15%)                  │
-│     └── Milestone Tranches (Locked in on-chain escrow until delivery)       │
+│ 1. LEGAL SETUP FEE: max($3,000, 3%)                                         │
+│    • Transferred directly to LegalSetupVault                                │
+│    • Covers corporate registry filings, MIDAO DAO LLC formation             │
+│                                                                             │
+│ 2. PERMANENT METEORA DLMM LIQUIDITY: Exactly 17.0%                          │
+│    • 17.0% of raised USDC + 17.0% of round shares                           │
+│    • Seeded via CPI add_liquidity_by_weight2 into Meteora DLMM              │
+│    • Irrevocably locked under DlmmCustody PDA (no removal ix exists)        │
+│                                                                             │
+│ 3. UPFRONT WORKING CAPITAL: Founder Defined (Capped at 15%)                 │
+│    • Transferred directly to OpCo Treasury wallet at graduation             │
+│                                                                             │
+│ 4. TRANCHE MILESTONE ESCROWS: Remaining Balance                             │
+│    • Locked in MilestoneEscrowUsdcVault                                     │
+│    • Released only upon verified roadmap deliverable completion             │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 3.1 Step 1: Venture Initialization & Mint Authority Revocation
-1. The founder defines the venture parameters: name, symbol, total raise cap, founder lock duration, and milestone roadmap.
-2. The transaction calls `launch_venture_all_in_one`. Exactly 1,000,000 shares are minted directly into the `MasterLockVault`.
-3. The SPL token mint authority is set to `None`. No additional shares can ever be created.
+# Cross-Border Legal Engineering & Institutional Compliance
 
-### 3.2 Step 2: Corporate Setup Execution & Fee Allocation
-1. Before public trading begins, the founder executes the corporate setup and roadmap commitment.
-2. The venture receives its registered legal entity (MIDAO DAO LLC for global founders, or Swiss Verein / Liechtenstein structure for European OpCos).
-3. The registry ID and the SHA-256 hash of the signed contract are permanently stored on the `VentureState` PDA.
+### 1. Three-Tier Geofencing Perimeter
+To remain fully compliant with **SEC Regulation S (Rule 903 Category 1)** and European reverse solicitation standards (MiCA Art. 61), Ventrion enforces a strict three-tier regulatory perimeter:
+1. **Network Layer:** Geoblocking of US and restricted IP addresses at the RPC and API gateway level.
+2. **Application Layer:** Mandatory wallet clickwrap self-certification verifying non-US, non-restricted resident status.
+3. **Communication Layer:** Global English-only documentation, USD denomination, and zero domestic solicitation in restricted jurisdictions.
 
-### 3.3 Step 3: Seed Capital Collection & Sellback on the Flat Curve
-1. The primary raise opens on the Meteora Dynamic Bonding Curve.
-2. The primary raise frontend enforces the 3-tier compliance perimeter (IP-filter, VPN blocking, and forced clickwrap self-certification excluding US and German/EU retail residents).
-3. Backers deposit canonical USDC and receive tranche tokens at flat, fair pricing.
-4. If a backer wants to exit before the round concludes, they can sell their tokens directly back to the curve for USDC.
+### 2. Tax-Compliant Triple-Entity Clearing Architecture
+Real businesses cannot remit operating capital to anonymous internet addresses without severe corporate tax penalties. Ventrion resolves this with a triple-entity structure:
+* **Operating Company (OpCo):** The local operational enterprise (e.g., German GmbH, Delaware C-Corp) collecting commercial revenue.
+* **Ecosystem Hub (Verein / SPV):** Non-profit association (e.g., Swiss Verein in Zug) that receives arm's length B2B marketing fees (benchmarked against payment interchange at 2.5% GMV via Solana Pay).
+* **On-Chain Vaults:** The ecosystem hub programmatically deposits collected service fees into `deposit_ecosystem_fees`, providing 100% tax-deductible invoices to the OpCo and verified token dividends to stakers.
 
-### 3.4 Step 4: Atomic Graduation (17% Permanent DLMM LP, Legal Fee, Milestone Escrow)
-When the raise reaches its target cap and is verified by $VENT stakers, graduation executes in a single permissionless atomic transaction (`execute_atomic_graduation`):
-
-1. **Permanent DLMM Seeding:** Exactly 17.0% of total raised USDC and 17.0% of round shares seed the Meteora DLMM pool via CPI (`initialize_lb_pair` and `add_liquidity_by_strategy`). The LP position NFT is locked inside `DlmmCustody` permanently.
-2. **The Legal Fee:** Exactly `max($3,000, 3% of total raise)` in USDC is transferred to the `LegalSetupVault` for MIDAO corporate registration.
-3. **Upfront Operational Disbursement:** The founder's pre-defined upfront runway (10% to 25% of round USDC) transfers directly to the corporate OpCo treasury wallet.
-4. **Milestone Escrow:** The remaining USDC balance (60% to 73%) is locked into the tranche-specific `MilestoneEscrow`.
-5. **State Progression:** Venture transitions atomically from `CapReached` to `GraduatedDLMMLive`. There is no intermediate pending state and no 48-hour timeout deadlock.
-
-### 3.5 Step 5: Receipt Token Redemption (1:1 Common Shares via `redeem_shares`)
-* **1:1 Share Swap:** Once graduation confirms (`GraduatedDLMMLive`), backers call `redeem_shares` to burn their round receipts ($VENT-RN) and pull their canonical common shares 1:1 from the `MasterLockVault` (< 20,000 Compute Units).
-* **Direct Staking Option:** Alternatively, backers can call `redeem_and_stake_shares` to atomar swap and stake into their personal `InvestorVault` in a single transaction.
-* **Secondary Market Open:** Secondary market trading opens immediately on Meteora DLMM. Unlocked common shares can be freely traded or staked for O(1) dividend yield.
+### 3. Business Judgment Rule & Honest Failure Protection
+Under the international **Business Judgment Rule**, founders acting in good faith with honest intentions are insulated from personal liability. If a startup legitimately fails due to market conditions, unspent milestone capital is returned pro-rata to backers through orderly corporate wind-down or ragequit mechanics, preventing predatory litigation.
 
 ---
 
-# 4. Staking, Vesting and Game-Theoretic Safeguards
+# Technical Architecture & PDA Specification
 
-Ventrion strictly separates founder locks from backer staking. These two groups have entirely different incentives and restrictions.
+### 1. Program Derived Address (PDA) Matrix
 
-```
-+─────────────────────────────────────────────────────────────────────────────+
-|                         FOUNDER LOCK VS. BACKER STAKING                     |
-+─────────────────────────────────────┬───────────────────────────────────────+
-| FOUNDER LOCKING (PILLAR 3)          | BACKER STAKING (PILLAR 5)             |
-+─────────────────────────────────────┼───────────────────────────────────────+
-| • Purpose: Long-term commitment     | • Purpose: Fee capture & advocacy     |
-| • Structure: 1 to 3 Years (Custom)  | • Structure: 0 to 730 Days Flexible   |
-| • Political Control: 0 Escrow Votes | • Protection: Milestone Escrow Safe   |
-| • Dividend Yield: Strictly 0 yield  | • Dividend Yield: 100% of DLMM fees   |
-| • Early Exit: Impossible            | • Protocol Rewards: B2B Advocacy Fees |
-+─────────────────────────────────────┴───────────────────────────────────────+
-```
-
-### 4.1 Founder Locking: Sovereign Allocation and Staking Flexibility
-Founders and CEOs enjoy complete sovereign flexibility over how they structure their token equity:
-* **Option A: Linear Vesting Stream:** Traditional vesting over 12 to 36 months with an optional 6 to 12 month cliff. Following the cliff, tokens unlock linearly.
-* **Option B: Milestone-Tied Tranches:** Equity unlocks in tranches matching the completion of business milestones.
-* **Option C: Direct Holder Staking from Day 1:** The founder can immediately lock their shares into the `InvestorVault` alongside community backers. By committing tokens for 1 to 3 years, the founder earns protocol rewards and POS marketing fees as a long-term stakeholder.
-* **Operational Control:** The founder maintains exclusive authority over operational company decisions, milestone delivery submissions, and voluntary dividend allocations.
-
-### 4.2 Backer Staking: Voluntary Time-Locks and Fee Capture
-Secondary buyers and primary backers can deposit their common shares into their personal `InvestorVault`:
-* **Flexible (0 days):** 1.0x baseline yield, withdrawable anytime.
-* **90 Days:** 1.25x yield (+25% boost).
-* **180 Days:** 1.5x yield (+50% boost).
-* **365 Days (1 Year):** 2.0x yield (Double rewards per share).
-* **730 Days (2 Years):** 3.0x yield (Triple rewards per share).
-
-Stakers receive their proportional share of all Meteora DLMM trading fees and verified B2B Ecosystem Marketing Rewards paid by the operating business.
-
-### 4.3 Tranche-Specific Milestone Governance, Dual-Path Release & Ragequit
-Milestone escrow governance must balance operational runway predictability for founders with rock-solid capital protection for investors.
-
-#### 1. The Dual-Path Release Formulation
-When a milestone tranche is submitted for disbursement:
-* **Path A: Active Approval Fast Track (>50.00%)**
-  $$\text{Approval BPS} = \frac{\text{Votes}_{\text{FOR}} \times 10,000}{\text{Primary Tokens Remaining}} > 5,000 \implies \text{Instant Tranche Payout}$$
-* **Path B: Optimistic Execution with 7-Day Veto Window (Anti-Apathy)**
-  If no fast-track 50% majority occurs, the milestone enters a 7-day veto countdown ($T_{\text{veto}} = T_{\text{proposed}} + 7\text{ days}$):
-  $$\text{Veto BPS} = \frac{\text{Votes}_{\text{AGAINST}} \times 10,000}{\text{Primary Tokens Remaining}}$$
-  * If $\text{Veto BPS} \le 3,333$ (<=33.33% veto) upon timer expiry: Status transitions to `Released`.
-  * If $\text{Veto BPS} > 3,333$ (>33.33% veto): Status transitions to `Vetoed`, blocking the payout.
-
-#### 2. The Cure & Resubmission Cycle (`amend_milestone`)
-Real businesses encounter client revisions and operational pivots. If a milestone is vetoed:
-1. The founder reviews backer feedback, rectifies deliverables, and invokes `amend_milestone`.
-2. The contract resets `votes_for = 0`, `votes_against = 0`, increments `amendment_count` (capped at 3), and establishes a fresh 7-day review window.
-3. If primary backers remain unsatisfied across 3 consecutive cure cycles, the milestone transitions permanently to `Breached`.
-
-#### 3. Tranche-Specific Isolation & The Ragequit Right
-In multi-round venture financing, mixing capital across funding rounds creates systemic vulnerabilities. If Seed shares sell at $0.10 and Series A shares sell at $1.00, a naive single escrow allows Series A failures to be drained by Seed holders.
-
-Ventrion enforces absolute round isolation:
-* **Round-Specific Escrow Ledger:** Each round maintains its own independent `MilestoneEscrow` and `PrimaryBackerReceipt` mapping.
-* **Eligible Ragequit Trigger:** When a milestone in Round $N$ is definitively breached or overdue without delivery:
-  1. Primary backers holding a valid `PrimaryBackerReceipt` for Round $N$ invoke `ragequit_milestone_escrow`.
-  2. The backer surrenders their round shares back to the company vault.
-  3. The contract pays out the exact pro-rata share of remaining unreleased USDC in that round's escrow:
-     $$\text{Refund USDC} = \frac{\text{Tokens Surrendered} \times \text{Unreleased Escrow USDC}}{\text{Primary Tokens Remaining}}$$
-  4. Secondary DEX buyers without a primary receipt have zero access to the escrow, completely eliminating cross-round arbitrage and phantom claims.
-
-### 4.5 Complete Hostile Takeover Immunity
-A fatal vulnerability in conventional DAO token models is that a hostile competitor or short-seller can accumulate 51% of circulating tokens on an open DEX and vote to dissolve the company, seize intellectual property, or fire the leadership.
-
-Ventrion completely eliminates this attack vector:
-* **Circulating tokens do not have the power to dissolve the physical company.**
-* Token holders do not vote on day-to-day operations or firing the founder.
-* Backer recourse is strictly confined to the **smart contract escrow**:
-  * Unreleased milestone cash belongs to the escrow, not the founder.
-  * If a venture does not achieve its milestones, unspent escrow capital remains locked and protected from unauthorized withdrawal, preserving backer funds.
-  * But a hostile whale cannot force the founder out of their own business or seize physical company equipment.
-* The entrepreneur retains full operating sovereignty while backers enjoy full financial downside protection.
-
----
-
-# 5. Legal Architecture, Geofencing and Tax-Compliant Clearing
-
-### 5.1 Geofencing, Active Marketing Ban and Reverse Solicitation
-Ventrion operates an institutional compliance perimeter to eliminate exposure to local securities offering rules (such as US SEC registration or German BaFin prospectus requirements):
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       3-TIER COMPLIANCE PERIMETER                           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 1. Network Layer (IP & VPN Geoblocking):                                    │
-│    Automated block of US and German IP ranges via Cloudflare / MaxMind.     │
-│    Commercial VPN exit nodes hard-blocked at the Web & RPC gateways.        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 2. Application Layer (Forced Clickwrap Self-Certification):                 │
-│    Mandatory modal on connectWallet():                                      │
-│    "User certifies under penalty of perjury non-US and non-DE residency."   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 3. Communication Layer (Active Marketing Ban & Reverse Solicitation):       │
-│    Whitepaper and platform exclusively in English. Zero EUR pricing.        │
-│    Zero active marketing, influencer campaigns, or ads in Germany or the US.│
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### Legal Grounds:
-* **United States (SEC Regulation S Safe Harbor):** The token emission qualifies under **Rule 903 Category 1** (Foreign Issuer with No Substantial U.S. Market Interest). The 3-tier perimeter satisfies SEC Release No. 33-7516 for offshore internet offerings.
-* **Germany & European Union (Reverse Solicitation):** Under Art. 61 MiCA and established BaFin cross-border guidance, the provision of decentralized protocol infrastructure does not constitute an offering within Germany if active domestic marketing is absent. Unprompted secondary market interaction via decentralized AMMs (Meteora DLMM) constitutes passive cross-border engagement initiated on the user's exclusive initiative (*Passive Dienstleistungsfreiheit*).
-
----
-
-### 5.2 Tax-Compliant Triple-Entity Clearing Architecture
-Under German tax law, a domestic operating company (GmbH) cannot transfer money directly to anonymous crypto wallets:
-* **Section 160 AO (Empfaengerbenennung):** German tax law requires the taxpayer to identify recipients of expenditures by full legal name and address. Payments to anonymous wallets result in mandatory denial of business expense deductibility.
-* **Section 50a EStG Royalty Trap:** Outbound payments structured as "software licenses" to offshore entities without a double taxation treaty trigger a mandatory **15.825% German withholding tax**.
-* **Section 9 StAbwG (Tax Haven Defense Act Trap):** Direct payments to entities in non-cooperative tax jurisdictions (such as the Marshall Islands, which is on the EU Blacklist) trigger an unconditional prohibition of business expense deduction (Betriebsausgabenabzugsverbot). Routing the commercial agreement through a white-listed jurisdiction with an active Double Taxation Agreement (Switzerland) completely eliminates Section 9 StAbwG liability.
-
-To solve this, Ventrion utilizes a **Triple-Entity Clearing Structure**:
-
-```
-+-------------------------------------------------------------+
-|                     GERMAN OPCO (GmbH)                      |
-|     • Holds physical leases, staff, and POS terminal IP     |
-|     • Deducts 100% as business expense (SKR03: 4600)        |
-+------------------------------+------------------------------+
-                               |
-                               |  B2B Service Agreement:
-                               |  Ecosystem Marketing Fee (2.5% GMV)
-                               v
-+-------------------------------------------------------------+
-|             SWISS VEREIN (Art. 60 ff. ZGB)                  |
-|           "Ventrion Global Ecosystem Association"           |
-|     • Seat: Zug, Switzerland (Crypto Valley)                |
-|     • White-listed jurisdiction (Full DTA, no StAbwG)       |
-|     • Issues formal invoice (UID: CHE-xxx.xxx.xxx)          |
-+------------------------------+------------------------------+
-                               |
-                               |  On-Chain Protocol Performance
-                               |  Bounty Routing
-                               v
-+-------------------------------------------------------------+
-|               ON-CHAIN STAKING REWARD VAULT                 |
-|     • Programmatic payout to active stakers and ambassadors |
-+-------------------------------------------------------------+
-```
-
-#### Tax Mechanics of the Ecosystem Marketing Fee:
-1. **Commercial Character:** The agreement between the German OpCo and the Swiss Association is a **pure marketing and merchant acquisition service contract**. It involves no licensing of IP, avoiding Section 50a EStG withholding tax completely (0.0% withholding tax).
-2. **Arm's Length Benchmark (Section 1 AStG):** The fee is structured as an industry-standard performance fee: **2.5% of Gross Merchandise Volume (GMV)** processed through the Solana Pay terminal. This matches standard payment interchange benchmarks (Stripe, Visa, Adyen) and withstands corporate tax audits.
-3. **Receipt Compliance (Section 160 AO):** The recipient is clearly identified as the Swiss Association with its Swiss Business Identification Number (UID).
-4. **Accounting Entry (DATEV):**
-   * *Debit:* Account 4600 (SKR03) / 6600 (SKR04) (Advertising & Marketing Expense).
-   * *Credit:* Account 1200 / 1800 (Bank / USDC Corporate Account).
-   * *Tax Key:* Section 13b UStG Reverse Charge (Third-Country B2B Service, 19% input tax / 19% output tax = cash-neutral).
-
----
-
-### 5.3 Tech Startups vs. Decentralized Gastro & Retail Brands
-Ventrion natively supports two distinct business archetypes:
-
-#### Class A: Software & Tech Startups (Global Digital Ventures)
-* **Contract Mechanism:** Standardized SAFE (Simple Agreement for Future Equity) and Token Warrant with the operating company.
-* **Cap Table Clarity:** Exactly one clean institutional line on the startup's cap table.
-* **Community Utility:** Backers receive global digital perks: API credits, lifetime developer licenses, token-gated beta releases, and protocol governance.
-
-#### Class B: Decentralized Gastro, Creator & Retail Brands (Local Physical Ventures)
-* **Contract Mechanism:** B2B Community Advocacy & Merchant Agreement.
-* **Real-World Value Engine:**
-  * **Direct Solana Pay Discounts:** Verified token holders receive an instant 15% discount at the point of sale. For a patron spending $500 annually, this returns $75 in real savings.
-  * **Brand Advocacy:** Stakers act as authentic promoters, driving local foot traffic through Solana Mobile geo-targeted campaigns.
-  * **Ecosystem Performance Fee:** The OpCo remits 2.5% of POS GMV as a tax-deductible marketing fee to the Swiss Association, which programmatically distributes it to the staker vault.
-
----
-
-### 5.4 Clear Distinction: Honest Failure vs. Willful Fraud
-
-```
-+─────────────────────────────────────────────────────────────────────────────+
-|                     HONEST FAILURE VS. WILLFUL FRAUD                        |
-+─────────────────────────────────────┬───────────────────────────────────────+
-| HONEST VENTURE FAILURE              | WILLFUL FRAUD & EMBEZZLEMENT          |
-| (100% PROTECTED UNDER SAFE HARBOR)  | (ACTIONABLE UNDER LAW & ESCROW VOID)  |
-+─────────────────────────────────────┼───────────────────────────────────────+
-| • Lack of customer demand or sales  | • Forged invoices or fake receipts    |
-| • Cost overruns, supplier delays    | • Fabricated milestone proof links    |
-| • Good-faith attempts to pivot      | • Funneling cash to personal luxury   |
-| • Open, transparent communication   | • Intentional fraud or embezzlement   |
-| • Funds spent on real operations    | • Refusal to provide bank records     |
-+─────────────────────────────────────┼───────────────────────────────────────+
-| LEGAL & PROTOCOL CONSEQUENCE:       | LEGAL & PROTOCOL CONSEQUENCE:         |
-| • Zero personal liability for CEO   | • Corporate veil pierced              |
-| • Zero lawsuits or court claims     | • Direct personal liability for theft |
-| • Unspent escrow refunded to backers| • Legal setup & counsel enforcement   |
-| • Founder walks away cleanly        | • Full international legal pursuit    |
-+─────────────────────────────────────┴───────────────────────────────────────+
-```
-
-#### The Honest Failure Safe Harbor
-* Governed by the **Business Judgment Rule (BJR)**.
-* If a founder works in good faith, updates the community, and spends funds on legitimate business activities, they are **fully protected from personal liability**.
-* When an honest failure occurs and the company executes an orderly corporate wind-down, remaining unspent milestone cash in the escrow is unlocked for 100% pro-rata distribution to shareholders.
-* The company winds down cleanly without personal bankruptcy or legal harassment.
-
-#### Actionable Fraud & Embezzlement
-* Intentional fraud occurs only in concrete, provable cases: forging milestone deliverables, wiring corporate funds to personal accounts for non-business purposes, or raising funds and vanishing completely without communication.
-* In these explicit cases, the founder loses the Safe Harbor shield and faces direct legal accountability.
-
----
-
-### 5.5 Precision on Asset Protection and Brand Ownership
-Founders often fear that tokenizing their business means risking their personal brand or life's work. Ventrion establishes strict boundaries:
-
-* **Founder Retains Core IP and Accounts:** The founder's personal social media accounts, proprietary technology, and primary company assets remain 100% their own.
-* **No Hostile Confiscation:** Ventrion does not confiscate trademarks or personal handles in an honest failure. If a venture fails to reach profitability, the owner simply winds down operations; anonymous internet users do not seize their name.
-* **Malicious Embezzlement Exception:** A transfer of official company-created project assets (such as an official project GitHub repository or project-specific website domain) only occurs if a founder commits verified, intentional fraud or embezzlement under corporate law. In all normal business outcomes, the founder's property is untouchable.
-
----
-
-# 6. Technical Specifications and Solana Anchor Layouts
-
-### 6.1 Program Derived Address (PDA) Matrix
-
-All PDA derivations use static string literals and fixed-width byte components to prevent hash collision vulnerabilities.
-
-| Account Name | Seeds (Borsh Specification) | Space (Allocated) | Owner Program | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| `GlobalConfig` | `[b"global_config"]` | **120 Bytes** | Ventrion Core | Protocol-wide parameters & fees |
-| `VentureState` | `[b"venture", venture_token_mint]` | **368 Bytes** | Ventrion Core | Master company state machine |
-| `MasterLockVault` | `[b"master_lock_vault", venture_key]` | **SPL Token Account**| SPL Token Program | Custody of all 1,000,000 shares |
-| `FounderVesting` | `[b"founder_vesting", venture_key, founder_key]`| **168 Bytes** | Ventrion Core | Custom vesting schedule tracking |
-| `FundingRound` | `[b"funding_round", venture_key, &[round_index]]`| **184 Bytes** | Ventrion Core | Terms and targets for round N |
-| `RoundInvestorRecord`| `[b"investor_record", funding_round_key, user_key]`| **168 Bytes** | Ventrion Core | Primary raise contribution receipts |
-| `MilestoneEscrow` | `[b"milestone_escrow", funding_round_key]` | **808 Bytes** | Ventrion Core | Milestone timeline and delivery state |
-| `MilestoneUsdcVault`| `[b"milestone_usdc_vault", milestone_escrow_key]`| **SPL Token Account**| SPL Token Program | Escrowed milestone USDC funds |
-| `VentureVerificationVote`| `[b"verification_vote", venture_key]` | **96 Bytes** | Ventrion Core | On-chain $VENT staker approval ballot |
-| `InvestorVault` | `[b"investor_vault", venture_key, investor_key]` | **184 Bytes** | Ventrion Core | Staking vault and dividend ledger |
-| `DlmmCustody` | `[b"dlmm_custody", venture_key]` | **SPL Token Account**| Ventrion Core | Permanent locked LP position custody |
-| `LegalSetupVault` | `[b"legal_setup_vault", venture_key]` | **SPL Token Account**| SPL Token Program | Holds legal setup fee until entity confirmation |
-
----
-
-### 6.2 State Machine Progression
-
-Every venture progresses through five deterministic on-chain states under strict sequential round execution:
-
-1. `GenesisInitialized`: 1,000,000 shares minted into `MasterLockVault`. Mint authority revoked. Initial funding round 0 created.
-2. `PrimaryRaiseActive`: Meteora flat curve open for USDC deposits and 100% sellbacks outside US/DE.
-3. `CapReached`: Target funding cap reached. Awaiting $VENT staker legal verification.
-4. `GraduatedDLMMLive`: Atomic graduation executed (`execute_atomic_graduation`): 17% DLMM seeded and locked, legal fee paid, upfront runway transferred, and remaining funds locked in tranche-specific `MilestoneEscrow`.
-5. `OperationalMature`: All milestone tranches for the active round delivered and released. `is_round_active` resets to false, permitting sequential creation of round N+1.
-
----
-
-### 6.3 Exact Account Memory Layouts
-
-All structs enforce exact byte counts including the 8-byte Anchor discriminator:
-
-#### 1. Global Config (`GlobalConfig`: 120 Bytes = 8B Disc + 112B Fields)
-```rust
-#[account]
-pub struct GlobalConfig {
-    pub admin: Pubkey,                       // 32 bytes
-    pub fee_treasury: Pubkey,                // 32 bytes
-    pub vent_staking_pool: Pubkey,           // 32 bytes: Mother token governance pool
-    pub protocol_fee_bps: u16,               // 2 bytes: e.g. 50 (0.5%)
-    pub min_approval_bps: u16,               // 2 bytes: e.g. 5000 (50.0% majority)
-    pub graduation_timeout_seconds: i64,     // 8 bytes: 172,800 (48 hours)
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 3],                  // 3 bytes: Alignment padding (Total 112B fields)
-}
-```
-
-#### 2. Venture State (`VentureState`: 368 Bytes = 8B Disc + 360B Fields)
-```rust
-#[account]
-pub struct VentureState {
-    pub global_config: Pubkey,               // 32 bytes
-    pub founder: Pubkey,                     // 32 bytes
-    pub venture_token_mint: Pubkey,          // 32 bytes
-    pub usdc_mint: Pubkey,                   // 32 bytes
-    pub master_lock_vault: Pubkey,           // 32 bytes
-    pub dlmm_custody: Pubkey,                // 32 bytes
-    pub meteora_dlmm_pool: Pubkey,           // 32 bytes
-    pub midao_llc_id: [u8; 32],              // 32 bytes: Registry ID
-    pub legal_contract_hash: [u8; 32],       // 32 bytes: SHA256 of Operating Agreement
-    pub total_supply: u64,                   // 8 bytes: Exactly 1,000,000 * 10^6
-    pub circulating_public_float: u64,       // 8 bytes
-    pub total_staked_in_vaults: u64,         // 8 bytes
-    pub founder_vesting_tokens: u64,         // 8 bytes
-    pub current_round_index: u8,             // 1 byte
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 38],                 // 38 bytes: Exact alignment padding
-}
-```
-
-#### 3. Founder Vesting Account (`FounderVesting`: 168 Bytes = 8B Disc + 160B Fields)
-```rust
-#[account]
-pub struct FounderVesting {
-    pub venture: Pubkey,                     // 32 bytes
-    pub founder: Pubkey,                     // 32 bytes
-    pub vesting_token_vault: Pubkey,         // 32 bytes
-    pub total_allocated_tokens: u64,         // 8 bytes: e.g. 700,000 * 10^6
-    pub total_claimed_tokens: u64,           // 8 bytes
-    pub start_timestamp: i64,                // 8 bytes
-    pub cliff_duration_seconds: i64,         // 8 bytes: Founder chosen cliff
-    pub total_duration_seconds: i64,         // 8 bytes: Founder chosen duration (1 to 3 years)
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 23],                 // 23 bytes: Alignment padding
-}
-```
-
-#### 4. Milestone Escrow Account (`MilestoneEscrow`: 808 Bytes = 8B Disc + 800B Fields)
-```rust
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
-#[repr(u8)]
-pub enum MilestoneStatus {
-    #[default]
-    Pending = 0,
-    Proposed = 1,
-    Approved = 2,
-    Released = 3,
-    Vetoed = 4,
-    Disputed = 5,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Default, Debug)]
-pub struct MilestoneItem {
-    pub id: u8,                              // 1 byte
-    pub percentage_bps: u16,                 // 2 bytes: Tranche percentage (e.g. 3000 = 30%)
-    pub amount_usdc: u64,                    // 8 bytes: USDC allocation for this milestone
-    pub target_completion_date: i64,         // 8 bytes
-    pub proposed_at: i64,                    // 8 bytes: Timestamp when founder proposed
-    pub veto_deadline: i64,                  // 8 bytes: proposed_at + 7 days
-    pub votes_for: u64,                      // 8 bytes: Backer tokens voting approval (>50%)
-    pub votes_against: u64,                  // 8 bytes: Backer tokens voting veto (>33.33%)
-    pub status: MilestoneStatus,             // 1 byte
-    pub amendment_count: u8,                 // 1 byte: Revision counter for amends (max 3)
-    pub _reserved: [u8; 6],                  // 6 bytes: Exact alignment
-} // 64 bytes per milestone * 10 = 640 bytes
-
-#[account]
-pub struct MilestoneEscrow {
-    pub venture: Pubkey,                     // 32 bytes: Parent VentureState
-    pub funding_round: Pubkey,               // 32 bytes: Associated FundingRound PDA
-    pub escrow_usdc_vault: Pubkey,           // 32 bytes: Vault holding non-upfront raise funds
-    pub total_allocated_usdc: u64,           // 8 bytes: Initial escrow capital
-    pub total_released_usdc: u64,            // 8 bytes: Cumulative disbursed to treasury
-    pub total_ragequit_usdc: u64,            // 8 bytes: Cumulative refunded via ragequit
-    pub primary_tokens_quorum_base: u64,     // 8 bytes: Total round tokens sold initially
-    pub primary_tokens_remaining: u64,       // 8 bytes: Active round tokens (decrements on ragequit)
-    pub current_milestone_index: u8,         // 1 byte
-    pub milestones_count: u8,                // 1 byte: Up to 10 milestone tranches
-    pub bump: u8,                            // 1 byte: PDA bump
-    pub _pad: [u8; 5],                       // 5 bytes: 8-byte alignment before array
-    pub milestones: [MilestoneItem; 10],     // 640 bytes
-    pub _reserved: [u8; 24],                 // 24 bytes: Alignment padding (800B fields total)
-}
-```
-
-#### 5. Funding Round Account (`FundingRound`: 184 Bytes = 8B Disc + 176B Fields)
-```rust
-#[account]
-pub struct FundingRound {
-    pub venture: Pubkey,                     // 32 bytes
-    pub round_index: u8,                     // 1 byte
-    pub target_cap_usdc: u64,                // 8 bytes
-    pub total_raised_usdc: u64,              // 8 bytes
-    pub upfront_working_capital_bps: u16,    // 2 bytes: e.g. 1500 to 2500 (15% to 25%)
-    pub round_status: u8,                    // 1 byte
-    pub graduation_initiated_ts: i64,        // 8 bytes: Timestamp of Step 4A
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 115],                // 115 bytes: Alignment padding
-}
-```
-
-#### 6. Round Investor Record (`RoundInvestorRecord`: 96 Bytes = 8B Disc + 88B Fields)
-```rust
-#[account]
-pub struct RoundInvestorRecord {
-    pub funding_round: Pubkey,               // 32 bytes
-    pub investor: Pubkey,                    // 32 bytes
-    pub usdc_contributed: u64,               // 8 bytes
-    pub shares_allocated: u64,               // 8 bytes
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 7],                  // 7 bytes: Alignment padding
-}
-```
-
-#### 7. Venture Verification Vote (`VentureVerificationVote`: 96 Bytes = 8B Disc + 88B Fields)
-```rust
-#[account]
-pub struct VentureVerificationVote {
-    pub venture: Pubkey,                     // 32 bytes
-    pub for_weight: u64,                     // 8 bytes: $VENT staker yes-votes
-    pub against_weight: u64,                 // 8 bytes: $VENT staker no-votes
-    pub voting_end_timestamp: i64,           // 8 bytes: Voting deadline
-    pub is_finalized: bool,                  // 1 byte
-    pub is_approved: bool,                   // 1 byte
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 29],                 // 29 bytes: Alignment padding (Total 88B fields)
-}
-```
-
-#### 8. Investor Staking Vault (`InvestorVault`: 184 Bytes = 8B Disc + 176B Fields)
-```rust
-#[account]
-pub struct InvestorVault {
-    pub venture: Pubkey,                     // 32 bytes
-    pub investor: Pubkey,                    // 32 bytes
-    pub staked_amount: u64,                  // 8 bytes
-    pub lock_start_timestamp: i64,           // 8 bytes
-    pub lock_end_timestamp: i64,             // 8 bytes
-    pub lock_duration_seconds: i64,          // 8 bytes
-    pub multiplier_bps: u16,                 // 2 bytes: 10,000 to 30,000 (1.0x to 3.0x)
-    pub effective_weight: u128,              // 16 bytes: staked_amount * multiplier_bps
-    pub last_acc_yield: u128,                // 16 bytes: O(1) Checkpoint
-    pub total_claimed_usdc: u64,             // 8 bytes
-    pub is_active: bool,                     // 1 byte
-    pub bump: u8,                            // 1 byte
-    pub _reserved: [u8; 36],                 // 36 bytes: Alignment padding
-}
-```
-
----
-
-### 6.4 Constant-Time O(1) Yield Math (Overflow-Safe u256)
-
-To completely eliminate the risk of `u128` arithmetic overflow, the scaling factor is calibrated to $10^{12}$, and all intermediate multiplications execute in 256-bit precision:
-
-#### Global Checkpoint Update:
-When marketing rewards or trading fees arrive:
-$$\Delta \text{Acc} = \left\lfloor \frac{\text{USDC}_{\text{inflow}} \times 10^{12} \times 10,000}{\sum_{j} W_j} \right\rfloor$$
-$$\text{Acc}_{\text{global}} \leftarrow \text{Acc}_{\text{global}} + \Delta \text{Acc}$$
-
-#### Individual Claim:
-Using intermediate 256-bit unsigned math:
-$$\text{Claimable USDC}_i = \left\lfloor \frac{W_i \times (\text{Acc}_{\text{global}} - \text{Acc}_{\text{user}, i})}{10^{12} \times 10,000} \right\rfloor$$
-$$\text{Acc}_{\text{user}, i} \leftarrow \text{Acc}_{\text{global}}$$
-
-Under $10^{12}$ scaling and `u256` multiplication, maximum intermediate products never exceed $10^{28}$, leaving over 10 orders of magnitude headroom below `u128::MAX` ($3.4 \times 10^{38}$) and guaranteeing absolute overflow safety.
-
----
-
-### 6.5 Compute Unit Profile and Zero-Loop Guarantee
-
-| Instruction | Operations Executed | Total Compute Units | Headroom vs 200k Limit |
+| Account | PDA Seeds (Borsh Specification) | Owner | Responsibility |
 | :--- | :--- | :--- | :--- |
-| `initialize_global_config` | Admin setup + Treasury configuration | **~5,400 CU** | 97.3% Headroom |
-| `launch_venture_genesis` | Token mint (1M fixed) + Revoke mint auth | **~38,200 CU** | 80.9% Headroom |
-| `create_funding_round` | Sequential round allocation + Mutex set | **~12,100 CU** | 93.9% Headroom |
-| `contribute_funding_round` | DBC Flat Curve buy + $VENT-R0 receipt mint | **~19,400 CU** | 90.3% Headroom |
-| `cast_verification_vote` | $VENT staker legal approval vote | **~11,200 CU** | 94.4% Headroom |
-| `finalize_verification` | Verification vote tally + Status update | **~9,800 CU** | 95.1% Headroom |
-| `execute_atomic_graduation` | 17% DLMM seed + Legal fee + Escrow funding | **~135,000 CU** | 32.5% Headroom |
-| `redeem_shares` | 1:1 Receipt pull-burn + Common shares claim | **~18,500 CU** | 90.7% Headroom |
-| `redeem_and_stake_shares` | 1:1 Receipt pull-burn + Direct vault stake | **~24,800 CU** | 87.6% Headroom |
-| `founder_claim_vesting` | Linear unlock math + Share transfer | **~14,200 CU** | 92.9% Headroom |
-| `propose_milestone` | Founder milestone submission & 7d window init | **~9,800 CU** | 95.1% Headroom |
-| `vote_milestone` | Primary backer approval / veto cast | **~14,200 CU** | 92.9% Headroom |
-| `execute_milestone_release` | Dual-path verification (>50% or <=33% veto) + payout | **~16,500 CU** | 91.7% Headroom |
-| `amend_milestone` | Founder rework resubmission (up to 3 cure cycles) | **~11,400 CU** | 94.3% Headroom |
-| `ragequit_milestone_escrow` | Tranche-specific pro-rata USDC refund on breach | **~18,200 CU** | 90.9% Headroom |
-| `deposit_investor_shares` | Token custody transfer + Weight update | **~12,600 CU** | 93.7% Headroom |
-| `claim_investor_dividends` | O(1) Accumulator math + USDC transfer | **~8,380 CU** | 95.8% Headroom |
-| `unstake_investor_shares` | Vault withdrawal + Final dividend settlement | **~16,100 CU** | 91.9% Headroom |
-| `deposit_ecosystem_fees` | B2B POS fee deposit + O(1) Accumulator bump | **~9,200 CU** | 95.4% Headroom |
+| `GlobalConfig` | `[b"global_config"]` | `ventrion_protocol` | Protocol governance parameters & fee targets |
+| `VentStakeVault` | `[b"vent_stake_vault"]` | SPL Token Program | Vault holding all staked $VENT governance tokens |
+| `VentStakePosition` | `[b"vent_stake", staker_pubkey]` | `ventrion_protocol` | Staker's voting power & lock timestamp |
+| `VentureState` | `[b"venture", venture_token_mint]` | `ventrion_protocol` | Master company state machine & metrics |
+| `MasterLockVault` | `[b"master_lock_vault", venture_pda]` | SPL Token Program | Custody of all 1,000,000 common shares |
+| `LegalSetupVault` | `[b"legal_setup_vault", venture_pda]` | SPL Token Program | Escrow for legal corporate incorporation fees |
+| `DividendVault` | `[b"dividend_vault", venture_pda]` | SPL Token Program | Accumulator pool for USDC dividend yields |
+| `StakedSharesVault` | `[b"staked_shares_vault", venture_pda]` | SPL Token Program | Custody for all staked company common shares |
+| `FounderVesting` | `[b"founder_vesting", venture_pda, founder]` | `ventrion_protocol` | Linear vesting schedule and cliff tracker |
+| `VestingVault` | `[b"vesting_vault", venture_pda]` | SPL Token Program | Custody vault for unvested founder shares |
+| `FundingRound` | `[b"funding_round", venture_pda, &[round_index]]` | `ventrion_protocol` | Terms, targets, and status of funding round N |
+| `ReceiptMint` | `[b"receipt_mint", funding_round_pda]` | SPL Token Program | Non-transferable $VENT-RN primary receipt mint |
+| `RoundUsdcVault` | `[b"round_usdc_vault", funding_round_pda]` | SPL Token Program | Flat-curve escrow holding primary USDC |
+| `RoundInvestorRecord`| `[b"round_record", funding_round_pda, investor]`| `ventrion_protocol` | Individual investor contributions and votes |
+| `VerificationVote` | `[b"verification_vote", funding_round_pda]` | `ventrion_protocol` | 14-day $VENT verification ballot tallies |
+| `StakerVoteRecord` | `[b"staker_vote", round_pda, staker_pubkey]` | `ventrion_protocol` | Records individual staker ballot decisions |
+| `MilestoneEscrow` | `[b"milestone_escrow", funding_round_pda]` | `ventrion_protocol` | Tranche-specific milestone governance state |
+| `MilestoneUsdcVault` | `[b"milestone_usdc_vault", milestone_escrow_pda]`| SPL Token Program | Escrow custody vault for unreleased milestones |
+| `InvestorVault` | `[b"investor_vault", venture_pda, investor]` | `ventrion_protocol` | Individual investor share staking & dividend ledger |
+| `DlmmCustody` | `[b"dlmm_custody", venture_pda]` | `ventrion_protocol` | Permanent custody of locked Meteora DLMM LP |
+| `CustodyUsdc` | `[b"custody_usdc", venture_pda]` | SPL Token Program | Temporary USDC staging vault during graduation |
+| `CustodyShares` | `[b"custody_shares", venture_pda]` | SPL Token Program | Temporary share staging vault during graduation |
 
 ---
 
-# 7. Security Rules and Error Codes
+### 2. State Machine Progression
 
-### 7.1 Attack Vectors and Built-In Defenses
-
-* **Hostile Takeover by Competitor:** Competitors who accumulate circulating tokens cannot vote to dissolve the operating business or seize assets. They only own public shares and fee rights.
-* **Founder Day-One Dump:** Founder shares are held in `FounderVesting` with an automated cliff. The code prohibits early transfers.
-* **Liquidity Rugpull:** The 17% Meteora DLMM LP position NFT is custodied in `DlmmCustody` with permanent withdrawal locks.
-* **Milestone Treasury Protection:** Escrowed USDC can only be released upon on-chain backer consensus (>50% active approval or 7-day optimistic window with <33.33% veto). Unapproved tranches remain locked in the contract, preventing unauthorized cash dissipation.
-* **Continuous Secondary Liquidity:** Investors do not face stranded liquidity or rely on hostile protocol liquidation; 17% of round capital is permanently locked in Meteora DLMM for continuous 24/7 trading.
-* **Tranche-Specific Protection on Breach:** If a milestone suffers an unresolvable breach, only unspent funds of that specific round are unlocked for pro-rata refund via `ragequit_milestone_escrow`. Shares return to `MasterLockVault` as treasury equity with zero founder burn.
-* **Sequential Round Isolation:** Funding rounds cannot execute in parallel (`is_round_active` mutex). Seed buyers cannot drain liquidity from Series A or Series B rounds.
-
-### 7.2 Program Error Code Reference
-
-```rust
-#[error_code]
-pub enum VentrionError {
-    #[msg("6000: Quote currency mint must match canonical USDC.")]
-    InvalidUsdcMint,
-    #[msg("6001: Target funding cap must be greater than zero.")]
-    ZeroTargetCap,
-    #[msg("6002: Lock commitment duration must be at least 1 day.")]
-    LockDurationTooShort,
-    #[msg("6003: Founder vesting cliff has not elapsed.")]
-    FounderCliffNotMet,
-    #[msg("6004: Funding round is not currently active.")]
-    RoundNotActive,
-    #[msg("6005: Round is not eligible for graduation.")]
-    RoundNotEligibleForGraduation,
-    #[msg("6006: Round is not eligible for refund.")]
-    RoundNotEligibleForRefund,
-    #[msg("6007: Milestone is not eligible for release.")]
-    MilestoneNotEligibleForRelease,
-    #[msg("6008: Previous funding round is still active.")]
-    RoundAlreadyActive,
-    #[msg("6009: Math overflow occurred during financial precision calculation.")]
-    MathOverflow,
-    #[msg("6010: Zero claimable rewards available.")]
-    NoDividendsOwed,
-    #[msg("6011: Global supply invariant violated. Total shares must equal 1,000,000.")]
-    SupplyInvariantViolated,
-    #[msg("6012: Caller lacks required authority for this instruction.")]
-    Unauthorized,
-    #[msg("6013: Position is still within lock commitment period.")]
-    LockNotExpired,
-    #[msg("6014: Milestone is not currently in proposed status.")]
-    MilestoneNotProposed,
-    #[msg("6015: Venture has not received legal approval by $VENT stakers.")]
-    VentureNotApproved,
-    #[msg("6016: Verification vote is currently active.")]
-    VerificationVoteActive,
-    #[msg("6017: CPI to Meteora DLMM initialize_lb_pair failed.")]
-    DlmmPoolInitFailed,
-    #[msg("6018: CPI to Meteora DLMM add_liquidity_by_strategy failed.")]
-    DlmmLiquiditySeedFailed,
-    #[msg("6019: Upfront working capital percentage out of bounds (10% to 25% allowed).")]
-    InvalidUpfrontCapitalBps,
-    #[msg("6020: Milestones count out of bounds. Exactly 1 to 10 milestone tranches permitted.")]
-    InvalidMilestoneCount,
-    #[msg("6021: Total allocation percentage sum must equal exactly 10,000 basis points.")]
-    InvalidAllocationSum,
-    #[msg("6022: Milestone amendment limit exceeded (maximum 3 revisions allowed).")]
-    AmendmentLimitExceeded,
-    #[msg("6023: Provided Meteora program ID does not match canonical deployment.")]
-    InvalidMeteoraProgram,
-    #[msg("6024: Primary receipt token balance insufficient for share redemption.")]
-    InsufficientReceiptBalance,
-    #[msg("6025: Legal Operating Agreement SHA256 contract hash cannot be empty.")]
-    EmptyLegalContractHash,
-}
+```
+[GenesisInitialized] ──> [PrimaryRaiseActive] ──> [CapReached] ──┬──> [VerifiedApproved] ──> [GraduatedDLMMLive] ──> [OperationalMature]
+                                                                 │
+                                                                 └──> [RefundActive] (100% USDC Backer Refund)
 ```
 
----
-
-# 8. Developer Implementation and Integration
-
-### 8.1 SDK Overview
-The official `@ventrion/sdk` provides a typed TypeScript client to interact with all on-chain programs:
-
-```typescript
-import { Connection, PublicKey } from "@solana/web3.js";
-import { AnchorProvider, Program } from "@coral-xyz/anchor";
-import { VentrionCore } from "./types/ventrion_core";
-
-export class VentrionClient {
-  public program: Program<VentrionCore>;
-
-  constructor(
-    public connection: Connection,
-    public provider: AnchorProvider
-  ) {
-    this.program = new Program<VentrionCore>(IDL, provider);
-  }
-
-  public getVenturePda(mint: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("venture"), mint.toBuffer()],
-      this.program.programId
-    );
-  }
-
-  public getFounderVestingPda(venture: PublicKey, founder: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("founder_vesting"), venture.toBuffer(), founder.toBuffer()],
-      this.program.programId
-    );
-  }
-
-  public getMilestoneEscrowPda(fundingRound: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("milestone_escrow"), fundingRound.toBuffer()],
-      this.program.programId
-    );
-  }
-
-  public getInvestorVaultPda(venture: PublicKey, investor: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("investor_vault"), venture.toBuffer(), investor.toBuffer()],
-      this.program.programId
-    );
-  }
-}
-```
+1. **`GenesisInitialized`**: 1,000,000 shares minted into `MasterLockVault`. Mint authority permanently revoked. Funding round 0 created.
+2. **`PrimaryRaiseActive`**: Founder commits milestone schedule. Flat curve opens for contributions and 100% sellbacks.
+3. **`CapReached`**: Funding target reached exactly. Curve freezes; 14-day $VENT verification vote begins.
+4. **`VerifiedApproved`**: $VENT stakers pass verification with >50% majority. Graduation unlocked.
+5. **`RefundActive`**: Verification rejected or timed out. Primary backers withdraw 100% of deposited USDC.
+6. **`GraduatedDLMMLive`**: 17.0% permanent DLMM liquidity seeded; legal fee paid; upfront runway transferred; milestone escrow funded; 1:1 receipt redemption open.
+7. **`OperationalMature`**: All milestone tranches of the active round verified and released.
 
 ---
 
-### 8.2 Complete End-to-End TypeScript Lifecycle
+### 3. Program Error Code Reference
 
-```typescript
-import { Connection, Keypair } from "@solana/web3.js";
-import { AnchorProvider, Wallet, BN } from "@coral-xyz/anchor";
-import { VentrionClient } from "@ventrion/sdk";
-
-async function runVentrionLifecycle() {
-  const connection = new Connection("https://api.devnet.solana.com", "confirmed");
-  const founder = Keypair.generate();
-  const investor = Keypair.generate();
-  const client = new VentrionClient(connection, new AnchorProvider(connection, new Wallet(founder), {}));
-
-  console.log("1. Initializing Venture (1,000,000 Common Shares Fixed)...");
-  const ventureMint = Keypair.generate();
-  const [venturePda] = client.getVenturePda(ventureMint.publicKey);
-
-  // Founder launches venture with custom vesting, milestones, and signed legal agreement
-  await client.program.methods
-    .launchVentureAllInOne({
-      name: "Solana Bistro & Roastery",
-      symbol: "BSTR",
-      midaoLlcId: Array.from(Buffer.alloc(32, 7)),
-      legalContractHash: Array.from(Buffer.alloc(32, 1)),
-      targetCapUsdc: new BN(50_000 * 10 ** 6), // $50,000 USDC raise
-      founderShares: new BN(700_000 * 10 ** 6), // 70% Founder Allocation
-      founderLockMonths: 36,                    // Founder chose 3-year commitment
-      founderCliffMonths: 12,                   // 12-month cliff
-      upfrontWorkingCapitalBps: 1500,           // Founder chose 15% upfront for initial setup
-    })
-    .accounts({
-      venture: venturePda,
-      founder: founder.publicKey,
-      // ... token mints and system vaults
-    })
-    .signers([founder])
-    .rpc();
-
-  console.log("2. Primary Backer deposits $3,000 USDC on the Flat Curve...");
-  // contributePrimaryRound is a typed SDK wrapper around the Meteora Dynamic Bonding Curve (DBC) swap CPI
-  await client.program.methods
-    .contributePrimaryRound(new BN(5_000 * 10 ** 6))
-    .accounts({
-      venture: venturePda,
-      investor: investor.publicKey,
-    })
-    .signers([investor])
-    .rpc();
-
-  console.log("3. Target cap reached. Executing atomic graduation...");
-  // Atomic graduation: 17% DLMM seed, legal fee, upfront runway, and milestone escrow seed in one TX
-  await client.program.methods
-    .executeAtomicGraduation()
-    .accounts({
-      venture: venturePda,
-      fundingRound: fundingRoundPda,
-      globalConfig: globalConfigPda,
-      masterLockVault: masterLockVaultPda,
-      dlmmCustody: dlmmCustodyPda,
-      legalSetupVault: legalSetupVaultPda,
-      escrowUsdcVault: escrowUsdcVaultPda,
-      opcoTreasury: opcoTreasury.publicKey,
-    })
-    .rpc();
-
-  console.log("4. Backer redeems round receipts 1:1 for common shares...");
-  await client.program.methods
-    .redeemShares(new BN(5_000 * 10 ** 6))
-    .accounts({
-      venture: venturePda,
-      fundingRound: fundingRoundPda,
-      userReceiptAccount: userReceiptAta,
-      userSharesAccount: userSharesAta,
-      user: investor.publicKey,
-    })
-    .signers([investor])
-    .rpc();
-
-  console.log("5. Backer stakes common shares for 1 Year (2.0x Conviction Multiplier)...");
-  const [investorVaultPda] = client.getInvestorVaultPda(venturePda, investor.publicKey);
-  await client.program.methods
-    .depositInvestorShares(new BN(5_000 * 10 ** 6), new BN(365 * 86400))
-    .accounts({
-      venture: venturePda,
-      investorVault: investorVaultPda,
-      investor: investor.publicKey,
-    })
-    .signers([investor])
-    .rpc();
-
-  console.log("6. Founder proposes Milestone 0 for governance review (starts 7-day window)...");
-  await client.program.methods
-    .proposeMilestone(0)
-    .accounts({
-      venture: venturePda,
-      fundingRound: fundingRoundPda,
-      milestoneEscrow: milestoneEscrowPda,
-      founder: founder.publicKey,
-    })
-    .signers([founder])
-    .rpc();
-
-  console.log("7. Primary Backer votes YES on Milestone 0 (>50% active approval or <33.33% veto)...");
-  await client.program.methods
-    .voteMilestone(0, true)
-    .accounts({
-      venture: venturePda,
-      fundingRound: fundingRoundPda,
-      milestoneEscrow: milestoneEscrowPda,
-      roundInvestorRecord: roundInvestorRecordPda,
-      investor: investor.publicKey,
-    })
-    .signers([investor])
-    .rpc();
-
-  console.log("8. Milestone approved. Releasing tranche to OpCo treasury...");
-  await client.program.methods
-    .executeMilestoneRelease(0)
-    .accounts({
-      venture: venturePda,
-      fundingRound: fundingRoundPda,
-      milestoneEscrow: milestoneEscrowPda,
-      escrowUsdcVault: escrowUsdcVaultPda,
-      opcoTreasury: opcoTreasury.publicKey,
-    })
-    .rpc();
-
-  console.log("Ventrion lifecycle active: 17% LP locked, milestone escrow secured, orderly corporate governance.");
-}
-
-runVentrionLifecycle().catch(console.error);
-```
+| Code | Error Name | Canonical Description |
+| :--- | :--- | :--- |
+| `6000` | `InvalidUsdcMint` | Quote currency mint must match canonical USDC. |
+| `6001` | `ZeroTargetCap` | Target funding cap must be greater than zero. |
+| `6002` | `LockDurationTooShort` | Lock commitment duration out of bounds. |
+| `6003` | `FounderCliffNotMet` | Founder vesting cliff has not elapsed. |
+| `6004` | `RoundNotActive` | Funding round is not currently active. |
+| `6005` | `RoundNotEligibleForGraduation` | Round is not eligible for graduation. |
+| `6006` | `RoundNotEligibleForRefund` | Round is not eligible for refund. |
+| `6007` | `MilestoneNotEligibleForRelease`| Milestone is not eligible for release. |
+| `6008` | `RoundAlreadyActive` | Previous funding round is still active. |
+| `6009` | `MathOverflow` | Math overflow occurred during financial precision calculation. |
+| `6010` | `NoDividendsOwed` | Zero claimable rewards available. |
+| `6011` | `SupplyInvariantViolated` | Global supply invariant violated. Total shares must equal 1,000,000. |
+| `6012` | `Unauthorized` | Caller lacks required authority for this instruction. |
+| `6013` | `LockNotExpired` | Position is still within lock commitment period. |
+| `6014` | `MilestoneNotProposed` | Milestone is not currently in proposed status. |
+| `6015` | `VentureNotApproved` | Venture has not received legal approval by $VENT stakers. |
+| `6016` | `VerificationVoteActive` | Verification vote is currently active. |
+| `6017` | `DlmmPoolInitFailed` | CPI to Meteora DLMM pool initialization failed. |
+| `6018` | `DlmmLiquiditySeedFailed` | CPI to Meteora DLMM add_liquidity_by_weight2 failed. |
+| `6019` | `InvalidUpfrontCapitalBps` | Upfront working capital percentage out of bounds (max 15%). |
+| `6020` | `InvalidMilestoneCount` | Milestones count out of bounds. Exactly 1 to 10 tranches permitted. |
+| `6021` | `InvalidAllocationSum` | Total allocation percentage sum must equal exactly 10,000 basis points. |
+| `6022` | `AmendmentLimitExceeded` | Milestone amendment limit exceeded (maximum 3 revisions allowed). |
+| `6023` | `InvalidMeteoraProgram` | Provided Meteora program ID does not match canonical deployment. |
+| `6024` | `InsufficientReceiptBalance` | Primary receipt token balance insufficient for share redemption. |
+| `6025` | `EmptyLegalContractHash` | Legal Operating Agreement SHA256 contract hash cannot be empty. |
+| `6026` | `InvalidRoundIndex` | Invalid round index. Rounds must increment sequentially. |
+| `6027` | `ZeroAmount` | Amount must be greater than zero. |
+| `6028` | `ExceedsHardCap` | Contribution would exceed the round hard cap. |
+| `6029` | `InexactPriceConversion` | Amount does not convert to an exact number of share atoms. |
+| `6030` | `InvalidPrice` | Flat price per share must be greater than zero. |
+| `6031` | `InvalidRoundEconomics` | Round economics invalid: legal fee, DLMM seed and runway exceed raise. |
+| `6032` | `InsufficientTreasuryShares` | Master lock vault does not hold enough shares for this round. |
+| `6033` | `VerificationVoteClosed` | Verification vote window is closed. |
+| `6034` | `VerificationAlreadyFinalized` | Verification vote has already been finalized. |
+| `6035` | `InsufficientStakedBalance` | Caller has no staked $VENT voting power. |
+| `6036` | `InvalidRoundStatus` | Round is not in the expected status for this instruction. |
+| `6037` | `InvalidVentureStatus` | Venture is not in the expected status for this instruction. |
+| `6038` | `MilestonesAlreadyConfigured` | Milestones have already been configured for this round. |
+| `6039` | `InvalidMilestoneSchedule` | Milestone target dates must be in the future and strictly increasing. |
+| `6040` | `InvalidMilestoneId` | Milestone index out of range. |
+| `6041` | `MilestoneOutOfOrder` | Milestones must be processed sequentially. |
+| `6042` | `MilestoneAlreadyVoted` | Backer already voted on this milestone review cycle. |
+| `6043` | `VetoPeriodExpired` | Milestone veto window has expired. |
+| `6044` | `NoPrimaryVotingWeight` | Caller holds no primary backer voting weight for this round. |
+| `6045` | `RagequitNotAllowed` | Ragequit is only possible for breached or overdue milestones. |
+| `6046` | `InvalidMeteoraAccount` | Account is not owned by Meteora DLMM or has wrong type. |
+| `6047` | `InvalidMeteoraPool` | Meteora DLMM pool address does not match canonical derivation. |
+| `6048` | `DlmmPriceMismatch` | DLMM active bin does not match the flat round price. |
+| `6049` | `DlmmBinArrayOutOfRange` | DLMM bin array index lies outside default bitmap range. |
+| `6050` | `InvalidDlmmBinArray` | Provided DLMM bin array does not match expected derivation. |
+| `6051` | `DlmmNotPrepared` | DLMM pool has not been prepared for this round. |
+| `6052` | `DlmmFeeClaimFailed` | CPI to Meteora DLMM claim_fee2 failed. |
+| `6053` | `InvalidParameter` | Invalid governance or protocol parameter. |
+| `6054` | `NoActiveStakers` | Venture has no active stakers to receive dividends. |
+| `6055` | `InsufficientLegalVaultBalance` | Legal setup vault balance insufficient. |
+| `6056` | `InvalidTokenAccount` | Account mint or owner does not match expected value. |
+| `6057` | `NothingToRefund` | Nothing to refund for this backer. |
+| `6058` | `NothingVested` | Founder vesting has nothing claimable. |
 
 ---
 
-*Ventrion Protocol ($VENT): The Sovereign Decentralized Equity Operating System on Solana.*  
-*Official Release Specification (October 2026).*
+# Verification and Testing Standards
+
+The Ventrion Protocol smart contracts have undergone rigorous testing:
+* **Zero-Mock Policy:** Validated on Solana Devnet with true Ed25519 keypairs, actual Meteora DLMM liquidity pools, and live CPI invocations.
+* **100% Invariant Enforcement:** Mathematical proofs verify that total share supply never exceeds 1,000,000, primary receipts always match allocated vault shares, and O(1) dividend distributions never truncate or overflow.
+* **All 10 Lifecycle Stages Verified:** Complete end-to-end lifecycle verified via automated TypeScript test suites (`anchor/tests/e2e_real_lifecycle.spec.ts`) and live Devnet scripts.
+
+---
+
+# Conclusion
+
+Ventrion transforms token launches from speculative gambling into a secure, legally-compliant corporate financing standard. By combining fixed common share equity, canonical USDC denomination, decentralized $VENT governance verification, permanent Meteora DLMM liquidity, and tranche-specific milestone escrows, Ventrion establishes the foundational infrastructure for real-world enterprise on Solana.

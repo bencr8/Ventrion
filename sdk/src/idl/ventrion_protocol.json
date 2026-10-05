@@ -1,0 +1,4557 @@
+{
+  "address": "37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8",
+  "metadata": {
+    "name": "ventrion_protocol",
+    "version": "1.0.0",
+    "spec": "0.1.0",
+    "description": "Ventrion Protocol ($VENT) - Regulated Security Token Escrow, DLMM Graduation, and Governance Engine"
+  },
+  "instructions": [
+    {
+      "name": "initialize_global_config",
+      "discriminator": [
+        113,
+        216,
+        122,
+        131,
+        225,
+        209,
+        22,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "vent_mint"
+        },
+        {
+          "name": "vent_stake_vault",
+          "writable": true
+        },
+        {
+          "name": "dlmm_preset_parameter"
+        },
+        {
+          "name": "program"
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "Only the program upgrade authority may bootstrap the protocol."
+          ]
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "GlobalConfigParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_global_config",
+      "discriminator": [
+        164,
+        84,
+        130,
+        189,
+        111,
+        58,
+        250,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "global_config",
+          "writable": true
+        },
+        {
+          "name": "dlmm_preset_parameter"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "GlobalConfigParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "release_legal_setup_fee",
+      "discriminator": [
+        120,
+        203,
+        102,
+        173,
+        94,
+        74,
+        154,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "legal_setup_authority",
+          "signer": true
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "legal_setup_vault",
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "docs": [
+            "USDC account of the legal service provider (e.g. MIDAO)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "stake_vent",
+      "discriminator": [
+        20,
+        245,
+        42,
+        204,
+        120,
+        57,
+        175,
+        104
+      ],
+      "accounts": [
+        {
+          "name": "staker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config",
+          "writable": true
+        },
+        {
+          "name": "stake_position",
+          "writable": true
+        },
+        {
+          "name": "staker_vent_account",
+          "writable": true
+        },
+        {
+          "name": "vent_stake_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "unstake_vent",
+      "discriminator": [
+        99,
+        171,
+        6,
+        216,
+        151,
+        11,
+        10,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "staker",
+          "signer": true
+        },
+        {
+          "name": "global_config",
+          "writable": true
+        },
+        {
+          "name": "stake_position",
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "vent_stake_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "launch_venture_genesis",
+      "discriminator": [
+        11,
+        52,
+        3,
+        30,
+        35,
+        143,
+        162,
+        40
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture_token_mint",
+          "docs": [
+            "Fresh keypair: the venture's common share mint (6 decimals, no freeze authority)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "legal_setup_vault",
+          "writable": true
+        },
+        {
+          "name": "founder_vesting",
+          "writable": true
+        },
+        {
+          "name": "vesting_vault",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "docs": [
+            "$VENT-RN receipt mint of round 0 (mint + freeze authority = round PDA)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "round_usdc_vault",
+          "docs": [
+            "`funding_round_usdc_vault`: flat-curve escrow of round 0."
+          ],
+          "writable": true
+        },
+        {
+          "name": "verification_vote",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "treasury_wallet",
+          "docs": [
+            "into its USDC token account. Any system account is acceptable."
+          ]
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "VentureGenesisParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "configure_milestones",
+      "discriminator": [
+        90,
+        181,
+        169,
+        208,
+        4,
+        41,
+        100,
+        53
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        },
+        {
+          "name": "milestone_usdc_vault",
+          "docs": [
+            "`MilestoneEscrowUsdcVault` (authority = funding round PDA)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "dividend_vault",
+          "writable": true
+        },
+        {
+          "name": "staked_shares_vault",
+          "writable": true
+        },
+        {
+          "name": "dlmm_custody",
+          "writable": true
+        },
+        {
+          "name": "custody_usdc",
+          "writable": true
+        },
+        {
+          "name": "custody_shares",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "venture_token_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "milestones",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "MilestoneInput"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_funding_round",
+      "discriminator": [
+        137,
+        140,
+        39,
+        150,
+        85,
+        67,
+        134,
+        110
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault"
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "writable": true
+        },
+        {
+          "name": "round_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "verification_vote",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "round_index",
+          "type": "u8"
+        },
+        {
+          "name": "terms",
+          "type": {
+            "defined": {
+              "name": "RoundTerms"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "contribute_funding_round",
+      "discriminator": [
+        79,
+        224,
+        117,
+        227,
+        87,
+        145,
+        130,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "verification_vote",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "writable": true
+        },
+        {
+          "name": "investor_receipt_account",
+          "writable": true
+        },
+        {
+          "name": "investor_usdc",
+          "writable": true
+        },
+        {
+          "name": "funding_round_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "usdc_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "sell_primary_round",
+      "discriminator": [
+        115,
+        97,
+        25,
+        23,
+        20,
+        190,
+        200,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "signer": true
+        },
+        {
+          "name": "venture"
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "writable": true
+        },
+        {
+          "name": "investor_receipt_account",
+          "writable": true
+        },
+        {
+          "name": "investor_usdc",
+          "writable": true
+        },
+        {
+          "name": "funding_round_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "receipt_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "cast_verification_vote",
+      "discriminator": [
+        179,
+        132,
+        240,
+        74,
+        84,
+        35,
+        222,
+        139
+      ],
+      "accounts": [
+        {
+          "name": "staker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "funding_round"
+        },
+        {
+          "name": "verification_vote",
+          "writable": true
+        },
+        {
+          "name": "stake_position",
+          "writable": true
+        },
+        {
+          "name": "staker_vote_record",
+          "docs": [
+            "One ballot per staker and round (account creation fails on a second vote)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "vote_yes",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "finalize_verification",
+      "discriminator": [
+        17,
+        156,
+        245,
+        109,
+        209,
+        118,
+        72,
+        240
+      ],
+      "accounts": [
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "verification_vote",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "refund_primary_round",
+      "discriminator": [
+        163,
+        234,
+        32,
+        248,
+        106,
+        61,
+        213,
+        59
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "signer": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "writable": true
+        },
+        {
+          "name": "investor_receipt_account",
+          "writable": true
+        },
+        {
+          "name": "backer_usdc_destination",
+          "docs": [
+            "Receives the refund (any USDC account chosen by the backer)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "funding_round_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "prepare_dlmm_pool",
+      "discriminator": [
+        188,
+        196,
+        5,
+        75,
+        31,
+        172,
+        65,
+        236
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "dlmm_custody",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "venture_token_mint"
+        },
+        {
+          "name": "lb_pair",
+          "writable": true
+        },
+        {
+          "name": "reserve_x",
+          "writable": true
+        },
+        {
+          "name": "reserve_y",
+          "writable": true
+        },
+        {
+          "name": "oracle",
+          "writable": true
+        },
+        {
+          "name": "preset_parameter"
+        },
+        {
+          "name": "bin_array_lower",
+          "writable": true
+        },
+        {
+          "name": "bin_array_upper",
+          "writable": true
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "dlmm_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "active_id",
+          "type": "i32"
+        }
+      ]
+    },
+    {
+      "name": "execute_atomic_graduation",
+      "discriminator": [
+        80,
+        24,
+        92,
+        245,
+        92,
+        113,
+        195,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "executor",
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        },
+        {
+          "name": "funding_round_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "legal_setup_vault",
+          "writable": true
+        },
+        {
+          "name": "founder_treasury_usdc",
+          "writable": true
+        },
+        {
+          "name": "milestone_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "dlmm_custody",
+          "writable": true
+        },
+        {
+          "name": "custody_usdc",
+          "writable": true
+        },
+        {
+          "name": "custody_shares",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "venture_token_mint"
+        },
+        {
+          "name": "lb_pair",
+          "writable": true
+        },
+        {
+          "name": "reserve_x",
+          "writable": true
+        },
+        {
+          "name": "reserve_y",
+          "writable": true
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "bin_array_lower",
+          "writable": true
+        },
+        {
+          "name": "bin_array_upper",
+          "writable": true
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "dlmm_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "redeem_shares",
+      "discriminator": [
+        239,
+        154,
+        224,
+        89,
+        240,
+        196,
+        42,
+        187
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "writable": true
+        },
+        {
+          "name": "investor_receipt_account",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "investor_share_account",
+          "writable": true
+        },
+        {
+          "name": "venture_token_mint"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "associated_token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "redeem_and_stake_shares",
+      "discriminator": [
+        177,
+        68,
+        105,
+        113,
+        131,
+        154,
+        6,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "writable": true
+        },
+        {
+          "name": "investor_receipt_account",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "investor_vault",
+          "writable": true
+        },
+        {
+          "name": "staked_shares_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "lock_duration_seconds",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "harvest_dlmm_fees",
+      "discriminator": [
+        131,
+        66,
+        189,
+        10,
+        45,
+        66,
+        80,
+        253
+      ],
+      "accounts": [
+        {
+          "name": "harvester",
+          "signer": true
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round"
+        },
+        {
+          "name": "dlmm_custody",
+          "writable": true
+        },
+        {
+          "name": "custody_usdc",
+          "writable": true
+        },
+        {
+          "name": "custody_shares",
+          "writable": true
+        },
+        {
+          "name": "dividend_vault",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "fee_treasury_usdc",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "venture_token_mint"
+        },
+        {
+          "name": "lb_pair",
+          "writable": true
+        },
+        {
+          "name": "position",
+          "writable": true
+        },
+        {
+          "name": "reserve_x",
+          "writable": true
+        },
+        {
+          "name": "reserve_y",
+          "writable": true
+        },
+        {
+          "name": "bin_array_lower",
+          "writable": true
+        },
+        {
+          "name": "bin_array_upper",
+          "writable": true
+        },
+        {
+          "name": "memo_program"
+        },
+        {
+          "name": "event_authority"
+        },
+        {
+          "name": "dlmm_program"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "founder_claim_vesting",
+      "discriminator": [
+        69,
+        8,
+        205,
+        78,
+        105,
+        77,
+        57,
+        187
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "founder_vesting",
+          "writable": true
+        },
+        {
+          "name": "vesting_token_vault",
+          "writable": true
+        },
+        {
+          "name": "founder_share_account",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_milestone",
+      "discriminator": [
+        66,
+        169,
+        222,
+        116,
+        142,
+        24,
+        217,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "signer": true
+        },
+        {
+          "name": "venture"
+        },
+        {
+          "name": "funding_round"
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "milestone_id",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "amend_milestone",
+      "discriminator": [
+        25,
+        121,
+        75,
+        91,
+        47,
+        51,
+        3,
+        190
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "signer": true
+        },
+        {
+          "name": "venture"
+        },
+        {
+          "name": "funding_round"
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "milestone_id",
+          "type": "u8"
+        },
+        {
+          "name": "new_target_completion_date",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "vote_milestone",
+      "discriminator": [
+        43,
+        27,
+        71,
+        239,
+        231,
+        20,
+        102,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "signer": true
+        },
+        {
+          "name": "funding_round"
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "milestone_id",
+          "type": "u8"
+        },
+        {
+          "name": "approve",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "execute_milestone_release",
+      "discriminator": [
+        179,
+        133,
+        59,
+        2,
+        211,
+        94,
+        202,
+        67
+      ],
+      "accounts": [
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        },
+        {
+          "name": "milestone_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "founder_treasury_usdc",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "milestone_id",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "ragequit_milestone_escrow",
+      "discriminator": [
+        78,
+        112,
+        224,
+        228,
+        245,
+        129,
+        172,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "funding_round"
+        },
+        {
+          "name": "milestone_escrow",
+          "writable": true
+        },
+        {
+          "name": "milestone_usdc_vault",
+          "writable": true
+        },
+        {
+          "name": "round_record",
+          "writable": true
+        },
+        {
+          "name": "investor_share_account",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "investor_usdc",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "shares_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit_investor_shares",
+      "discriminator": [
+        98,
+        43,
+        50,
+        47,
+        105,
+        177,
+        163,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "investor_vault",
+          "writable": true
+        },
+        {
+          "name": "investor_share_account",
+          "writable": true
+        },
+        {
+          "name": "staked_shares_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "lock_duration_seconds",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "unstake_investor_shares",
+      "discriminator": [
+        62,
+        19,
+        68,
+        27,
+        70,
+        81,
+        30,
+        129
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "investor_vault",
+          "writable": true
+        },
+        {
+          "name": "investor_share_account",
+          "writable": true
+        },
+        {
+          "name": "staked_shares_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim_investor_dividends",
+      "discriminator": [
+        60,
+        146,
+        219,
+        221,
+        107,
+        53,
+        220,
+        114
+      ],
+      "accounts": [
+        {
+          "name": "investor",
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "investor_vault",
+          "writable": true
+        },
+        {
+          "name": "dividend_vault",
+          "writable": true
+        },
+        {
+          "name": "investor_usdc",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "refresh_investor_vault",
+      "discriminator": [
+        3,
+        209,
+        54,
+        179,
+        55,
+        158,
+        41,
+        131
+      ],
+      "accounts": [
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "investor_vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deposit_ecosystem_fees",
+      "discriminator": [
+        37,
+        92,
+        104,
+        255,
+        44,
+        100,
+        115,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "depositor",
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "depositor_usdc",
+          "writable": true
+        },
+        {
+          "name": "dividend_vault",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "reference",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "launch_venture_genesis_with_metadata",
+      "discriminator": [
+        65,
+        123,
+        112,
+        119,
+        243,
+        100,
+        173,
+        157
+      ],
+      "accounts": [
+        {
+          "name": "founder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "global_config"
+        },
+        {
+          "name": "venture_token_mint",
+          "docs": [
+            "Fresh keypair: the venture's common share mint (6 decimals, no freeze authority)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "venture",
+          "writable": true
+        },
+        {
+          "name": "master_lock_vault",
+          "writable": true
+        },
+        {
+          "name": "legal_setup_vault",
+          "writable": true
+        },
+        {
+          "name": "founder_vesting",
+          "writable": true
+        },
+        {
+          "name": "vesting_vault",
+          "writable": true
+        },
+        {
+          "name": "funding_round",
+          "writable": true
+        },
+        {
+          "name": "receipt_mint",
+          "docs": [
+            "$VENT-RN receipt mint of round 0 (mint + freeze authority = round PDA)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "round_usdc_vault",
+          "docs": [
+            "`funding_round_usdc_vault`: flat-curve escrow of round 0."
+          ],
+          "writable": true
+        },
+        {
+          "name": "verification_vote",
+          "writable": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "treasury_wallet",
+          "docs": [
+            "into its USDC token account. Any system account is acceptable."
+          ]
+        },
+        {
+          "name": "metadata",
+          "writable": true
+        },
+        {
+          "name": "token_metadata_program"
+        },
+        {
+          "name": "rent"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "VentureGenesisParams"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "GlobalConfig",
+      "discriminator": [
+        149,
+        8,
+        156,
+        202,
+        160,
+        252,
+        176,
+        217
+      ]
+    },
+    {
+      "name": "VentStakePosition",
+      "discriminator": [
+        136,
+        214,
+        184,
+        64,
+        119,
+        221,
+        131,
+        119
+      ]
+    },
+    {
+      "name": "DlmmCustody",
+      "discriminator": [
+        132,
+        76,
+        188,
+        231,
+        116,
+        9,
+        133,
+        71
+      ]
+    },
+    {
+      "name": "MilestoneEscrow",
+      "discriminator": [
+        6,
+        184,
+        172,
+        193,
+        121,
+        69,
+        20,
+        175
+      ]
+    },
+    {
+      "name": "FundingRound",
+      "discriminator": [
+        137,
+        235,
+        160,
+        80,
+        252,
+        185,
+        180,
+        4
+      ]
+    },
+    {
+      "name": "RoundInvestorRecord",
+      "discriminator": [
+        104,
+        203,
+        14,
+        83,
+        197,
+        207,
+        185,
+        39
+      ]
+    },
+    {
+      "name": "StakerVotingRecord",
+      "discriminator": [
+        158,
+        40,
+        192,
+        59,
+        162,
+        170,
+        187,
+        69
+      ]
+    },
+    {
+      "name": "VentureVerificationVote",
+      "discriminator": [
+        214,
+        167,
+        103,
+        121,
+        165,
+        45,
+        87,
+        152
+      ]
+    },
+    {
+      "name": "InvestorVault",
+      "discriminator": [
+        232,
+        117,
+        168,
+        151,
+        30,
+        250,
+        20,
+        169
+      ]
+    },
+    {
+      "name": "FounderVesting",
+      "discriminator": [
+        94,
+        149,
+        120,
+        31,
+        36,
+        23,
+        14,
+        164
+      ]
+    },
+    {
+      "name": "VentureState",
+      "discriminator": [
+        24,
+        57,
+        25,
+        207,
+        57,
+        50,
+        88,
+        19
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AtomicGraduationExecuted",
+      "discriminator": [
+        208,
+        135,
+        59,
+        170,
+        149,
+        123,
+        249,
+        163
+      ]
+    },
+    {
+      "name": "DividendsClaimed",
+      "discriminator": [
+        47,
+        49,
+        16,
+        88,
+        139,
+        132,
+        245,
+        16
+      ]
+    },
+    {
+      "name": "DividendsDistributed",
+      "discriminator": [
+        117,
+        213,
+        170,
+        55,
+        19,
+        80,
+        211,
+        101
+      ]
+    },
+    {
+      "name": "DlmmFeesHarvested",
+      "discriminator": [
+        180,
+        51,
+        101,
+        148,
+        173,
+        251,
+        43,
+        76
+      ]
+    },
+    {
+      "name": "DlmmPoolPrepared",
+      "discriminator": [
+        40,
+        151,
+        241,
+        126,
+        140,
+        168,
+        80,
+        159
+      ]
+    },
+    {
+      "name": "FounderVestingClaimed",
+      "discriminator": [
+        228,
+        45,
+        163,
+        242,
+        208,
+        232,
+        249,
+        198
+      ]
+    },
+    {
+      "name": "FundingRoundCreated",
+      "discriminator": [
+        118,
+        70,
+        3,
+        99,
+        58,
+        196,
+        5,
+        45
+      ]
+    },
+    {
+      "name": "GlobalConfigInitialized",
+      "discriminator": [
+        5,
+        221,
+        172,
+        158,
+        77,
+        87,
+        157,
+        113
+      ]
+    },
+    {
+      "name": "GlobalConfigUpdated",
+      "discriminator": [
+        232,
+        238,
+        158,
+        123,
+        210,
+        172,
+        159,
+        46
+      ]
+    },
+    {
+      "name": "InvestorStaked",
+      "discriminator": [
+        175,
+        126,
+        205,
+        26,
+        50,
+        69,
+        237,
+        83
+      ]
+    },
+    {
+      "name": "InvestorUnstaked",
+      "discriminator": [
+        207,
+        203,
+        147,
+        6,
+        163,
+        143,
+        194,
+        183
+      ]
+    },
+    {
+      "name": "LegalSetupFeeReleased",
+      "discriminator": [
+        250,
+        107,
+        134,
+        86,
+        24,
+        211,
+        175,
+        133
+      ]
+    },
+    {
+      "name": "MilestoneProposed",
+      "discriminator": [
+        152,
+        192,
+        4,
+        119,
+        190,
+        112,
+        193,
+        62
+      ]
+    },
+    {
+      "name": "MilestoneRagequit",
+      "discriminator": [
+        81,
+        254,
+        132,
+        109,
+        253,
+        123,
+        101,
+        43
+      ]
+    },
+    {
+      "name": "MilestoneResolved",
+      "discriminator": [
+        187,
+        22,
+        126,
+        26,
+        156,
+        84,
+        105,
+        7
+      ]
+    },
+    {
+      "name": "MilestoneVoteCast",
+      "discriminator": [
+        251,
+        202,
+        241,
+        169,
+        201,
+        116,
+        60,
+        46
+      ]
+    },
+    {
+      "name": "MilestonesConfigured",
+      "discriminator": [
+        154,
+        139,
+        153,
+        113,
+        32,
+        214,
+        19,
+        167
+      ]
+    },
+    {
+      "name": "PrimaryContribution",
+      "discriminator": [
+        28,
+        14,
+        82,
+        201,
+        16,
+        155,
+        58,
+        107
+      ]
+    },
+    {
+      "name": "PrimaryRefund",
+      "discriminator": [
+        255,
+        206,
+        236,
+        222,
+        12,
+        205,
+        175,
+        130
+      ]
+    },
+    {
+      "name": "PrimarySellback",
+      "discriminator": [
+        128,
+        199,
+        255,
+        151,
+        25,
+        56,
+        161,
+        87
+      ]
+    },
+    {
+      "name": "RoundCapReached",
+      "discriminator": [
+        120,
+        253,
+        70,
+        44,
+        128,
+        124,
+        159,
+        199
+      ]
+    },
+    {
+      "name": "SharesRedeemed",
+      "discriminator": [
+        232,
+        166,
+        7,
+        56,
+        67,
+        19,
+        42,
+        117
+      ]
+    },
+    {
+      "name": "VentStaked",
+      "discriminator": [
+        119,
+        107,
+        106,
+        50,
+        130,
+        162,
+        160,
+        228
+      ]
+    },
+    {
+      "name": "VentUnstaked",
+      "discriminator": [
+        220,
+        67,
+        107,
+        125,
+        10,
+        109,
+        103,
+        207
+      ]
+    },
+    {
+      "name": "VentureGenesisLaunched",
+      "discriminator": [
+        12,
+        90,
+        252,
+        253,
+        165,
+        39,
+        209,
+        202
+      ]
+    },
+    {
+      "name": "VerificationFinalized",
+      "discriminator": [
+        86,
+        204,
+        238,
+        243,
+        86,
+        75,
+        243,
+        13
+      ]
+    },
+    {
+      "name": "VerificationVoteCast",
+      "discriminator": [
+        248,
+        11,
+        205,
+        6,
+        182,
+        2,
+        104,
+        13
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidUsdcMint",
+      "msg": "6000: Quote currency mint must match canonical USDC."
+    },
+    {
+      "code": 6001,
+      "name": "ZeroTargetCap",
+      "msg": "6001: Target funding cap must be greater than zero."
+    },
+    {
+      "code": 6002,
+      "name": "LockDurationTooShort",
+      "msg": "6002: Lock commitment duration out of bounds."
+    },
+    {
+      "code": 6003,
+      "name": "FounderCliffNotMet",
+      "msg": "6003: Founder vesting cliff has not elapsed."
+    },
+    {
+      "code": 6004,
+      "name": "RoundNotActive",
+      "msg": "6004: Funding round is not currently active."
+    },
+    {
+      "code": 6005,
+      "name": "RoundNotEligibleForGraduation",
+      "msg": "6005: Round is not eligible for graduation."
+    },
+    {
+      "code": 6006,
+      "name": "RoundNotEligibleForRefund",
+      "msg": "6006: Round is not eligible for refund."
+    },
+    {
+      "code": 6007,
+      "name": "MilestoneNotEligibleForRelease",
+      "msg": "6007: Milestone is not eligible for release."
+    },
+    {
+      "code": 6008,
+      "name": "RoundAlreadyActive",
+      "msg": "6008: Previous funding round is still active."
+    },
+    {
+      "code": 6009,
+      "name": "MathOverflow",
+      "msg": "6009: Math overflow occurred during financial precision calculation."
+    },
+    {
+      "code": 6010,
+      "name": "NoDividendsOwed",
+      "msg": "6010: Zero claimable rewards available."
+    },
+    {
+      "code": 6011,
+      "name": "SupplyInvariantViolated",
+      "msg": "6011: Global supply invariant violated. Total shares must equal 1,000,000."
+    },
+    {
+      "code": 6012,
+      "name": "Unauthorized",
+      "msg": "6012: Caller lacks required authority for this instruction."
+    },
+    {
+      "code": 6013,
+      "name": "LockNotExpired",
+      "msg": "6013: Position is still within lock commitment period."
+    },
+    {
+      "code": 6014,
+      "name": "MilestoneNotProposed",
+      "msg": "6014: Milestone is not currently in proposed status."
+    },
+    {
+      "code": 6015,
+      "name": "VentureNotApproved",
+      "msg": "6015: Venture has not received legal approval by $VENT stakers."
+    },
+    {
+      "code": 6016,
+      "name": "VerificationVoteActive",
+      "msg": "6016: Verification vote is currently active."
+    },
+    {
+      "code": 6017,
+      "name": "DlmmPoolInitFailed",
+      "msg": "6017: CPI to Meteora DLMM pool initialization failed."
+    },
+    {
+      "code": 6018,
+      "name": "DlmmLiquiditySeedFailed",
+      "msg": "6018: CPI to Meteora DLMM add_liquidity_by_weight2 failed."
+    },
+    {
+      "code": 6019,
+      "name": "InvalidUpfrontCapitalBps",
+      "msg": "6019: Upfront working capital percentage out of bounds (max 15%)."
+    },
+    {
+      "code": 6020,
+      "name": "InvalidMilestoneCount",
+      "msg": "6020: Milestones count out of bounds. Exactly 1 to 10 milestone tranches permitted."
+    },
+    {
+      "code": 6021,
+      "name": "InvalidAllocationSum",
+      "msg": "6021: Total allocation percentage sum must equal exactly 10,000 basis points."
+    },
+    {
+      "code": 6022,
+      "name": "AmendmentLimitExceeded",
+      "msg": "6022: Milestone amendment limit exceeded (maximum 3 revisions allowed)."
+    },
+    {
+      "code": 6023,
+      "name": "InvalidMeteoraProgram",
+      "msg": "6023: Provided Meteora program ID does not match canonical deployment."
+    },
+    {
+      "code": 6024,
+      "name": "InsufficientReceiptBalance",
+      "msg": "6024: Primary receipt token balance insufficient for share redemption."
+    },
+    {
+      "code": 6025,
+      "name": "EmptyLegalContractHash",
+      "msg": "6025: Legal Operating Agreement SHA256 contract hash cannot be empty."
+    },
+    {
+      "code": 6026,
+      "name": "InvalidRoundIndex",
+      "msg": "6026: Invalid round index. Rounds must increment sequentially."
+    },
+    {
+      "code": 6027,
+      "name": "ZeroAmount",
+      "msg": "6027: Amount must be greater than zero."
+    },
+    {
+      "code": 6028,
+      "name": "ExceedsHardCap",
+      "msg": "6028: Contribution would exceed the round hard cap."
+    },
+    {
+      "code": 6029,
+      "name": "InexactPriceConversion",
+      "msg": "6029: Amount does not convert to an exact number of share atoms at the flat price."
+    },
+    {
+      "code": 6030,
+      "name": "InvalidPrice",
+      "msg": "6030: Flat price per share must be greater than zero."
+    },
+    {
+      "code": 6031,
+      "name": "InvalidRoundEconomics",
+      "msg": "6031: Round economics invalid: legal fee, DLMM seed and runway exceed the raise."
+    },
+    {
+      "code": 6032,
+      "name": "InsufficientTreasuryShares",
+      "msg": "6032: Master lock vault does not hold enough shares for this round."
+    },
+    {
+      "code": 6033,
+      "name": "VerificationVoteClosed",
+      "msg": "6033: Verification vote window is closed."
+    },
+    {
+      "code": 6034,
+      "name": "VerificationAlreadyFinalized",
+      "msg": "6034: Verification vote has already been finalized."
+    },
+    {
+      "code": 6035,
+      "name": "InsufficientStakedBalance",
+      "msg": "6035: Caller has no staked $VENT voting power."
+    },
+    {
+      "code": 6036,
+      "name": "InvalidRoundStatus",
+      "msg": "6036: Round is not in the expected status for this instruction."
+    },
+    {
+      "code": 6037,
+      "name": "InvalidVentureStatus",
+      "msg": "6037: Venture is not in the expected status for this instruction."
+    },
+    {
+      "code": 6038,
+      "name": "MilestonesAlreadyConfigured",
+      "msg": "6038: Milestones have already been configured for this round."
+    },
+    {
+      "code": 6039,
+      "name": "InvalidMilestoneSchedule",
+      "msg": "6039: Milestone target dates must be in the future and strictly increasing."
+    },
+    {
+      "code": 6040,
+      "name": "InvalidMilestoneId",
+      "msg": "6040: Milestone index out of range."
+    },
+    {
+      "code": 6041,
+      "name": "MilestoneOutOfOrder",
+      "msg": "6041: Milestones must be processed sequentially."
+    },
+    {
+      "code": 6042,
+      "name": "MilestoneAlreadyVoted",
+      "msg": "6042: Backer already voted on this milestone review cycle."
+    },
+    {
+      "code": 6043,
+      "name": "VetoPeriodExpired",
+      "msg": "6043: Milestone veto window has expired."
+    },
+    {
+      "code": 6044,
+      "name": "NoPrimaryVotingWeight",
+      "msg": "6044: Caller holds no primary backer voting weight for this round."
+    },
+    {
+      "code": 6045,
+      "name": "RagequitNotAllowed",
+      "msg": "6045: Ragequit is only possible for breached or overdue milestones."
+    },
+    {
+      "code": 6046,
+      "name": "InvalidMeteoraAccount",
+      "msg": "6046: Account is not owned by the Meteora DLMM program or has the wrong type."
+    },
+    {
+      "code": 6047,
+      "name": "InvalidMeteoraPool",
+      "msg": "6047: Meteora DLMM pool address does not match the canonical derivation."
+    },
+    {
+      "code": 6048,
+      "name": "DlmmPriceMismatch",
+      "msg": "6048: DLMM active bin does not match the flat round price."
+    },
+    {
+      "code": 6049,
+      "name": "DlmmBinArrayOutOfRange",
+      "msg": "6049: DLMM bin array index lies outside the default bitmap range."
+    },
+    {
+      "code": 6050,
+      "name": "InvalidDlmmBinArray",
+      "msg": "6050: Provided DLMM bin array does not match the expected derivation."
+    },
+    {
+      "code": 6051,
+      "name": "DlmmNotPrepared",
+      "msg": "6051: DLMM pool has not been prepared for this round."
+    },
+    {
+      "code": 6052,
+      "name": "DlmmFeeClaimFailed",
+      "msg": "6052: CPI to Meteora DLMM claim_fee2 failed."
+    },
+    {
+      "code": 6053,
+      "name": "InvalidParameter",
+      "msg": "6053: Invalid governance or protocol parameter."
+    },
+    {
+      "code": 6054,
+      "name": "NoActiveStakers",
+      "msg": "6054: Venture has no active stakers to receive dividends."
+    },
+    {
+      "code": 6055,
+      "name": "InsufficientLegalVaultBalance",
+      "msg": "6055: Legal setup vault balance insufficient."
+    },
+    {
+      "code": 6056,
+      "name": "InvalidTokenAccount",
+      "msg": "6056: Account mint or owner does not match the expected value."
+    },
+    {
+      "code": 6057,
+      "name": "NothingToRefund",
+      "msg": "6057: Nothing to refund for this backer."
+    },
+    {
+      "code": 6058,
+      "name": "NothingVested",
+      "msg": "6058: Founder vesting has nothing claimable."
+    }
+  ],
+  "types": [
+    {
+      "name": "GlobalConfigParams",
+      "docs": [
+        "Mutable protocol parameters."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee_treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "legal_setup_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "min_approval_bps",
+            "type": "u16"
+          },
+          {
+            "name": "verification_quorum_bps",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VentureGenesisParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "midao_llc_id",
+            "docs": [
+              "Legal entity registry ID (MIDAO DAO LLC / Verein)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "legal_contract_hash",
+            "docs": [
+              "SHA-256 of the signed Operating Agreement."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "founder_shares",
+            "docs": [
+              "Founder allocation (share atoms), vested linearly after the cliff."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vesting_cliff_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "vesting_duration_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "round_terms",
+            "docs": [
+              "Terms of funding round 0 (flat curve)."
+            ],
+            "type": {
+              "defined": {
+                "name": "RoundTerms"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoundTerms",
+      "docs": [
+        "Economic terms of a flat-curve funding round."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "price_per_share_usdc",
+            "docs": [
+              "USDC atoms per whole share (e.g. `100_000` = 0.10 USDC). Constant for the round."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "target_cap_usdc",
+            "docs": [
+              "Hard cap in USDC atoms. The round only closes when exactly this amount is raised."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "upfront_working_capital_bps",
+            "docs": [
+              "Upfront runway paid to the founder treasury at graduation (max 1,500 bps)."
+            ],
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GlobalConfig",
+      "docs": [
+        "Protocol-wide configuration. `[b\"global_config\"]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Protocol admin (must be the program upgrade authority at initialization)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_treasury",
+            "docs": [
+              "Owner of the USDC account that receives the protocol royalty on DLMM fees."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "legal_setup_authority",
+            "docs": [
+              "Authority allowed to release escrowed legal setup fees (e.g. MIDAO payment)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "docs": [
+              "Quote mint used by every venture (canonical USDC on mainnet)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vent_mint",
+            "docs": [
+              "$VENT mother token mint (governance)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vent_stake_vault",
+            "docs": [
+              "Program-owned vault holding all staked $VENT. `[b\"vent_stake_vault\"]`"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "dlmm_preset_parameter",
+            "docs": [
+              "Meteora DLMM `PresetParameter2` used to create every venture pool."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "total_vent_staked",
+            "docs": [
+              "Sum of all staked $VENT (quorum denominator)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "min_approval_bps",
+            "docs": [
+              "Approval requires `for_bps > min_approval_bps` (>= 5000 => strict majority)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "verification_quorum_bps",
+            "docs": [
+              "Minimum participation (for + against) relative to `total_vent_staked`, in bps."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Royalty on harvested DLMM USDC fees routed to `fee_treasury` (e.g. 50 = 0.5%)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vent_stake_vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VentStakePosition",
+      "docs": [
+        "A staker's position in the $VENT governance pool. `[b\"vent_stake\", staker]`",
+        "",
+        "Voting locks the position until the end of the ballot, so the same tokens can",
+        "never be moved to another wallet and counted twice."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "staker",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "locked_until",
+            "docs": [
+              "Unix timestamp until which `unstake_vent` is blocked (max over all ballots voted on)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DlmmCustody",
+      "docs": [
+        "Permanent custodian of the venture's Meteora DLMM liquidity. `[b\"dlmm_custody\", venture]`",
+        "",
+        "This PDA is the `owner` of every DLMM position funded by the venture and the",
+        "authority of the custody token accounts. The program exposes **no** instruction",
+        "that removes liquidity or closes a position, so the LP is permanently locked;",
+        "only accrued trading fees can be harvested (`harvest_dlmm_fees`)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "lb_pair",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_x_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_y_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "custody_usdc",
+            "docs": [
+              "`[b\"custody_usdc\", venture]`"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "custody_shares",
+            "docs": [
+              "`[b\"custody_shares\", venture]`"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "positions_count",
+            "type": "u8"
+          },
+          {
+            "name": "total_usdc_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "total_shares_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "total_fees_harvested_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_fees_harvested_shares",
+            "type": "u64"
+          },
+          {
+            "name": "is_permanently_locked",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "custody_usdc_bump",
+            "type": "u8"
+          },
+          {
+            "name": "custody_shares_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneEscrow",
+      "docs": [
+        "Tranche-specific milestone escrow. `[b\"milestone_escrow\", funding_round]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_usdc_vault",
+            "docs": [
+              "`MilestoneEscrowUsdcVault`. `[b\"milestone_usdc_vault\", milestone_escrow]`"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "total_allocated_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_released_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_ragequit_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "primary_tokens_quorum_base",
+            "docs": [
+              "Round shares sold (quorum base for milestone votes)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "primary_tokens_remaining",
+            "docs": [
+              "Decrements on ragequit."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "current_milestone_index",
+            "type": "u8"
+          },
+          {
+            "name": "milestones_count",
+            "type": "u8"
+          },
+          {
+            "name": "is_funded",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "milestones",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "MilestoneItem"
+                  }
+                },
+                10
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneInput",
+      "docs": [
+        "Founder roadmap input, committed before the curve opens so $VENT stakers vote on it."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "percentage_bps",
+            "type": "u16"
+          },
+          {
+            "name": "target_completion_date",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "percentage_bps",
+            "type": "u16"
+          },
+          {
+            "name": "amount_usdc",
+            "docs": [
+              "Nominal allocation fixed at graduation (scaled by remaining/base on release)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "target_completion_date",
+            "type": "i64"
+          },
+          {
+            "name": "proposed_at",
+            "type": "i64"
+          },
+          {
+            "name": "veto_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "votes_for",
+            "type": "u64"
+          },
+          {
+            "name": "votes_against",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "MilestoneStatus"
+              }
+            }
+          },
+          {
+            "name": "amendment_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MilestoneStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Proposed"
+          },
+          {
+            "name": "Released"
+          },
+          {
+            "name": "Vetoed"
+          },
+          {
+            "name": "Breached"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FundingRound",
+      "docs": [
+        "Terms, treasury custody and lifecycle of funding round N.",
+        "`[b\"funding_round\", venture, &[round_index]]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt_mint",
+            "docs": [
+              "$VENT-RN receipt mint (mint & freeze authority = this PDA; receipts are non-transferable)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_vault",
+            "docs": [
+              "`funding_round_usdc_vault`: escrow holding all primary USDC until graduation/refund."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "verification_vote",
+            "type": "pubkey"
+          },
+          {
+            "name": "milestone_escrow",
+            "type": "pubkey"
+          },
+          {
+            "name": "dlmm_position",
+            "docs": [
+              "Meteora DLMM position funded by this round (owned by `DlmmCustody`)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "price_per_share_usdc",
+            "docs": [
+              "Flat price: USDC atoms per whole share (e.g. 100_000 = 0.10 USDC)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "target_cap_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_raised_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "shares_for_sale",
+            "docs": [
+              "`target_cap_usdc * ONE_SHARE / price_per_share_usdc` (exact)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "receipts_outstanding",
+            "docs": [
+              "Outstanding receipts (net of sellbacks and refunds)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "receipts_redeemed",
+            "type": "u64"
+          },
+          {
+            "name": "total_refunded_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "legal_fee_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "upfront_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "escrow_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "dlmm_seed_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "dlmm_seed_shares",
+            "type": "u64"
+          },
+          {
+            "name": "cap_reached_ts",
+            "type": "i64"
+          },
+          {
+            "name": "graduated_ts",
+            "type": "i64"
+          },
+          {
+            "name": "dlmm_active_id",
+            "docs": [
+              "Expected DLMM active bin (flat price) recorded by `prepare_dlmm_pool`."
+            ],
+            "type": "i32"
+          },
+          {
+            "name": "dlmm_lower_bin_id",
+            "type": "i32"
+          },
+          {
+            "name": "upfront_working_capital_bps",
+            "type": "u16"
+          },
+          {
+            "name": "round_index",
+            "type": "u8"
+          },
+          {
+            "name": "round_status",
+            "type": {
+              "defined": {
+                "name": "RoundStatus"
+              }
+            }
+          },
+          {
+            "name": "dlmm_prepared",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "receipt_mint_bump",
+            "type": "u8"
+          },
+          {
+            "name": "usdc_vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoundInvestorRecord",
+      "docs": [
+        "Primary backer ledger for one round. `[b\"round_record\", funding_round, investor]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_contributed",
+            "docs": [
+              "Net USDC contributed (sellbacks decrement)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "tokens_purchased",
+            "docs": [
+              "Net receipts purchased (sellbacks decrement)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "usdc_refunded",
+            "type": "u64"
+          },
+          {
+            "name": "tokens_redeemed",
+            "type": "u64"
+          },
+          {
+            "name": "tokens_surrendered",
+            "docs": [
+              "Shares surrendered through milestone ragequit."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "usdc_ragequit",
+            "type": "u64"
+          },
+          {
+            "name": "vote_mask",
+            "docs": [
+              "Bit i = voted YES on milestone i in its current review cycle."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "veto_mask",
+            "docs": [
+              "Bit i = voted VETO on milestone i in its current review cycle."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "amendment_seen",
+            "docs": [
+              "Review cycle (amendment count) the masks refer to, per milestone."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoundStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Initialized"
+          },
+          {
+            "name": "Active"
+          },
+          {
+            "name": "CapReached"
+          },
+          {
+            "name": "VerifiedApproved"
+          },
+          {
+            "name": "RefundActive"
+          },
+          {
+            "name": "Graduated"
+          },
+          {
+            "name": "Completed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StakerVotingRecord",
+      "docs": [
+        "One staker's ballot. `[b\"staker_vote\", verification_vote, staker]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "staker",
+            "type": "pubkey"
+          },
+          {
+            "name": "verification_vote",
+            "type": "pubkey"
+          },
+          {
+            "name": "vote_weight",
+            "type": "u64"
+          },
+          {
+            "name": "vote_yes",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VentureVerificationVote",
+      "docs": [
+        "On-chain $VENT staker approval ballot for one round.",
+        "`[b\"verification_vote\", funding_round]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "for_weight",
+            "type": "u64"
+          },
+          {
+            "name": "against_weight",
+            "type": "u64"
+          },
+          {
+            "name": "voter_count",
+            "type": "u32"
+          },
+          {
+            "name": "total_vent_staked_snapshot",
+            "docs": [
+              "`GlobalConfig::total_vent_staked` captured at `CapReached` (quorum denominator)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "voting_start_timestamp",
+            "docs": [
+              "Set exactly when the round reaches `CapReached` (0 before)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "voting_end_timestamp",
+            "docs": [
+              "`voting_start_timestamp + 14 days` (0 before `CapReached`)."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "is_finalized",
+            "type": "bool"
+          },
+          {
+            "name": "is_approved",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InvestorVault",
+      "docs": [
+        "Personal staking vault and dividend ledger. `[b\"investor_vault\", venture, investor]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "staked_amount",
+            "type": "u64"
+          },
+          {
+            "name": "lock_start_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "lock_end_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "lock_duration_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "multiplier_bps",
+            "docs": [
+              "10_000..=30_000 (1.0x to 3.0x)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "effective_weight",
+            "docs": [
+              "`staked_amount * multiplier_bps`."
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "last_acc_yield",
+            "docs": [
+              "O(1) accumulator checkpoint."
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "pending_usdc",
+            "docs": [
+              "Settled but unclaimed USDC."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FounderVesting",
+      "docs": [
+        "Founder vesting schedule. `[b\"founder_vesting\", venture, founder]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "founder",
+            "type": "pubkey"
+          },
+          {
+            "name": "vesting_token_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_allocated_tokens",
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed_tokens",
+            "type": "u64"
+          },
+          {
+            "name": "start_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "cliff_duration_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "total_duration_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VentureState",
+      "docs": [
+        "Master company state machine. `[b\"venture\", venture_token_mint]`"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "global_config",
+            "type": "pubkey"
+          },
+          {
+            "name": "founder",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury_wallet",
+            "docs": [
+              "Wallet that owns the OpCo treasury USDC account (upfront runway + milestone payouts)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "venture_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "master_lock_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "legal_setup_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "dividend_vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "dlmm_custody",
+            "type": "pubkey"
+          },
+          {
+            "name": "meteora_dlmm_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "midao_llc_id",
+            "docs": [
+              "Legal entity registry ID (MIDAO DAO LLC / Verein)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "legal_contract_hash",
+            "docs": [
+              "SHA-256 of the signed Operating Agreement."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "total_supply",
+            "type": "u64"
+          },
+          {
+            "name": "founder_vesting_tokens",
+            "type": "u64"
+          },
+          {
+            "name": "circulating_public_float",
+            "docs": [
+              "Shares that left the master vault into the market (redemptions + DLMM seed)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "unredeemed_receipt_shares",
+            "docs": [
+              "Shares owed to receipt holders of graduated rounds (reserved in the master vault)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_staked_in_vaults",
+            "type": "u64"
+          },
+          {
+            "name": "total_legal_fees_escrowed",
+            "type": "u64"
+          },
+          {
+            "name": "total_legal_fees_released",
+            "type": "u64"
+          },
+          {
+            "name": "acc_dividend_per_weight_unit",
+            "docs": [
+              "O(1) dividend accumulator (scaled by ACC_PRECISION * 10_000)."
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "total_dividend_weight_units",
+            "type": "u128"
+          },
+          {
+            "name": "total_dividends_distributed",
+            "type": "u64"
+          },
+          {
+            "name": "current_round_index",
+            "type": "u8"
+          },
+          {
+            "name": "is_round_active",
+            "docs": [
+              "Sequential round mutex."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "VentureStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "master_lock_vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "legal_setup_vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "dividend_vault_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VentureStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "GenesisInitialized"
+          },
+          {
+            "name": "PrimaryRaiseActive"
+          },
+          {
+            "name": "CapReached"
+          },
+          {
+            "name": "VerifiedApproved"
+          },
+          {
+            "name": "RefundActive"
+          },
+          {
+            "name": "GraduatedDLMMLive"
+          },
+          {
+            "name": "OperationalMature"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AtomicGraduationExecuted",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "lb_pair",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_raised_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "legal_fee_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "upfront_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "dlmm_usdc_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "dlmm_shares_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "escrow_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "DividendsClaimed",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "DividendsDistributed",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "source",
+            "type": "u8"
+          },
+          {
+            "name": "reference",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "acc_dividend_per_weight_unit",
+            "type": "u128"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "DlmmFeesHarvested",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_fees",
+            "type": "u64"
+          },
+          {
+            "name": "share_fees",
+            "type": "u64"
+          },
+          {
+            "name": "protocol_royalty_usdc",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "DlmmPoolPrepared",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "lb_pair",
+            "type": "pubkey"
+          },
+          {
+            "name": "position",
+            "type": "pubkey"
+          },
+          {
+            "name": "active_id",
+            "type": "i32"
+          },
+          {
+            "name": "lower_bin_id",
+            "type": "i32"
+          },
+          {
+            "name": "pool_created",
+            "type": "bool"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "FounderVestingClaimed",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "founder",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "FundingRoundCreated",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "round_index",
+            "type": "u8"
+          },
+          {
+            "name": "price_per_share_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "target_cap_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "shares_for_sale",
+            "type": "u64"
+          },
+          {
+            "name": "upfront_working_capital_bps",
+            "type": "u16"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "GlobalConfigInitialized",
+      "type": {
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vent_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "dlmm_preset_parameter",
+            "type": "pubkey"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "GlobalConfigUpdated",
+      "type": {
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "dlmm_preset_parameter",
+            "type": "pubkey"
+          },
+          {
+            "name": "min_approval_bps",
+            "type": "u16"
+          },
+          {
+            "name": "verification_quorum_bps",
+            "type": "u16"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "type": "u16"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "InvestorStaked",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "staked_amount",
+            "type": "u64"
+          },
+          {
+            "name": "multiplier_bps",
+            "type": "u16"
+          },
+          {
+            "name": "lock_end_timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "InvestorUnstaked",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "LegalSetupFeeReleased",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "destination",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "MilestoneProposed",
+      "type": {
+        "fields": [
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "milestone_id",
+            "type": "u8"
+          },
+          {
+            "name": "veto_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "amendment_count",
+            "type": "u8"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "MilestoneRagequit",
+      "type": {
+        "fields": [
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "shares_surrendered",
+            "type": "u64"
+          },
+          {
+            "name": "usdc_refunded",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "MilestoneResolved",
+      "type": {
+        "fields": [
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "milestone_id",
+            "type": "u8"
+          },
+          {
+            "name": "released",
+            "type": "bool"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "amount_usdc",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "MilestoneVoteCast",
+      "type": {
+        "fields": [
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "milestone_id",
+            "type": "u8"
+          },
+          {
+            "name": "approve",
+            "type": "bool"
+          },
+          {
+            "name": "weight",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "MilestonesConfigured",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "milestones_count",
+            "type": "u8"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PrimaryContribution",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_amount",
+            "type": "u64"
+          },
+          {
+            "name": "receipts_minted",
+            "type": "u64"
+          },
+          {
+            "name": "total_raised_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PrimaryRefund",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipts_burned",
+            "type": "u64"
+          },
+          {
+            "name": "usdc_refunded",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "PrimarySellback",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipts_burned",
+            "type": "u64"
+          },
+          {
+            "name": "usdc_returned",
+            "type": "u64"
+          },
+          {
+            "name": "total_raised_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "RoundCapReached",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_raised_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "voting_start_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "voting_end_timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "SharesRedeemed",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "investor",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "staked",
+            "type": "bool"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "VentStaked",
+      "type": {
+        "fields": [
+          {
+            "name": "staker",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "position_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_vent_staked",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "VentUnstaked",
+      "type": {
+        "fields": [
+          {
+            "name": "staker",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "position_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_vent_staked",
+            "type": "u64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "VentureGenesisLaunched",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "founder",
+            "type": "pubkey"
+          },
+          {
+            "name": "venture_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "midao_llc_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "legal_contract_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "total_supply",
+            "type": "u64"
+          },
+          {
+            "name": "founder_shares",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "VerificationFinalized",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_approved",
+            "type": "bool"
+          },
+          {
+            "name": "for_weight",
+            "type": "u64"
+          },
+          {
+            "name": "against_weight",
+            "type": "u64"
+          },
+          {
+            "name": "total_vent_staked",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    },
+    {
+      "name": "VerificationVoteCast",
+      "type": {
+        "fields": [
+          {
+            "name": "venture",
+            "type": "pubkey"
+          },
+          {
+            "name": "funding_round",
+            "type": "pubkey"
+          },
+          {
+            "name": "staker",
+            "type": "pubkey"
+          },
+          {
+            "name": "vote_yes",
+            "type": "bool"
+          },
+          {
+            "name": "vote_weight",
+            "type": "u64"
+          },
+          {
+            "name": "for_weight",
+            "type": "u64"
+          },
+          {
+            "name": "against_weight",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ],
+        "kind": "struct"
+      }
+    }
+  ]
+}
