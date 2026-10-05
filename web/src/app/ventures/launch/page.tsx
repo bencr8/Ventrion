@@ -12,12 +12,11 @@ import {
   Image as ImageIcon,
   Upload,
 } from "lucide-react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { Navbar } from "../../../components/common/Navbar";
 import { formatCompactUsdc, formatCompactShares } from "../../../lib/formatters";
 import { TOTAL_SHARES } from "../../../lib/constants";
-
-const USER_VENTURES_STORAGE_KEY = "ventrion_user_created_ventures_v1";
+import { executeLaunchGenesis } from "../../../lib/solana/walletTransactionRunner";
 
 interface TrancheItem {
   id: string;
@@ -28,7 +27,9 @@ interface TrancheItem {
 
 export default function LaunchVenturePage() {
   const router = useRouter();
-  const { publicKey, connected } = useWallet();
+  const wallet = useWallet();
+  const { publicKey, connected } = wallet;
+  const { connection } = useConnection();
 
   // Navigation steps
   const [activeStep, setActiveStep] = useState<"identity" | "capital" | "milestones">("identity");
@@ -223,62 +224,61 @@ export default function LaunchVenturePage() {
   // Launch state
   const [isLaunching, setIsLaunching] = useState(false);
   const [launchStepIndex, setLaunchStepIndex] = useState(0);
+  const [confirmedTx, setConfirmedTx] = useState<string | null>(null);
 
   const handleLaunchGenesis = async () => {
+    if (!connected || !publicKey) {
+      alert("Please connect your Solana wallet before launching a venture.");
+      return;
+    }
+
     if (totalTranchePercent !== 100) {
       alert(`Milestone percentages must sum up to exactly 100% (currently ${totalTranchePercent}%).`);
       return;
     }
 
     setIsLaunching(true);
-    setLaunchStepIndex(1); // Minting 1,000,000 shares
-    await new Promise((r) => setTimeout(r, 900));
-
-    setLaunchStepIndex(2); // Establishing MIDAO DAO LLC
-    await new Promise((r) => setTimeout(r, 900));
-
-    setLaunchStepIndex(3); // Deploying Meteora Dynamic Bonding Curve
-    await new Promise((r) => setTimeout(r, 1000));
-
-    setLaunchStepIndex(4); // Finalizing genesis
-
-    const fakeChars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-    let mockTx = "";
-    let mockMint = "";
-    for (let i = 0; i < 64; i++) mockTx += fakeChars.charAt(Math.floor(Math.random() * fakeChars.length));
-    for (let i = 0; i < 44; i++) mockMint += fakeChars.charAt(Math.floor(Math.random() * fakeChars.length));
+    setConfirmedTx(null);
 
     try {
-      const newVenture = {
-        id: symbol.toLowerCase(),
-        name,
-        symbol,
-        ticker: `$${symbol}`,
-        mint: mockMint,
-        price: sharePriceUsdc,
-        founderLockedShares: founderShares,
-        fundingTargetUsdc,
-        status: "Genesis Active",
-        tx: mockTx,
-        logoUrl: logoPreview,
-        bannerUrl: bannerPreview,
-        createdAt: new Date().toISOString(),
-      };
+      setLaunchStepIndex(1); // Building transaction & deriving PDAs
+      await new Promise((r) => setTimeout(r, 400));
 
-      const existing = localStorage.getItem(USER_VENTURES_STORAGE_KEY);
-      const list = existing ? JSON.parse(existing) : [];
-      list.unshift(newVenture);
-      localStorage.setItem(USER_VENTURES_STORAGE_KEY, JSON.stringify(list));
-    } catch {}
+      setLaunchStepIndex(2); // Requesting wallet signature for company mint & fee payer
+      const { signature, companyMint } = await executeLaunchGenesis(
+        {
+          founderPubkey: publicKey.toBase58(),
+          name,
+          symbol,
+          uri: metadataUri,
+          equitySalePercent,
+          fundingTargetUsdc,
+          upfrontRunwayPercent,
+          vestingCliffMonths,
+          vestingDurationYears,
+        },
+        wallet,
+        connection
+      );
 
-    await new Promise((r) => setTimeout(r, 600));
+      setLaunchStepIndex(3); // Broadcasted & confirmed on Solana Devnet
+      setConfirmedTx(signature);
+      await new Promise((r) => setTimeout(r, 600));
 
-    // Redirect directly to the launched venture terminal
-    const targetUrl = `/ventures/${symbol.toLowerCase()}`;
-    router.push(targetUrl);
-    setTimeout(() => {
-      window.location.href = `/ventrion/ventures/${symbol.toLowerCase()}/`;
-    }, 400);
+      setLaunchStepIndex(4); // Finalizing genesis
+      await new Promise((r) => setTimeout(r, 1200));
+
+      // Redirect directly to the launched venture terminal by contract address
+      const targetUrl = `/ventures/${companyMint}`;
+      router.push(targetUrl);
+      setTimeout(() => {
+        window.location.href = `/ventrion/ventures/${companyMint}/`;
+      }, 500);
+    } catch (err: any) {
+      console.error("Genesis launch failed:", err);
+      setIsLaunching(false);
+      alert(`Genesis Launch Failed: ${err?.message || "Transaction rejected or network error"}`);
+    }
   };
 
   return (
@@ -316,10 +316,10 @@ export default function LaunchVenturePage() {
               {/* Progress Steps */}
               <div className="p-5 rounded-2xl bg-white border border-black/[0.06] shadow-xs text-xs space-y-3 text-left">
                 {[
-                  { step: 1, text: "Minting 1,000,000 shares & revoking mint authority" },
-                  { step: 2, text: "Registering MIDAO DAO LLC corporate wrapper" },
-                  { step: 3, text: "Deploying Meteora flat bonding curve" },
-                  { step: 4, text: "Genesis confirmed. Opening terminal..." },
+                  { step: 1, text: "Deriving on-chain PDAs & generating Company Mint" },
+                  { step: 2, text: "Signing Anchor Genesis instruction with your wallet" },
+                  { step: 3, text: "Broadcasting & confirming 1,000,000 shares on Devnet" },
+                  { step: 4, text: "Genesis confirmed! Opening venture terminal..." },
                 ].map((s) => {
                   const isDone = launchStepIndex > s.step;
                   const isCurrent = launchStepIndex === s.step;
@@ -347,6 +347,19 @@ export default function LaunchVenturePage() {
                     </div>
                   );
                 })}
+
+                {confirmedTx && (
+                  <div className="pt-2 text-center border-t border-black/[0.04]">
+                    <a
+                      href={`https://explorer.solana.com/tx/${confirmedTx}?cluster=devnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-[#FF5C18] hover:underline font-mono inline-flex items-center gap-1 font-bold"
+                    >
+                      <span>View on Solana Explorer ({confirmedTx.slice(0, 4)}...{confirmedTx.slice(-4)}) ↗</span>
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="h-1.5 w-full bg-black/[0.05] rounded-full overflow-hidden">

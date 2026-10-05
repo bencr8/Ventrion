@@ -79,19 +79,28 @@ export default function VenturesPage() {
     // Baseline mapping according to canonical protocol phases
     return VERIFIED_VENTURES.map((v) => {
       let canonical: LifecyclePhase = "Raising";
-      if (v.statusBadge.includes("Graduated") || v.id === "qcmp" || v.id === "alps-commerce") {
+      if (
+        v.canonicalStatus === "Funded" ||
+        v.statusBadge?.includes("Graduated") ||
+        v.statusBadge?.includes("Funded") ||
+        v.id === "qcmp" ||
+        v.id === "pvent"
+      ) {
         canonical = "Funded";
-      } else if (v.id === "vent-ai") {
+      } else if (v.canonicalStatus === "Migrating" || v.statusBadge?.includes("Migrating")) {
         canonical = "Migrating";
       } else {
         canonical = "Raising";
       }
+      const targetCap = v.targetFundingCapUsdc ?? 50000;
+      const raised = v.totalCapitalRaisedUsdc ?? (canonical === "Funded" ? targetCap : 0);
+      const progress = v.fundingProgressPercent ?? (targetCap > 0 ? (raised / targetCap) * 100 : 100.0);
       return {
         ...v,
         canonicalStatus: canonical,
-        targetFundingCapUsdc: v.targetFundingCapUsdc || 50000,
-        totalCapitalRaisedUsdc: v.totalCapitalRaisedUsdc || (canonical === "Raising" ? 31000 : 50000),
-        fundingProgressPercent: v.fundingProgressPercent || (canonical === "Raising" ? 62.0 : 100.0),
+        targetFundingCapUsdc: targetCap,
+        totalCapitalRaisedUsdc: raised,
+        fundingProgressPercent: progress,
       } as Venture;
     });
   }, [liveVentures]);

@@ -5,11 +5,10 @@ import Link from "next/link";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Building2, Plus, ArrowRight } from "lucide-react";
+import { PublicKey } from "@solana/web3.js";
 import { Navbar } from "../../components/common/Navbar";
 import { BezierCounter } from "../../components/common/BezierCounter";
 import { formatCompactUsdc, formatCompactShares } from "../../lib/formatters";
-
-const USER_VENTURES_STORAGE_KEY = "ventrion_user_created_ventures_v1";
 
 interface FounderVentureItem {
   id: string;
@@ -31,71 +30,121 @@ export default function MyVenturesPage() {
   const { setVisible } = useWalletModal();
 
   const [founderVentures, setFounderVentures] = useState<FounderVentureItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Live DLMM Prices cache
   const [livePrices, setLivePrices] = useState<Record<string, number>>({
-    qcmp: 10.0,
-    pvent: 0.1,
-    "vent-ai": 0.85,
-    "alps-commerce": 0.85,
+    qcmp: 1.25,
+    pvent: 0.10,
   });
 
-  useEffect(() => {
-    async function fetchPrices() {
-      try {
-        const res = await fetch("/api/ventures/live");
-        if (res.ok) {
-          const json = await res.json();
-          const list = json.data || json.ventures;
-          if (Array.isArray(list)) {
-            const priceMap: Record<string, number> = {};
-            for (const v of list) {
-              if (v.id && v.sharePriceUsdc) {
-                priceMap[v.id] = v.sharePriceUsdc;
-              }
+  // Fetch live sub-second prices and founder ventures from Solana Devnet
+  const fetchFounderVentures = useCallback(async () => {
+    if (!connected || !publicKey) {
+      setFounderVentures([]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
+      let allVentures: any[] = [];
+
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const json = await res.json();
+            const list = json.data || json.ventures;
+            if (Array.isArray(list) && list.length > 0) {
+              allVentures = list;
+              break;
             }
-            setLivePrices((prev) => ({ ...prev, ...priceMap }));
+          }
+        } catch {}
+      }
+
+      if (allVentures.length > 0) {
+        const priceMap: Record<string, number> = {};
+        for (const v of allVentures) {
+          if (v.id && v.sharePriceUsdc) {
+            priceMap[v.id] = v.sharePriceUsdc;
           }
         }
-      } catch {}
-    }
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 10000);
-    return () => clearInterval(interval);
-  }, []);
+        setLivePrices((prev) => ({ ...prev, ...priceMap }));
+      }
 
-  // Load custom-created ventures from LocalStorage
-  const loadStoredVentures = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(USER_VENTURES_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const mapped: FounderVentureItem[] = parsed.map((item: any) => ({
-            id: item.id || `custom-${item.mint || Date.now()}`,
-            name: item.name || "Custom Venture",
-            symbol: item.symbol || "VENT",
-            ticker: `$${item.symbol || "VENT"}`,
-            mintAddress: item.mint || "GENESIS_MINT",
-            sharePriceUsdc: item.price || 1.0,
-            founderLockedShares: item.founderLockedShares || 800000,
-            impliedValuationUsdc: (item.founderLockedShares || 800000) * (item.price || 1.0),
-            fundingTargetUsdc: item.fundingTargetUsdc || 16000,
-            status: "Genesis Active",
-            isUserCreated: true,
-          }));
+      const walletPubkeyStr = publicKey.toBase58();
+      let matched = allVentures.filter(
+        (v) => v.founderAddress && v.founderAddress === walletPubkeyStr
+      );
 
-          setFounderVentures(mapped);
-          return;
+      // On-Chain RPC Direct Verification Fallback
+      if (matched.length === 0) {
+        try {
+          const VENTRION_PROGRAM_ID = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
+          const onChainAccounts = await connection.getProgramAccounts(VENTRION_PROGRAM_ID, {
+            filters: [
+              { memcmp: { offset: 0, bytes: "53zeaRLh9k6" } }, // VentureState discriminator
+              { memcmp: { offset: 40, bytes: walletPubkeyStr } }, // Founder pubkey
+            ],
+          });
+
+          if (onChainAccounts.length > 0) {
+            matched = onChainAccounts.map((acc) => {
+              const data = acc.account.data;
+              let off = 8 + 32 + 32 + 32; // skip disc, config, founder, treasury
+              const mint = new PublicKey(data.slice(off, off + 32)).toBase58();
+              return {
+                id: mint,
+                name: `Enterprise ${mint.slice(0, 4)}...${mint.slice(-4)}`,
+                symbol: mint.slice(0, 4).toUpperCase(),
+                ticker: `$${mint.slice(0, 4).toUpperCase()}`,
+                mintAddress: mint,
+                sharePriceUsdc: 1.0,
+                founderVestingShares: 800000,
+                targetFundingCapUsdc: 50000,
+                canonicalStatus: "Raising",
+                founderAddress: walletPubkeyStr,
+              };
+            });
+          }
+        } catch (onChainErr) {
+          console.warn("Direct on-chain check error:", onChainErr);
         }
       }
-    } catch {}
-    setFounderVentures([]);
-  }, []);
+
+      const mapped: FounderVentureItem[] = matched.map((v) => {
+        const lockedShares = v.founderVestingShares || 800000;
+        const price = v.sharePriceUsdc || 1.0;
+        return {
+          id: v.id || v.mintAddress,
+          name: v.name,
+          symbol: v.symbol,
+          ticker: v.ticker || `$${v.symbol}`,
+          mintAddress: v.mintAddress,
+          sharePriceUsdc: price,
+          founderLockedShares: lockedShares,
+          impliedValuationUsdc: lockedShares * price,
+          fundingTargetUsdc: v.targetFundingCapUsdc || 50000,
+          status: v.canonicalStatus === "Funded" ? "Graduated" : "Genesis Active",
+          isUserCreated: true,
+        };
+      });
+
+      setFounderVentures(mapped);
+    } catch (err) {
+      console.warn("Failed to load founder ventures from Devnet:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [connected, publicKey, connection]);
 
   useEffect(() => {
-    loadStoredVentures();
-  }, [loadStoredVentures]);
+    fetchFounderVentures();
+    const interval = setInterval(fetchFounderVentures, 10000);
+    return () => clearInterval(interval);
+  }, [fetchFounderVentures]);
 
   const totalFounderEquityValue = useMemo(() => {
     return founderVentures.reduce(

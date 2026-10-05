@@ -7,9 +7,15 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Layers, ArrowRight } from "lucide-react";
 import { Navbar } from "../../components/common/Navbar";
+import { PublicKey } from "@solana/web3.js";
 import { BezierCounter } from "../../components/common/BezierCounter";
 import { VERIFIED_VENTURES, Venture } from "../../lib/venturesData";
-import { TOKEN_PROGRAM_ID } from "../../lib/solana/ventrionProgram";
+import {
+  TOKEN_PROGRAM_ID,
+  getVenturePDA,
+  getFundingRoundPDA,
+  getReceiptMintPDA,
+} from "../../lib/solana/ventrionProgram";
 import { formatCompactUsdc, formatCompactShares } from "../../lib/formatters";
 
 interface HoldingItem {
@@ -40,10 +46,8 @@ export default function SharesPage() {
 
   // Live DLMM Prices cache
   const [livePrices, setLivePrices] = useState<Record<string, number>>({
-    qcmp: 10.0,
+    qcmp: 1.25,
     pvent: 0.1,
-    "vent-ai": 0.85,
-    "alps-commerce": 0.85,
   });
 
   // Fetch live sub-second prices from API daemon
@@ -71,7 +75,7 @@ export default function SharesPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch real on-chain token accounts for user
+  // Fetch real on-chain token accounts for user matched against all live ventures
   const fetchHoldings = useCallback(async () => {
     if (!connected || !publicKey) {
       setHoldings([]);
@@ -80,6 +84,25 @@ export default function SharesPage() {
 
     try {
       setIsLoadingHoldings(true);
+
+      // 1. Fetch live ventures from API daemon
+      let allVentures: Venture[] = [...VERIFIED_VENTURES];
+      try {
+        const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
+        for (const ep of endpoints) {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const json = await res.json();
+            const list = json.data || json.ventures;
+            if (Array.isArray(list) && list.length > 0) {
+              allVentures = list;
+              break;
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Query all on-chain parsed SPL token accounts owned by this wallet
       const parsed = await connection
         .getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
@@ -96,16 +119,31 @@ export default function SharesPage() {
 
       const userHoldings: HoldingItem[] = [];
 
-      for (const v of VERIFIED_VENTURES) {
-        const shares = mintToAmount[v.mintAddress] || 0;
-        const price = livePrices[v.id] || v.sharePriceUsdc || 1.0;
-        const totalValue = shares * price;
-        const ownership = (shares / 1000000) * 100;
+      for (const v of allVentures) {
+        let shares = mintToAmount[v.mintAddress] || 0;
 
-        if (shares > 0) {
+        // Also check primary round receipts
+        let receipts = 0;
+        if (v.receiptMint && mintToAmount[v.receiptMint]) {
+          receipts = mintToAmount[v.receiptMint];
+        } else if (v.mintAddress) {
+          try {
+            const [vPda] = getVenturePDA(new PublicKey(v.mintAddress));
+            const [fRound] = getFundingRoundPDA(vPda, 0);
+            const [rMint] = getReceiptMintPDA(fRound);
+            receipts = mintToAmount[rMint.toBase58()] || 0;
+          } catch {}
+        }
+
+        const totalHolding = shares + receipts;
+        const price = livePrices[v.id] || v.sharePriceUsdc || 1.0;
+        const totalValue = totalHolding * price;
+        const ownership = (totalHolding / (v.totalShares || 1000000)) * 100;
+
+        if (totalHolding > 0) {
           userHoldings.push({
             venture: v,
-            shares: Math.round(shares),
+            shares: Math.round(totalHolding),
             sharePriceUsdc: price,
             totalValueUsdc: totalValue,
             ownershipPercent: ownership,
