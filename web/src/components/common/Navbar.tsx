@@ -22,7 +22,12 @@ import {
   PILOT_VENTURE_2_QCMP_MINT,
   SOLANA_DEVNET_RPC,
   TOKEN_PROGRAM_ID,
+  getVenturePDA,
+  getFundingRoundPDA,
+  getReceiptMintPDA,
 } from "../../lib/solana/ventrionProgram";
+import { VERIFIED_VENTURES } from "../../lib/venturesData";
+import { PublicKey } from "@solana/web3.js";
 
 interface NavbarProps {
   activeTab?: string;
@@ -59,6 +64,56 @@ function copyTextRobust(text: string): boolean {
   }
 }
 
+/**
+ * Compact Money Formatter for Navbar Button:
+ * - >= 1M: "$1M" (when close to 1M or round), "$1.23M"
+ * - >= 1k: "$1.23k", "$50k"
+ * - < 1k: "$123.45"
+ */
+function formatNavbarMoney(val: number): string {
+  if (!val || val <= 0) return "$0.00";
+  if (val >= 1_000_000) {
+    const m = val / 1_000_000;
+    if (val >= 1_000_000 && val < 1_060_000) {
+      return "$1M";
+    }
+    if (m % 1 === 0) {
+      return `$${m.toFixed(0)}M`;
+    }
+    return `$${m.toFixed(2)}M`;
+  }
+  if (val >= 1_000) {
+    const k = val / 1_000;
+    if (k % 1 === 0) {
+      return `$${k.toFixed(0)}k`;
+    }
+    return `$${k.toFixed(2)}k`;
+  }
+  return `$${val.toFixed(2)}`;
+}
+
+/**
+ * Compact Money Formatter for small modal metrics container:
+ */
+function formatCompactModalMoney(val: number): string {
+  if (!val || val <= 0) return "$0";
+  if (val >= 1_000_000) {
+    const m = val / 1_000_000;
+    if (val >= 1_000_000 && val < 1_060_000) {
+      return "$1M";
+    }
+    return `$${m.toFixed(2)}M`;
+  }
+  if (val >= 1_000) {
+    const k = val / 1_000;
+    if (k % 1 === 0) {
+      return `$${k.toFixed(0)}k`;
+    }
+    return `$${k.toFixed(1)}k`;
+  }
+  return `$${val.toFixed(2)}`;
+}
+
 export function Navbar({ activeTab }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -67,12 +122,13 @@ export function Navbar({ activeTab }: NavbarProps) {
   const [copiedPrivKey, setCopiedPrivKey] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Live Balances
+  // Live Balances & True Business Equity
   const [solBalance, setSolBalance] = useState<number>(0);
   const [usdcBalance, setUsdcBalance] = useState<number>(0);
   const [ventBalance, setVentBalance] = useState<number>(0);
-  const [qcmpShares, setQcmpShares] = useState<number>(0);
-  const [pventShares, setPventShares] = useState<number>(0);
+  const [ventureEquityUsdc, setVentureEquityUsdc] = useState<number>(0);
+  const [holdingsCount, setHoldingsCount] = useState<number>(0);
+  const [isLoadingBalances, setIsLoadingBalances] = useState<boolean>(true);
 
   const pathname = usePathname();
   const profileRef = useRef<HTMLDivElement>(null);
@@ -89,16 +145,15 @@ export function Navbar({ activeTab }: NavbarProps) {
   // Valuation constants (Devnet)
   const SOL_PRICE_USD = 152.0;
   const VENT_PRICE_USD = 0.264;
-  const QCMP_PRICE_USD = 10.0;
-  const PVENT_PRICE_USD = 0.1;
 
   const totalPortfolioValueUsd = connected
-    ? Math.round(
-        solBalance * SOL_PRICE_USD +
+    ? Number(
+        (
+          solBalance * SOL_PRICE_USD +
           usdcBalance +
           ventBalance * VENT_PRICE_USD +
-          qcmpShares * QCMP_PRICE_USD +
-          pventShares * PVENT_PRICE_USD
+          ventureEquityUsdc
+        ).toFixed(2)
       )
     : 0;
 
@@ -135,57 +190,117 @@ export function Navbar({ activeTab }: NavbarProps) {
       setSolBalance(0);
       setUsdcBalance(0);
       setVentBalance(0);
-      setQcmpShares(0);
-      setPventShares(0);
+      setVentureEquityUsdc(0);
+      setHoldingsCount(0);
+      setIsLoadingBalances(false);
       return;
     }
 
     try {
+      setIsLoadingBalances(true);
       const connection = new Connection(SOLANA_DEVNET_RPC, "confirmed");
 
-      // 1. Native SOL Balance
-      const lamports = await connection.getBalance(publicKey).catch(() => 0);
+      // 1. Fetch live ventures catalog
+      let allVentures: any[] = [...VERIFIED_VENTURES];
+      try {
+        const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
+        for (const ep of endpoints) {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const json = await res.json();
+            const list = json.data || json.ventures;
+            if (Array.isArray(list) && list.length > 0) {
+              allVentures = list;
+              break;
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Fetch SOL balance and parsed token accounts in parallel
+      const [lamports, tokenAccounts] = await Promise.all([
+        connection.getBalance(publicKey).catch(() => 0),
+        connection
+          .getParsedTokenAccountsByOwner(publicKey, {
+            programId: TOKEN_PROGRAM_ID,
+          })
+          .catch(() => ({ value: [] })),
+      ]);
+
       setSolBalance(Number((lamports / LAMPORTS_PER_SOL).toFixed(4)));
 
-      // 2. Token Accounts (USDC, VENT, QCMP, PVENT)
-      const tokenAccounts = await connection
-        .getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        })
-        .catch(() => ({ value: [] }));
-
+      const mintToAmount: Record<string, number> = {};
       let foundUsdc = 0;
       let foundVent = 0;
-      let foundQcmp = 0;
-      let foundPvent = 0;
 
       for (const item of tokenAccounts.value) {
         const info = item.account.data.parsed.info;
         const mint = info.mint;
         const amount = info.tokenAmount.uiAmount || 0;
+        mintToAmount[mint] = (mintToAmount[mint] || 0) + amount;
 
         if (mint === DEVNET_USDC_MINT.toBase58()) {
-          foundUsdc = amount;
+          foundUsdc += amount;
         } else if (mint === DEVNET_VENT_MINT.toBase58()) {
-          foundVent = amount;
-        } else if (mint === PILOT_VENTURE_2_QCMP_MINT.toBase58()) {
-          foundQcmp = amount;
-        } else if (mint === PILOT_VENTURE_1_PVENT_MINT.toBase58()) {
-          foundPvent = amount;
+          foundVent += amount;
+        }
+      }
+
+      // 3. Calculate true business equity across all real on-chain venture tokens and receipts
+      let totalVentureEquity = 0;
+      let count = 0;
+
+      for (const v of allVentures) {
+        let shares = mintToAmount[v.mintAddress] || 0;
+        let receipts = 0;
+        if (v.receiptMint && mintToAmount[v.receiptMint]) {
+          receipts = mintToAmount[v.receiptMint];
+        } else if (v.mintAddress) {
+          try {
+            const [vPda] = getVenturePDA(new PublicKey(v.mintAddress));
+            const [fRound] = getFundingRoundPDA(vPda, 0);
+            const [rMint] = getReceiptMintPDA(fRound);
+            receipts = mintToAmount[rMint.toBase58()] || 0;
+          } catch {}
+        }
+
+        const holdingAmount = shares + receipts;
+        if (holdingAmount > 0) {
+          count++;
+          const price = Number(v.sharePriceUsdc || 0.10);
+          totalVentureEquity += holdingAmount * price;
         }
       }
 
       setUsdcBalance(Number(foundUsdc.toFixed(2)));
       setVentBalance(Math.round(foundVent));
-      setQcmpShares(Math.round(foundQcmp));
-      setPventShares(Math.round(foundPvent));
+      setVentureEquityUsdc(Number(totalVentureEquity.toFixed(2)));
+      setHoldingsCount(count);
+
+      // Graceful delay for smooth visual feel without flickering (~800ms)
+      await new Promise((r) => setTimeout(r, 800));
     } catch (err) {
       console.warn("Failed to fetch live balances:", err);
+    } finally {
+      setIsLoadingBalances(false);
     }
   }, [connected, publicKey]);
 
   useEffect(() => {
     fetchBalances();
+  }, [fetchBalances]);
+
+  // Reactive listener for trade events to instantly update wallet balances
+  useEffect(() => {
+    const handleRefreshEvent = () => {
+      fetchBalances();
+    };
+    window.addEventListener("ventrion:trade_completed", handleRefreshEvent);
+    window.addEventListener("ventrion:balances_updated", handleRefreshEvent);
+    return () => {
+      window.removeEventListener("ventrion:trade_completed", handleRefreshEvent);
+      window.removeEventListener("ventrion:balances_updated", handleRefreshEvent);
+    };
   }, [fetchBalances]);
 
   useEffect(() => {
@@ -213,8 +328,8 @@ export function Navbar({ activeTab }: NavbarProps) {
     setSolBalance(0);
     setUsdcBalance(0);
     setVentBalance(0);
-    setQcmpShares(0);
-    setPventShares(0);
+    setVentureEquityUsdc(0);
+    setHoldingsCount(0);
   };
 
   const copyAddress = () => {
@@ -334,8 +449,12 @@ export function Navbar({ activeTab }: NavbarProps) {
             {connected ? (
               <>
                 {/* Balance Bubble */}
-                <div className="px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-semibold text-white tracking-tight flex items-center justify-center font-mono">
-                  <span>${totalPortfolioValueUsd.toLocaleString()}</span>
+                <div className="px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-semibold text-white tracking-tight flex items-center justify-center font-mono min-w-[48px]">
+                  {isLoadingBalances ? (
+                    <div className="w-10 h-3 bg-white/20 rounded animate-pulse" />
+                  ) : (
+                    <span>{formatNavbarMoney(totalPortfolioValueUsd)}</span>
+                  )}
                 </div>
 
                 {/* Short Address & Dropdown Indicator */}
@@ -434,26 +553,60 @@ export function Navbar({ activeTab }: NavbarProps) {
                     <span className="text-[10px] font-mono uppercase text-[#7A7672] tracking-wider block">
                       Net Portfolio Value
                     </span>
-                    <div className="text-xl font-bold font-mono tracking-tight text-[#111113] mt-0.5">
-                      ${totalPortfolioValueUsd.toLocaleString()}{" "}
-                      <span className="text-[11px] font-normal text-[#7A7672]">USD</span>
+                    <div className="text-xl font-bold font-mono tracking-tight text-[#111113] mt-0.5 flex items-baseline gap-1.5">
+                      {isLoadingBalances ? (
+                        <div className="w-40 h-6 bg-black/[0.06] rounded animate-pulse my-0.5" />
+                      ) : (
+                        <>
+                          <span>
+                            ${totalPortfolioValueUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[11px] font-normal text-[#7A7672]">USD</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {/* 3 Metric Boxes */}
-                  <div className="grid grid-cols-3 gap-2 font-mono">
+                  {/* 4 Metric Boxes (2x2 Grid) */}
+                  <div className="grid grid-cols-2 gap-2 font-mono">
                     <div className="p-2.5 rounded-xl bg-[#FAF7F2] border border-black/[0.05]">
                       <div className="text-[10px] text-[#7A7672]">SOL</div>
-                      <div className="font-bold text-xs text-[#111113] mt-0.5">{solBalance}</div>
+                      <div className="font-bold text-xs text-[#111113] mt-0.5">
+                        {isLoadingBalances ? (
+                          <div className="w-12 h-3.5 bg-black/[0.06] rounded animate-pulse mt-0.5" />
+                        ) : (
+                          `${solBalance} SOL`
+                        )}
+                      </div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-[#FAF7F2] border border-black/[0.05]">
                       <div className="text-[10px] text-[#7A7672]">USDC</div>
-                      <div className="font-bold text-xs text-[#111113] mt-0.5">${usdcBalance}</div>
+                      <div className="font-bold text-xs text-[#111113] mt-0.5">
+                        {isLoadingBalances ? (
+                          <div className="w-12 h-3.5 bg-black/[0.06] rounded animate-pulse mt-0.5" />
+                        ) : (
+                          formatCompactModalMoney(usdcBalance)
+                        )}
+                      </div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-[#FAF7F2] border border-black/[0.05]">
-                      <div className="text-[10px] text-[#7A7672]">$VENT</div>
+                      <div className="text-[10px] text-[#7A7672]">VENTURE EQUITY</div>
+                      <div className="font-bold text-xs text-[#111113] mt-0.5">
+                        {isLoadingBalances ? (
+                          <div className="w-12 h-3.5 bg-black/[0.06] rounded animate-pulse mt-0.5" />
+                        ) : (
+                          formatCompactModalMoney(ventureEquityUsdc)
+                        )}
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-[#FAF7F2] border border-black/[0.05]">
+                      <div className="text-[10px] text-[#7A7672]">$VENT GOVERNANCE</div>
                       <div className="font-bold text-xs text-[#FF5C18] mt-0.5">
-                        {ventBalance.toLocaleString()}
+                        {isLoadingBalances ? (
+                          <div className="w-12 h-3.5 bg-black/[0.06] rounded animate-pulse mt-0.5" />
+                        ) : (
+                          ventBalance.toLocaleString()
+                        )}
                       </div>
                     </div>
                   </div>

@@ -609,14 +609,16 @@ export function PureGlassVToken({ className = "" }: PureGlassVTokenProps) {
       lastTime = currentTime;
 
       const elapsed = clock.getElapsedTime();
-      const popUpDuration = 1.1; // seconds
+      const popUpDuration = 0.95; // seconds
       const popUpProgress = Math.min(1.0, (currentTime - startTime) / (popUpDuration * 1000));
 
-      // Elastic spring pop-up curve: 0 -> 1.08 -> 0.98 -> 1.0
+      // Pure steep-rise ease curve on the original flat sine:
+      // Steep initial pop from 0, completely flat horizontal landing at 1.0, strictly <= 1.0 (no overshoot)
       let currentScale = 1.0;
       if (popUpProgress < 1.0) {
         const p = popUpProgress;
-        currentScale = Math.sin(p * Math.PI * 0.5) * (1.0 + Math.sin(p * Math.PI * 2.0) * 0.15 * (1.0 - p));
+        const progressSteep = 1 - Math.pow(1 - p, 3.2);
+        currentScale = Math.min(1.0, Math.sin(progressSteep * Math.PI * 0.5));
       }
       tokenGroup.scale.set(currentScale, currentScale, currentScale);
 

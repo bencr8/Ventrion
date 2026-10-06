@@ -65,6 +65,135 @@ async function copyTextRobust(text: string): Promise<boolean> {
   }
 }
 
+/**
+ * Smart Amount Parser:
+ * Supports '13.5k', '50k', '1.2m', '954.441,98', '954,441.98', '$100', etc.
+ */
+export function parseSmartAmount(input: string | number): number {
+  if (typeof input === "number") return isNaN(input) ? 0 : input;
+  if (!input) return 0;
+  let str = input.trim().toLowerCase().replace(/^\$/, "");
+  if (!str) return 0;
+
+  let multiplier = 1;
+  if (str.endsWith("k")) {
+    multiplier = 1e3;
+    str = str.slice(0, -1).trim();
+  } else if (str.endsWith("m")) {
+    multiplier = 1e6;
+    str = str.slice(0, -1).trim();
+  } else if (str.endsWith("b")) {
+    multiplier = 1e9;
+    str = str.slice(0, -1).trim();
+  }
+
+  // Handle German vs US separator formats:
+  // e.g. "954.441,98" (dots thousand, comma decimal)
+  if (str.includes(",") && str.includes(".")) {
+    if (str.lastIndexOf(",") > str.lastIndexOf(".")) {
+      str = str.replace(/\./g, "").replace(",", ".");
+    } else {
+      str = str.replace(/,/g, "");
+    }
+  } else if (str.includes(",")) {
+    const parts = str.split(",");
+    if (parts.length === 2 && (parts[1].length !== 3 || multiplier > 1)) {
+      str = str.replace(",", ".");
+    } else if (parts.length > 2) {
+      str = str.replace(/,/g, "");
+    } else {
+      str = str.replace(",", ".");
+    }
+  } else if (str.includes(".")) {
+    const parts = str.split(".");
+    if (parts.length === 2 && parts[1].length === 3 && parts[0].length <= 3 && multiplier === 1 && Number(parts[0]) >= 1) {
+      // e.g. "50.000" -> 50000
+      str = parts[0] + parts[1];
+    }
+  }
+
+  const num = parseFloat(str);
+  if (isNaN(num)) return 0;
+  return num * multiplier;
+}
+
+/**
+ * Visual Formatter for MAX button:
+ * Floors to 2 decimal places and formats with thousands dot separators and comma decimals:
+ * e.g. 954441.986067 -> "954.441,98"
+ */
+export function formatMaxFloored(val: number): string {
+  if (!val || val <= 0) return "0";
+  const floored = Math.floor(val * 100) / 100;
+  const parts = floored.toFixed(2).split(".");
+  const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${intPart},${parts[1]}`;
+}
+
+/**
+ * Sanitized user-friendly error messages (no raw Anchor errors, byte arrays, or RPC logs):
+ */
+export function sanitizeSolanaError(err: any): string {
+  if (!err) return "Transaction failed. Please try again.";
+  const msg = typeof err === "string" ? err : err.message || JSON.stringify(err);
+
+  if (
+    msg.toLowerCase().includes("user rejected") ||
+    msg.toLowerCase().includes("cancelled") ||
+    msg.toLowerCase().includes("rejected the request") ||
+    msg.toLowerCase().includes("declined")
+  ) {
+    return "Transaction cancelled in wallet.";
+  }
+
+  if (
+    msg.toLowerCase().includes("insufficient lamports") ||
+    msg.toLowerCase().includes("insufficient funds for rent") ||
+    msg.toLowerCase().includes("custom program error: 0x1") ||
+    msg.toLowerCase().includes("insufficient sol")
+  ) {
+    return "Insufficient SOL to cover transaction gas fees. Please keep at least 0.05 SOL.";
+  }
+
+  if (msg.includes("6028") || msg.includes("ExceedsHardCap") || msg.includes("0x178c")) {
+    return "Contribution would exceed round hard cap. Automatically capped to remaining allocation.";
+  }
+  if (msg.includes("6029") || msg.includes("InexactPriceConversion") || msg.includes("0x178d")) {
+    return "Amount adjusted to whole share units.";
+  }
+  if (msg.includes("6004") || msg.includes("RoundNotActive") || msg.includes("0x1774")) {
+    return "Funding round is currently paused or completed.";
+  }
+  if (msg.includes("6024") || msg.includes("InsufficientReceiptBalance") || msg.includes("0x1788")) {
+    return "Insufficient primary receipts to redeem shares.";
+  }
+  if (msg.includes("6013") || msg.includes("LockNotExpired") || msg.includes("0x177d")) {
+    return "Staking lock period is still active.";
+  }
+  if (msg.includes("6010") || msg.includes("NoDividendsOwed") || msg.includes("0x177a")) {
+    return "No claimable dividends available right now.";
+  }
+  if (msg.includes("6000") || msg.includes("InvalidUsdcMint")) {
+    return "Invalid currency mint: transaction requires Devnet USDC.";
+  }
+  if (msg.includes("6006") || msg.includes("RoundNotEligibleForRefund")) {
+    return "Venture has already graduated; primary receipts must be converted to shares.";
+  }
+
+  if (msg.toLowerCase().includes("blockhash not found") || msg.toLowerCase().includes("block height exceeded")) {
+    return "Network timed out. Please retry the transaction.";
+  }
+  if (msg.toLowerCase().includes("slippage") || msg.toLowerCase().includes("slippagetoleranceexceeded")) {
+    return "Price moved outside slippage tolerance. Please try again.";
+  }
+
+  if (msg.length > 100 && (msg.includes("Program ") || msg.includes("InstructionError") || msg.includes("failed: "))) {
+    return "Devnet transaction failed. Please check your balance and try again.";
+  }
+
+  return msg;
+}
+
 export function VentureDetailClient({ mint }: { mint: string }) {
   const getInitialMint = (): string => {
     if (typeof window !== "undefined") {
@@ -302,17 +431,28 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const isGraduated = venture?.canonicalStatus === "Funded" || venture?.statusBadge?.includes("Graduated") || venture?.statusBadge === "Funded";
   const isMigrating = venture?.canonicalStatus === "Migrating" || venture?.statusBadge?.includes("Migrating");
   const isPrimary = venture?.canonicalStatus === "Raising" || venture?.statusBadge?.includes("Primary Raise") || venture?.statusBadge === "Raising";
+  const isReceiptPhase = isPrimary || isMigrating;
 
   // Chart States
   const [timeframe, setTimeframe] = useState<Timeframe>("1D");
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
   const chartSvgRef = useRef<SVGSVGElement | null>(null);
 
-  // Buy Terminal States
+  // Buy Terminal States with Smart String Input ('13.5k', '50k', '954.441,98', etc.)
   const [tradeAction, setTradeAction] = useState<"BUY" | "SELL" | "REDEEM">("BUY");
-  const [tradeAmount, setTradeAmount] = useState<number>(100);
+  const [tradeInputStr, setTradeInputStr] = useState<string>("100");
+  const tradeAmount = useMemo(() => {
+    return parseSmartAmount(tradeInputStr);
+  }, [tradeInputStr]);
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
   const tradeInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Default to SELL when a venture is in Migrating state (as primary raise is 100% full)
+  useEffect(() => {
+    if (isMigrating && tradeAction === "BUY") {
+      setTradeAction("SELL");
+    }
+  }, [isMigrating]);
 
   // Bottom Module Tab State (Unified 3-Switchers)
   const [bottomTab, setBottomTab] = useState<BottomTab>("STAKING");
@@ -583,8 +723,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
-    if (isMigrating) {
-      setTxError("Trading disabled: Venture is currently migrating to Meteora DLMM.");
+    if (isMigrating && tradeAction === "BUY") {
+      setTxError("Primary raise is 100% completed. Buying is paused while liquidity migrates to Meteora DLMM. You can refund receipts via 'Sell'.");
       return;
     }
 
@@ -600,9 +740,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     }
 
     if (tradeAction === "SELL") {
-      const maxAvailable = isPrimary ? userReceipts : userShares;
+      const maxAvailable = isReceiptPhase ? userReceipts : userShares;
       if (maxAvailable < tradeAmount) {
-        setTxError(`Insufficient balance to sell. You have ${maxAvailable.toLocaleString()} ${isPrimary ? "receipts" : venture.symbol} available, but entered ${tradeAmount.toLocaleString()}.`);
+        setTxError(`Insufficient balance to sell. You have ${maxAvailable.toLocaleString()} ${isReceiptPhase ? "receipts" : venture.symbol} available, but entered ${tradeAmount.toLocaleString()}.`);
         return;
       }
     }
@@ -614,10 +754,6 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       }
       if (userReceipts < tradeAmount) {
         setTxError(`Insufficient receipts to redeem. You hold ${userReceipts.toLocaleString()} receipts, but entered ${tradeAmount.toLocaleString()}.`);
-        return;
-      }
-      if (!wallet.publicKey) {
-        setTxError("Connect your Solana wallet to redeem primary receipts.");
         return;
       }
       try {
@@ -634,47 +770,76 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         setTxSignature(signature);
         setTxSuccess(`Redeemed ${tradeAmount.toLocaleString()} receipts for 1:1 tradable shares on Devnet!`);
         await refreshUserBalances();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("ventrion:trade_completed"));
+          window.dispatchEvent(new Event("ventrion:balances_updated"));
+        }
       } catch (err: any) {
-        setTxError(err.message || "Redemption transaction failed on Solana devnet.");
+        setTxError(sanitizeSolanaError(err));
       } finally {
         setTxLoading(null);
       }
       return;
     }
 
-    if (isPrimary && tradeAction === "BUY") {
-      if (!wallet.publicKey) {
-        setTxError("Connect your Solana wallet to buy in primary raise.");
-        return;
-      }
+    if (isReceiptPhase && tradeAction === "BUY") {
       try {
-        setTxLoading(`Buying $${tradeAmount} USDC on Devnet...`);
+        // Auto-clamp to remaining round allocation if greater than hard cap
+        let finalBuyAmount = tradeAmount;
+        if (venture.targetFundingCapUsdc) {
+          const remainingCap = Math.max(0, venture.targetFundingCapUsdc - (venture.totalCapitalRaisedUsdc || 0));
+          if (remainingCap > 0 && finalBuyAmount > remainingCap) {
+            finalBuyAmount = remainingCap;
+          }
+        }
+
+        if (finalBuyAmount <= 0) {
+          setTxError("This funding round has reached its target cap.");
+          return;
+        }
+
+        setTxLoading(`Buying $${finalBuyAmount.toLocaleString()} USDC on Devnet...`);
         const { signature } = await executeContributeRound(
           {
             investorPubkey: wallet.publicKey.toBase58(),
             companyMint: venture.mintAddress,
-            usdcAmount: Math.floor(tradeAmount * 1_000_000),
+            usdcAmount: Math.floor(finalBuyAmount * 1_000_000),
           },
           wallet,
           connection
         );
         setTxSignature(signature);
-        const acquired = Math.floor(tradeAmount / (venture.sharePriceUsdc || 0.1));
-        setTxSuccess(`Bought $${tradeAmount} USDC for ${acquired.toLocaleString()} $${venture.symbol}-R0 on Devnet!`);
+        const acquired = Math.floor(finalBuyAmount / (venture.sharePriceUsdc || 0.1));
+        setTxSuccess(`Bought $${finalBuyAmount.toLocaleString()} USDC for ${acquired.toLocaleString()} $${venture.symbol}-R0 on Devnet!`);
+
+        // Instant optimistic update of venture metrics
+        setVenture((prev) => {
+          if (!prev) return null;
+          const newRaised = (prev.totalCapitalRaisedUsdc || 0) + finalBuyAmount;
+          const target = prev.targetFundingCapUsdc || 50000;
+          const newPct = Math.min(100, +((newRaised / target) * 100).toFixed(1));
+          return {
+            ...prev,
+            totalCapitalRaisedUsdc: newRaised,
+            fundingProgressPercent: newPct,
+            progressPercentage: newPct,
+          };
+        });
+
         await refreshUserBalances();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("ventrion:trade_completed"));
+          window.dispatchEvent(new Event("ventrion:balances_updated"));
+        }
       } catch (err: any) {
-        setTxError(err.message || "Contribution transaction failed on Solana devnet.");
+        setTxError(sanitizeSolanaError(err));
       } finally {
         setTxLoading(null);
       }
       return;
     }
 
-    if (isPrimary && tradeAction === "SELL") {
-      if (!wallet.publicKey) {
-        setTxError("Connect your Solana wallet to refund/sell primary receipts.");
-        return;
-      }
+    if (isReceiptPhase && tradeAction === "SELL") {
       try {
         setTxLoading(`Refunding ${tradeAmount.toLocaleString()} receipts on Devnet...`);
         const { signature } = await executeSellPrimaryRound(
@@ -689,8 +854,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         setTxSignature(signature);
         setTxSuccess(`Refunded ${tradeAmount.toLocaleString()} receipts back to USDC on Devnet!`);
         await refreshUserBalances();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("ventrion:trade_completed"));
+          window.dispatchEvent(new Event("ventrion:balances_updated"));
+        }
       } catch (err: any) {
-        setTxError(err.message || "Refund transaction failed on Solana devnet.");
+        setTxError(sanitizeSolanaError(err));
       } finally {
         setTxLoading(null);
       }
@@ -698,10 +867,6 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     }
 
     // Secondary DLMM trade execution
-    if (!wallet.publicKey) {
-      setTxError("Connect your Solana wallet to swap on Meteora DLMM.");
-      return;
-    }
     if (!venture.meteoraDlmmPool) {
       setTxError("No active Meteora DLMM liquidity pool found for this venture.");
       return;
@@ -725,8 +890,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         `Successfully swapped ${tradeAmount.toLocaleString()} ${tradeAction === "BUY" ? "USDC" : venture.symbol} on Meteora DLMM Devnet! ${outTokensFormatted ? `Received ~${outTokensFormatted} ${tradeAction === "BUY" ? venture.symbol : "USDC"}` : ""}`
       );
       await refreshUserBalances();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("ventrion:trade_completed"));
+        window.dispatchEvent(new Event("ventrion:balances_updated"));
+      }
     } catch (err: any) {
-      setTxError(err.message || "DLMM swap transaction failed on Solana devnet.");
+      setTxError(sanitizeSolanaError(err));
     } finally {
       setTxLoading(null);
     }
@@ -1308,7 +1477,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 {(["BUY", "SELL"] as const).map((mode) => (
                   <button
                     key={mode}
-                    disabled={isMigrating}
+                    disabled={isMigrating && mode === "BUY"}
                     onClick={() => setTradeAction(mode)}
                     className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                       tradeAction === mode ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
@@ -1345,15 +1514,15 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 )}
               </div>
 
-              {isMigrating ? (
+              {isMigrating && tradeAction === "BUY" ? (
                 <div className="py-8 px-6 rounded-2xl bg-amber-50 border border-amber-200/80 text-center space-y-3 font-mono">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span>Migration in Progress</span>
+                    <span>Primary Raise 100% Filled</span>
                   </div>
-                  <div className="text-sm font-bold text-[#111113]">100% Target Reached</div>
+                  <div className="text-sm font-bold text-[#111113]">Migration in Progress</div>
                   <p className="text-xs text-[#7A7672] max-w-sm mx-auto leading-relaxed">
-                    Protocol verification voting and automated 17% Meteora DLMM pool seeding are in progress. Trading & redemption will unlock upon graduation.
+                    Target capital hard cap reached. Seeding Meteora DLMM pool. Select "Sell" above to refund primary receipts back to USDC.
                   </p>
                 </div>
               ) : (
@@ -1364,10 +1533,16 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     const isSelling = tradeAction === "SELL";
                     const isRedeeming = tradeAction === "REDEEM";
                     const hasInsufficientUsdc = isBuying && userUsdcBalance < tradeAmount && tradeAmount > 0;
-                    const maxSell = isPrimary ? userReceipts : userShares;
+                    const maxSell = isReceiptPhase ? userReceipts : userShares;
                     const hasInsufficientSell = isSelling && maxSell < tradeAmount && tradeAmount > 0;
                     const hasInsufficientRedeem = isRedeeming && userReceipts < tradeAmount && tradeAmount > 0;
                     const hasInvalidAmount = tradeAmount <= 0 || isNaN(tradeAmount);
+
+                    const remainingCap = (isPrimary && isBuying && venture.targetFundingCapUsdc)
+                      ? Math.max(0, venture.targetFundingCapUsdc - (venture.totalCapitalRaisedUsdc || 0))
+                      : 0;
+                    const isAutoCapped = isPrimary && isBuying && remainingCap > 0 && tradeAmount > remainingCap;
+                    const effectiveTradeUsdc = isAutoCapped ? remainingCap : tradeAmount;
 
                     const hasBalanceError = hasInsufficientUsdc || hasInsufficientSell || hasInsufficientRedeem;
 
@@ -1375,10 +1550,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       !wallet.connected ||
                       !isOnChainVerified ||
                       !venture ||
-                      isMigrating ||
+                      (isMigrating && isBuying) ||
                       !!txLoading ||
                       hasInvalidAmount ||
                       hasBalanceError;
+
+                    const maxVal = isBuying ? userUsdcBalance : (isReceiptPhase ? userReceipts : userShares);
 
                     return (
                       <>
@@ -1395,35 +1572,42 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                           >
                             <div className="flex justify-between text-xs text-[#7A7672] mb-1">
                               <span>
-                                {isBuying ? "USDC" : isPrimary ? `${venture.symbol} Receipts` : venture.symbol}
+                                {isBuying ? "USDC" : isReceiptPhase ? `${venture.symbol} Receipts` : venture.symbol}
                               </span>
                               <span className="font-medium">
-                                Bal {isBuying ? `$${userUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (isPrimary ? userReceipts : userShares).toLocaleString()}
+                                Bal {isBuying ? `$${userUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (isReceiptPhase ? userReceipts : userShares).toLocaleString()}
                               </span>
                             </div>
 
                             <div className="flex items-center justify-between">
                               <input
                                 ref={tradeInputRef}
-                                type="number"
-                                min="0"
-                                value={tradeAmount}
+                                type="text"
+                                value={tradeInputStr}
                                 onFocus={() => setIsInputFocused(true)}
                                 onBlur={() => setIsInputFocused(false)}
-                                onChange={(e) => setTradeAmount(Math.max(0, Number(e.target.value)))}
-                                className="w-full bg-transparent text-3xl font-bold text-[#111113] focus:outline-none tabular-nums"
+                                onChange={(e) => setTradeInputStr(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full bg-transparent text-2xl sm:text-3xl font-bold text-[#111113] focus:outline-none tabular-nums font-mono"
                               />
                               <span className="text-xs font-bold text-[#7A7672] shrink-0 ml-2">
-                                {isBuying ? "USDC" : venture.symbol}
+                                {isBuying ? "USDC" : isReceiptPhase ? `${venture.symbol}-R0` : venture.symbol}
                               </span>
                             </div>
+
+                            {/* Auto-Cap Notification */}
+                            {isAutoCapped && (
+                              <div className="text-[11px] text-amber-700 font-mono mt-1 font-semibold">
+                                • Auto-capped to round capacity: ${remainingCap.toLocaleString()} USDC
+                              </div>
+                            )}
 
                             {/* Exactly 3 Money Options: $50, $250, MAX */}
                             <div className="grid grid-cols-3 gap-2 pt-3 mt-2 border-t border-black/[0.04]">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setTradeAmount(50);
+                                  setTradeInputStr("50");
                                   tradeInputRef.current?.focus();
                                 }}
                                 className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
@@ -1437,7 +1621,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setTradeAmount(250);
+                                  setTradeInputStr("250");
                                   tradeInputRef.current?.focus();
                                 }}
                                 className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
@@ -1451,11 +1635,11 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setTradeAmount(isBuying ? userUsdcBalance : (isPrimary ? userReceipts : userShares));
+                                  setTradeInputStr(formatMaxFloored(maxVal));
                                   tradeInputRef.current?.focus();
                                 }}
                                 className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                                  tradeAmount === (isBuying ? userUsdcBalance : (isPrimary ? userReceipts : userShares))
+                                  Math.abs(tradeAmount - Math.floor(maxVal * 100) / 100) < 0.01 && tradeAmount > 0
                                     ? "bg-[#111113] text-white border-[#111113]"
                                     : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
                                 }`}
@@ -1470,7 +1654,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                             <span>Receive</span>
                             <span className="font-bold text-[#111113] text-sm tabular-nums">
                               {isBuying
-                                ? `${(tradeAmount / (venture.sharePriceUsdc || 0.1)).toFixed(1)} ${venture.symbol}`
+                                ? `${(effectiveTradeUsdc / (venture.sharePriceUsdc || 0.1)).toFixed(1)} ${venture.symbol}${isReceiptPhase ? "-R0" : ""}`
                                 : `$${(tradeAmount * (venture.sharePriceUsdc || 0.1)).toFixed(2)} USDC`}
                             </span>
                           </div>
@@ -1491,20 +1675,24 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               ? "Connect Wallet"
                               : !isOnChainVerified
                               ? "Contract Not On-Chain"
+                              : isMigrating && isBuying
+                              ? "Primary Raise 100% Filled"
                               : hasInvalidAmount
                               ? "Enter Valid Amount"
                               : hasInsufficientUsdc
                               ? "Insufficient USDC"
                               : hasInsufficientSell
-                              ? `Insufficient ${isPrimary ? "Receipts" : venture.symbol}`
+                              ? `Insufficient ${isReceiptPhase ? "Receipts" : venture.symbol}`
                               : hasInsufficientRedeem
                               ? "Insufficient Receipts"
                               : isBuying
-                              ? isPrimary
-                                ? `Buy $${tradeAmount} USDC`
+                              ? isReceiptPhase
+                                ? `Buy $${effectiveTradeUsdc.toLocaleString()} USDC`
                                 : `Buy ${venture.symbol}`
                               : isSelling
-                              ? `Sell ${venture.symbol}`
+                              ? isReceiptPhase
+                                ? `Refund Receipts for $${(tradeAmount * (venture.sharePriceUsdc || 0.1)).toFixed(2)} USDC`
+                                : `Sell ${venture.symbol}`
                               : `Redeem Receipts`}
                           </span>
                         </button>

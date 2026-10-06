@@ -11,7 +11,6 @@ import {
   TrendingUp,
   Clock,
   ExternalLink,
-  ShieldCheck,
   Sparkles,
   Layers,
   Activity,
@@ -206,15 +205,6 @@ export default function VenturesPage() {
               Inspect live tokenized enterprises across primary capital formation, liquidity
               migration, and graduated secondary DLMM markets.
             </p>
-          </div>
-
-          {/* Institutional Status Badge (NO green pulsating dot!) */}
-          <div className="flex items-center gap-3 bg-[#FAF7F2] px-4 py-3 rounded-xl border border-black/[0.05] self-start md:self-auto">
-            <span className="w-2 h-2 rounded-full bg-[#111113] shrink-0" />
-            <div className="text-xs font-mono">
-              <div className="text-[#111113] font-semibold">Solana Devnet Cluster</div>
-              <div className="text-[#8E8B88] text-[11px]">10s Autonomous Cache Daemon</div>
-            </div>
           </div>
         </div>
 
@@ -508,20 +498,7 @@ export default function VenturesPage() {
           </div>
         </div>
 
-        {/* REFINED AUDIT FOOTER STRIP */}
-        <div className="p-4 rounded-2xl bg-white border border-black/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-[#787470]">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Smart Contract: <strong className="text-[#111113]">37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8</strong></span>
-          </div>
-          <div className="flex items-center gap-3 text-[11px]">
-            <span>Audited On-Chain Contracts</span>
-            <span>•</span>
-            <span>Meteora DLMM Pools</span>
-            <span>•</span>
-            <span>USDC Settlement</span>
-          </div>
-        </div>
+
       </main>
 
       {/* FOOTER */}

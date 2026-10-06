@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description:
     "The Solana protocol turning commercial revenue into programmatic equity and continuous shareholder USDC distributions.",
   icons: {
-    icon: "/ventrion/ventrion-logo.png",
+    icon: "/ventrion-logo.png",
   },
 };
 

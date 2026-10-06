@@ -268,9 +268,12 @@ export function StayUpdatedSection() {
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#111113] p-1.5 flex items-center justify-center shadow-xs">
               <img
-                src="/preview/ventrion-logo.png"
+                src="/ventrion-logo.png"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/ventrion-logo.png";
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.indexOf("/ventrion/ventrion-logo.png") === -1 && target.src.indexOf("/preview/ventrion-logo.png") === -1) {
+                    target.src = "/ventrion/ventrion-logo.png";
+                  }
                 }}
                 alt="Ventrion Logo"
                 className="w-full h-full object-contain"

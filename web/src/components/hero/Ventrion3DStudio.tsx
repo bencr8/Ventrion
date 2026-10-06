@@ -402,7 +402,17 @@ export function Ventrion3DStudio({ className = "" }: Ventrion3DStudioProps) {
             <div className="w-[64px] sm:w-[70px] bg-[#F7F5F0] border-r border-black/[0.05] flex flex-col items-center pt-3.5 pb-2 justify-start gap-2.5 shrink-0 relative z-20">
               {/* Brand "V" Mark */}
               <div className="w-7 h-7 rounded-lg bg-[#111113] flex items-center justify-center p-1 mb-0.5 shadow-2xs hover:scale-105 transition-transform">
-                <img src="/ventrion/ventrion-logo.png" alt="V" className="w-full h-full object-contain" />
+                <img
+                  src="/ventrion-logo.png"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (target.src.indexOf("/ventrion/ventrion-logo.png") === -1) {
+                      target.src = "/ventrion/ventrion-logo.png";
+                    }
+                  }}
+                  alt="V"
+                  className="w-full h-full object-contain"
+                />
               </div>
 
               {/* 1. Active Bar Chart Pill Button */}
