@@ -50,7 +50,12 @@ export default function VenturesPage() {
 
     async function fetchLiveVentures() {
       try {
-        const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
+        const endpoints = [
+          "/ventrion/api/ventures/live",
+          "/api/ventures/live",
+          "/ventrion/api/ventures",
+          "/api/ventures",
+        ];
         let result = null;
 
         for (const ep of endpoints) {

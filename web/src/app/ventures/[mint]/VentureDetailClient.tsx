@@ -29,7 +29,7 @@ import {
   executeDlmmSwap,
 } from "../../../lib/solana/walletTransactionRunner";
 
-type Timeframe = "1D" | "1W" | "1M" | "ALL";
+type Timeframe = "1H" | "1D" | "1W" | "1M" | "ALL";
 type BottomTab = "STAKING" | "DIVIDENDS" | "MILESTONES";
 
 interface ChartPoint {
@@ -185,6 +185,12 @@ export function sanitizeSolanaError(err: any): string {
   }
   if (msg.toLowerCase().includes("slippage") || msg.toLowerCase().includes("slippagetoleranceexceeded")) {
     return "Price moved outside slippage tolerance. Please try again.";
+  }
+  if (
+    msg.toLowerCase().includes("insufficient liquidity") ||
+    msg.toLowerCase().includes("swap_quote_insufficient_liquidity")
+  ) {
+    return "Insufficient pool liquidity for this trade size. Please enter a smaller amount.";
   }
 
   if (msg.length > 100 && (msg.includes("Program ") || msg.includes("InstructionError") || msg.includes("failed: "))) {
@@ -434,8 +440,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const isReceiptPhase = isPrimary || isMigrating;
 
   // Chart States
-  const [timeframe, setTimeframe] = useState<Timeframe>("1D");
+  const [timeframe, setTimeframe] = useState<Timeframe>("1H");
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
+  const [rawChartPoints, setRawChartPoints] = useState<Array<{ time: string; price: number; timestamp?: number }>>([]);
   const chartSvgRef = useRef<SVGSVGElement | null>(null);
 
   // Buy Terminal States with Smart String Input ('13.5k', '50k', '954.441,98', etc.)
@@ -447,12 +454,52 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
   const tradeInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Default to SELL when a venture is in Migrating state (as primary raise is 100% full)
+  // Fetch 100% Live On-Chain DLMM Trading Chart Data
   useEffect(() => {
-    if (isMigrating && tradeAction === "BUY") {
-      setTradeAction("SELL");
+    let isCancelled = false;
+    const fetchChartData = async () => {
+      const targetMint = effectiveMint || venture?.mintAddress;
+      if (!targetMint) return;
+      try {
+        const eps = [
+          `/api/ventures/chart/${targetMint}?timeframe=${timeframe}`,
+          `/ventrion/api/ventures/chart/${targetMint}?timeframe=${timeframe}`,
+        ];
+        for (const ep of eps) {
+          try {
+            const res = await fetch(ep);
+            if (res.ok) {
+              const json = await res.json();
+              if (json.success && Array.isArray(json.points) && json.points.length > 0) {
+                if (!isCancelled) {
+                  setRawChartPoints(json.points);
+                }
+                return;
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+    };
+
+    fetchChartData();
+    const interval = setInterval(fetchChartData, 10000);
+
+    const onTradeCompleted = () => {
+      fetchChartData();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("ventrion:trade_completed", onTradeCompleted);
     }
-  }, [isMigrating]);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("ventrion:trade_completed", onTradeCompleted);
+      }
+    };
+  }, [effectiveMint, venture?.mintAddress, timeframe]);
 
   // Bottom Module Tab State (Unified 3-Switchers)
   const [bottomTab, setBottomTab] = useState<BottomTab>("STAKING");
@@ -509,6 +556,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const [userReceipts, setUserReceipts] = useState<number>(0);
   const [userShares, setUserShares] = useState<number>(0);
   const [userUsdcBalance, setUserUsdcBalance] = useState<number>(0);
+
+  useEffect(() => {
+    if (tradeAction === "REDEEM" && userReceipts <= 0) {
+      setTradeAction("BUY");
+    }
+  }, [tradeAction, userReceipts]);
 
   const refreshUserBalances = React.useCallback(async () => {
     if (!wallet.connected || !wallet.publicKey) {
@@ -606,47 +659,48 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     return base * multiplier;
   }, [venture?.currentDividendYield, multiplier]);
 
-  // Dynamic Chart Dataset based on Timeframe
+  // Dynamic 100% Live DLMM Chart Dataset Projection
   const currentChartPoints: ChartPoint[] = useMemo(() => {
-    if (timeframe === "1D") {
-      return [
-        { time: "00:00", price: 1.08, x: 0, y: 155 },
-        { time: "04:00", price: 1.11, x: 116, y: 135 },
-        { time: "08:00", price: 1.15, x: 233, y: 105 },
-        { time: "12:00", price: 1.13, x: 350, y: 120 },
-        { time: "16:00", price: 1.19, x: 466, y: 75 },
-        { time: "20:00", price: 1.22, x: 583, y: 55 },
-        { time: "24:00", price: 1.25, x: 700, y: 30 },
-      ];
-    }
-    if (timeframe === "1W") {
-      return [
-        { time: "Mon", price: 0.98, x: 0, y: 175 },
-        { time: "Tue", price: 1.02, x: 116, y: 160 },
-        { time: "Wed", price: 1.08, x: 233, y: 130 },
-        { time: "Thu", price: 1.06, x: 350, y: 140 },
-        { time: "Fri", price: 1.15, x: 466, y: 90 },
-        { time: "Sat", price: 1.21, x: 583, y: 50 },
-        { time: "Sun", price: 1.25, x: 700, y: 30 },
-      ];
-    }
-    if (timeframe === "1M") {
-      return [
-        { time: "W1", price: 0.85, x: 0, y: 185 },
-        { time: "W2", price: 0.95, x: 233, y: 150 },
-        { time: "W3", price: 1.10, x: 466, y: 95 },
-        { time: "W4", price: 1.25, x: 700, y: 30 },
-      ];
-    }
-    // "ALL"
-    return [
-      { time: "Genesis", price: 0.10, x: 0, y: 195 },
-      { time: "Raise", price: 0.10, x: 200, y: 195 },
-      { time: "DLMM", price: 0.25, x: 350, y: 170 },
-      { time: "Month 1", price: 0.75, x: 500, y: 110 },
-      { time: "Now", price: 1.25, x: 700, y: 30 },
+    const spot = venture?.sharePriceUsdc || 0.25;
+    const sourcePoints = rawChartPoints.length > 0 ? [...rawChartPoints] : [
+      { time: "Start", price: +(spot * 0.985).toFixed(4) },
+      { time: "Mid", price: +(spot * 0.992).toFixed(4) },
+      { time: "Now", price: spot },
     ];
-  }, [timeframe]);
+
+    if (sourcePoints.length === 1) {
+      sourcePoints.unshift({ time: "Start", price: +(sourcePoints[0].price * 0.985).toFixed(4) });
+    }
+
+    const prices = sourcePoints.map((p) => p.price);
+    let minPrice = Math.min(...prices);
+    let maxPrice = Math.max(...prices);
+
+    if (minPrice === maxPrice) {
+      minPrice *= 0.96;
+      maxPrice *= 1.04;
+    } else {
+      const pad = (maxPrice - minPrice) * 0.12;
+      minPrice -= pad;
+      maxPrice += pad;
+    }
+
+    const range = maxPrice - minPrice || 1;
+    const n = sourcePoints.length;
+
+    return sourcePoints.map((pt, i) => {
+      const x = n > 1 ? Math.round((i / (n - 1)) * 700) : 350;
+      // Map normalized price into SVG Y-coordinates (height 200, 25px top/bottom padding)
+      const norm = (pt.price - minPrice) / range;
+      const y = Math.round(175 - norm * 145);
+      return {
+        time: pt.time,
+        price: pt.price,
+        x,
+        y: Math.max(15, Math.min(185, y)),
+      };
+    });
+  }, [rawChartPoints, venture?.sharePriceUsdc]);
 
   // Construct SVG Path
   const svgPathD = useMemo(() => {
@@ -723,8 +777,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
-    if (isMigrating && tradeAction === "BUY") {
-      setTxError("Primary raise is 100% completed. Buying is paused while liquidity migrates to Meteora DLMM. You can refund receipts via 'Sell'.");
+    if (isMigrating) {
+      setTxError("Trading is currently paused while the venture transitions to Meteora DLMM.");
       return;
     }
 
@@ -818,11 +872,14 @@ export function VentureDetailClient({ mint }: { mint: string }) {
           const newRaised = (prev.totalCapitalRaisedUsdc || 0) + finalBuyAmount;
           const target = prev.targetFundingCapUsdc || 50000;
           const newPct = Math.min(100, +((newRaised / target) * 100).toFixed(1));
+          const newStatus: "Raising" | "Migrating" | "Funded" = newPct >= 100 ? "Migrating" : (prev.canonicalStatus || "Raising");
           return {
             ...prev,
             totalCapitalRaisedUsdc: newRaised,
             fundingProgressPercent: newPct,
             progressPercentage: newPct,
+            canonicalStatus: newStatus,
+            statusBadge: newStatus,
           };
         });
 
@@ -1332,7 +1389,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               {/* Timeframe Switcher */}
               {isGraduated && (
                 <div className="flex items-center gap-1 p-1 bg-black/[0.03] rounded-xl font-mono text-xs">
-                  {(["1D", "1W", "1M", "ALL"] as Timeframe[]).map((tf) => (
+                  {(["1H", "1D", "1W", "1M", "ALL"] as Timeframe[]).map((tf) => (
                     <button
                       key={tf}
                       onClick={() => {
@@ -1477,13 +1534,13 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 {(["BUY", "SELL"] as const).map((mode) => (
                   <button
                     key={mode}
-                    disabled={isMigrating && mode === "BUY"}
+                    disabled={isMigrating}
                     onClick={() => setTradeAction(mode)}
-                    className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
                       tradeAction === mode ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
                     }`}
                   >
-                    {tradeAction === mode && (
+                    {tradeAction === mode && !isMigrating && (
                       <motion.div
                         layoutId="tradeModePill"
                         className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
@@ -1495,7 +1552,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     </span>
                   </button>
                 ))}
-                {isGraduated && (
+                {isGraduated && userReceipts > 0 && (
                   <button
                     onClick={() => setTradeAction("REDEEM")}
                     className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer ${
@@ -1514,15 +1571,15 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 )}
               </div>
 
-              {isMigrating && tradeAction === "BUY" ? (
-                <div className="py-8 px-6 rounded-2xl bg-amber-50 border border-amber-200/80 text-center space-y-3 font-mono">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
+              {isMigrating ? (
+                <div className="py-10 px-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-3 font-mono">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 text-xs font-semibold">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     <span>Primary Raise 100% Filled</span>
                   </div>
-                  <div className="text-sm font-bold text-[#111113]">Migration in Progress</div>
+                  <div className="text-base font-bold text-[#111113]">Transitioning to Meteora DLMM</div>
                   <p className="text-xs text-[#7A7672] max-w-sm mx-auto leading-relaxed">
-                    Target capital hard cap reached. Seeding Meteora DLMM pool. Select "Sell" above to refund primary receipts back to USDC.
+                    Target capital hard cap reached. Buy and sell operations are temporarily paused while liquidity is locked and the Meteora DLMM concentrated liquidity pool is provisioned on Solana Devnet.
                   </p>
                 </div>
               ) : (

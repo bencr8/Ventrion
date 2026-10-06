@@ -71,16 +71,20 @@ function WalletAdapterBridge({
     [dual.isModalOpen, dual.setIsModalOpen]
   );
 
+  const ConnProvider = ConnectionContext.Provider as any;
+  const WalProvider = WalletContext.Provider as any;
+  const ModalProvider = WalletModalContext.Provider as any;
+
   return (
-    <ConnectionContext.Provider value={{ connection }}>
-      <WalletContext.Provider value={walletContextValue}>
-        <WalletModalContext.Provider value={modalContextValue}>
+    <ConnProvider value={{ connection }}>
+      <WalProvider value={walletContextValue}>
+        <ModalProvider value={modalContextValue}>
           {children}
           <DualModeWalletModal />
           <WalletRejectionToast />
-        </WalletModalContext.Provider>
-      </WalletContext.Provider>
-    </ConnectionContext.Provider>
+        </ModalProvider>
+      </WalProvider>
+    </ConnProvider>
   );
 }
 
