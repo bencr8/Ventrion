@@ -95,23 +95,53 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     }
   };
 
-  // UNIFIED DECENTRALIZED RESOLUTION: Every single token resolves uniformly from Solana Devnet RPC
+  // UNIFIED HIGH-SPEED DECENTRALIZED RESOLUTION: Parallel RPC & Cache querying
   useEffect(() => {
     const currentMint = getInitialMint();
     setEffectiveMint(currentMint);
-    setIsLoadingVenture(true);
     setVentureNotFound(false);
-    setIsOnChainVerified(false);
-    setVenture(null);
 
     let isMounted = true;
+
+    // Instant local baseline match or session cache match if available
+    let initialMatch = VERIFIED_VENTURES.find(
+      (v) =>
+        v.mintAddress === currentMint ||
+        v.id === currentMint ||
+        v.symbol.toLowerCase() === currentMint.toLowerCase()
+    );
+
+    if (!initialMatch && typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("ventrion_live_ventures");
+        if (cached) {
+          const list: Venture[] = JSON.parse(cached);
+          initialMatch = list.find(
+            (v) =>
+              v.mintAddress === currentMint ||
+              v.id === currentMint ||
+              v.symbol.toLowerCase() === currentMint.toLowerCase()
+          );
+        }
+      } catch {}
+    }
+
+    if (initialMatch) {
+      setVenture({ ...initialMatch });
+      setIsOnChainVerified(true);
+      setIsLoadingVenture(false);
+    } else {
+      setIsLoadingVenture(true);
+      setIsOnChainVerified(false);
+      setVenture(null);
+    }
 
     (async () => {
       let mintPubkey: PublicKey | null = null;
       try {
         mintPubkey = new PublicKey(currentMint);
       } catch {
-        if (isMounted) {
+        if (isMounted && !initialMatch) {
           setIsLoadingVenture(false);
           setVentureNotFound(true);
           setIsOnChainVerified(false);
@@ -122,164 +152,143 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
       try {
         const [venturePda] = getVenturePDA(mintPubkey);
-        const accountInfo = await connection.getAccountInfo(venturePda);
-        if (!accountInfo) {
-          // STRICT RULE: CONTRACT DOES NOT EXIST ON SOLANA DEVNET!
-          if (isMounted) {
-            setIsLoadingVenture(false);
-            setVentureNotFound(true);
-            setIsOnChainVerified(false);
-            setVenture(null);
-          }
-          return;
-        }
 
-        // On-chain account exists! Query backend live daemon for metadata
-        let resolved: Venture | null = null;
-        const endpoints = [
-          `/ventrion/api/ventures/live`,
-          `/api/ventures/live`,
-          `/ventrion/api/ventures?mint=${encodeURIComponent(currentMint)}`,
-          `/api/ventures?mint=${encodeURIComponent(currentMint)}`,
-        ];
-
-        for (const ep of endpoints) {
-          try {
-            const res = await fetch(ep);
-            if (res.ok) {
-              const data = await res.json();
-              const list = data?.data || data?.ventures || (Array.isArray(data) ? data : null);
-              if (Array.isArray(list)) {
-                const match = list.find(
-                  (v: any) =>
-                    v.mintAddress === currentMint ||
-                    v.id === currentMint ||
-                    v.symbol?.toLowerCase() === currentMint.toLowerCase()
-                );
-                if (match) {
-                  resolved = match;
-                  break;
+        // Fetch live cache and on-chain account in parallel with zero sequential waiting
+        const fetchLivePromise = (async () => {
+          const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
+          for (const ep of endpoints) {
+            try {
+              const res = await fetch(ep);
+              if (res.ok) {
+                const data = await res.json();
+                const list = data?.data || data?.ventures;
+                if (Array.isArray(list)) {
+                  const m = list.find(
+                    (v: any) =>
+                      v.mintAddress === currentMint ||
+                      v.id === currentMint ||
+                      v.symbol?.toLowerCase() === currentMint.toLowerCase()
+                  );
+                  if (m) return m;
                 }
-              } else if (data && (data.mintAddress === currentMint || data.id === currentMint)) {
-                resolved = data;
-                break;
               }
-            }
-          } catch {}
-        }
-
-        // If not in live daemon cache, check known verified baseline
-        if (!resolved) {
-          const baseline = VERIFIED_VENTURES.find(
-            (v) =>
-              v.mintAddress === currentMint ||
-              v.id === currentMint ||
-              v.symbol.toLowerCase() === currentMint.toLowerCase()
-          );
-          if (baseline) {
-            resolved = { ...baseline };
+            } catch {}
           }
-        }
+          return null;
+        })();
 
-        // Fallback default on-chain entity if metadata not yet indexed
-        if (!resolved) {
-          const [fRound] = getFundingRoundPDA(venturePda, 0);
-          const [rMint] = getReceiptMintPDA(fRound);
-          resolved = {
-            id: currentMint,
-            name: `Enterprise ${currentMint.slice(0, 4)}...${currentMint.slice(-4)}`,
-            symbol: currentMint.slice(0, 4).toUpperCase(),
-            ticker: `$${currentMint.slice(0, 4).toUpperCase()}`,
-            tagline: `Verified on-chain venture on Solana Devnet. Contract ${currentMint.slice(0, 6)}...`,
-            description: `On-chain enterprise entity deployed on Ventrion Protocol (Devnet). Mint: ${currentMint}`,
-            category: "AI & Compute",
-            canonicalStatus: "Raising",
-            statusBadge: "Raising",
-            legalEntity: "MIDAO DAO LLC, Marshall Islands",
-            registrationNumber: `MIDAO-${currentMint.slice(0, 5).toUpperCase()}-REG`,
-            sharePriceUsdc: 0.10,
-            marketCapUsdc: 100000,
-            targetFundingCapUsdc: 50000,
-            totalCapitalRaisedUsdc: 0,
-            fundingProgressPercent: 0,
-            lockedEscrowUsdc: 0,
-            currentDividendYield: 0,
-            logoUrl: "/ventrion-logo.png",
-            mintAddress: currentMint,
-            receiptMint: rMint.toBase58(),
-            founderAddress: "",
-            totalShares: 1000000,
-            circulatingFloat: 400000,
-            dlmmLockedShares: 170000,
-            founderVestingShares: 300000,
-            progressPercentage: 0,
-            founderLockMonths: 12,
-            founderLockPercentage: 30,
-            vTrustTier: "AAA+",
-            schufaRating: "AAA+",
-            totalDividendsPaidUsdc: 0,
-            currentApy: 0,
-            activeRound: 0,
-            milestones: [],
-            products: [],
-          };
-        }
+        const checkAccountPromise = connection.getAccountInfo(venturePda).catch(() => null);
 
-        // Ensure canonical milestones are populated for evaluation
-        if (!resolved.milestones || resolved.milestones.length === 0) {
-          const cap = resolved.targetFundingCapUsdc || 50000;
-          resolved.milestones = [
-            {
-              id: 1,
-              title: "Legal Formation & Protocol Escrow Lock",
-              description: `25% initial operating tranche ($${((cap * 0.25) / 1000).toFixed(1)}k USDC) released upon round completion. Protocol legal wrap and MIDAO filing.`,
-              percentageBps: 2500,
-              amountUsdc: Math.round(cap * 0.25),
-              targetDays: 30,
-              status: "completed",
-              votesFor: 1,
-              votesAgainst: 0,
-              vetoPercentage: 0,
-            },
-            {
-              id: 2,
-              title: "Product Prototype & Core Infrastructure",
-              description: `35% milestone tranche ($${((cap * 0.35) / 1000).toFixed(1)}k USDC) locked in funding escrow PDA. Requires shareholder quorum verification before release.`,
-              percentageBps: 3500,
-              amountUsdc: Math.round(cap * 0.35),
-              targetDays: 90,
-              status: "pending",
-              votesFor: 0,
-              votesAgainst: 0,
-              vetoPercentage: 0,
-            },
-            {
-              id: 3,
-              title: "Commercial Scaling & Dividend Accumulator",
-              description: `40% final expansion tranche ($${((cap * 0.40) / 1000).toFixed(1)}k USDC). Enables Meteora DLMM concentrated liquidity and automated revenue dividends.`,
-              percentageBps: 4000,
-              amountUsdc: Math.round(cap * 0.40),
-              targetDays: 180,
-              status: "pending",
-              votesFor: 0,
-              votesAgainst: 0,
-              vetoPercentage: 0,
-            },
-          ];
-        }
+        const [liveMatch, accountInfo] = await Promise.all([
+          fetchLivePromise,
+          checkAccountPromise,
+        ]);
 
-        if (isMounted) {
+        if (!isMounted) return;
+
+        if (liveMatch || accountInfo || initialMatch) {
+          let resolved = liveMatch || initialMatch;
+          if (!resolved) {
+            const [fRound] = getFundingRoundPDA(venturePda, 0);
+            const [rMint] = getReceiptMintPDA(fRound);
+            resolved = {
+              id: currentMint,
+              name: `Enterprise ${currentMint.slice(0, 4)}...${currentMint.slice(-4)}`,
+              symbol: currentMint.slice(0, 4).toUpperCase(),
+              ticker: `$${currentMint.slice(0, 4).toUpperCase()}`,
+              tagline: `Tokenized enterprise entity on Solana Devnet.`,
+              description: `On-chain enterprise entity deployed on Ventrion Protocol (Devnet). Mint: ${currentMint}`,
+              category: "AI & Compute",
+              canonicalStatus: "Raising",
+              statusBadge: "Raising",
+              legalEntity: "MIDAO DAO LLC, Marshall Islands",
+              registrationNumber: `MIDAO-${currentMint.slice(0, 5).toUpperCase()}-REG`,
+              sharePriceUsdc: 0.10,
+              marketCapUsdc: 100000,
+              targetFundingCapUsdc: 50000,
+              totalCapitalRaisedUsdc: 0,
+              fundingProgressPercent: 0,
+              lockedEscrowUsdc: 0,
+              currentDividendYield: 0,
+              logoUrl: "/ventrion-logo.png",
+              mintAddress: currentMint,
+              receiptMint: rMint.toBase58(),
+              founderAddress: "",
+              totalShares: 1000000,
+              circulatingFloat: 400000,
+              dlmmLockedShares: 170000,
+              founderVestingShares: 300000,
+              progressPercentage: 0,
+              founderLockMonths: 12,
+              founderLockPercentage: 30,
+              vTrustTier: "AAA+",
+              schufaRating: "AAA+",
+              totalDividendsPaidUsdc: 0,
+              currentApy: 0,
+              activeRound: 0,
+              milestones: [
+                {
+                  id: 0,
+                  title: "Milestone 1: Legal Formation & Setup",
+                  description: "Protocol legal wrapper and smart contract verification.",
+                  percentageBps: 3000,
+                  amountUsdc: 15000,
+                  targetDays: 30,
+                  status: "in_review",
+                  votesFor: 10,
+                  votesAgainst: 0,
+                  vetoPercentage: 0,
+                },
+                {
+                  id: 1,
+                  title: "Milestone 2: Prototype Architecture",
+                  description: "Infrastructure scaling and commercial pipeline validation.",
+                  percentageBps: 3500,
+                  amountUsdc: 17500,
+                  targetDays: 60,
+                  status: "pending",
+                  votesFor: 0,
+                  votesAgainst: 0,
+                  vetoPercentage: 0,
+                },
+                {
+                  id: 2,
+                  title: "Milestone 3: Full Market Integration",
+                  description: "Meteora DLMM liquidity pool and programmatic dividend streaming.",
+                  percentageBps: 3500,
+                  amountUsdc: 17500,
+                  targetDays: 90,
+                  status: "pending",
+                  votesFor: 0,
+                  votesAgainst: 0,
+                  vetoPercentage: 0,
+                },
+              ],
+              products: [],
+            };
+          }
+
           setVenture(resolved);
           setIsOnChainVerified(true);
           setVentureNotFound(false);
           setIsLoadingVenture(false);
-        }
-      } catch (err) {
-        if (isMounted) {
+        } else {
+          // Strictly does not exist on Solana Devnet
           setIsLoadingVenture(false);
           setVentureNotFound(true);
           setIsOnChainVerified(false);
           setVenture(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          if (initialMatch) {
+            setVenture(initialMatch);
+            setIsOnChainVerified(true);
+            setIsLoadingVenture(false);
+          } else {
+            setIsLoadingVenture(false);
+            setVentureNotFound(true);
+          }
         }
       }
     })();
@@ -885,15 +894,88 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       </div>
 
       {isLoadingVenture ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center font-mono my-24 space-y-4">
-          <div className="w-14 h-14 rounded-3xl bg-white border border-black/[0.08] flex items-center justify-center shadow-xs">
-            <div className="w-3.5 h-3.5 rounded-full bg-[#FF5C18] animate-ping" />
+        <main className="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 z-10 space-y-10 sm:space-y-12">
+          {/* SKELETON 1: BANNER CONTAINER */}
+          <div className="relative rounded-3xl overflow-hidden border border-black/[0.08] bg-[#111113] p-6 sm:p-8 min-h-[220px] sm:min-h-[260px] flex flex-col justify-between animate-pulse">
+            <div className="w-24 h-7 rounded-xl bg-white/10" />
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/15 shrink-0" />
+                <div className="space-y-2.5">
+                  <div className="w-48 sm:w-64 h-8 rounded-lg bg-white/15" />
+                  <div className="w-32 h-4 rounded-md bg-white/10" />
+                </div>
+              </div>
+              <div className="flex items-center gap-6 bg-black/45 px-6 py-4 rounded-2xl border border-white/10 shrink-0">
+                <div className="w-16 h-8 rounded-lg bg-white/10" />
+                <div className="h-8 w-px bg-white/15" />
+                <div className="w-16 h-8 rounded-lg bg-white/10" />
+                <div className="h-8 w-px bg-white/15" />
+                <div className="w-16 h-8 rounded-lg bg-white/10" />
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <div className="text-sm font-bold text-[#111113]">Resolving Venture on Solana Devnet...</div>
-            <div className="text-xs text-[#7A7672] max-w-sm truncate">{effectiveMint}</div>
+
+          {/* SKELETON 2: 12-COL TRADING TERMINAL */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-8 bg-white border border-black/[0.08] rounded-3xl p-8 sm:p-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] min-h-[480px] flex flex-col justify-between animate-pulse">
+              <div className="flex items-start justify-between pb-6 border-b border-black/[0.06]">
+                <div className="space-y-2">
+                  <div className="w-40 h-10 rounded-xl bg-black/[0.06]" />
+                  <div className="w-28 h-4 rounded-md bg-black/[0.04]" />
+                </div>
+                <div className="w-36 h-8 rounded-xl bg-black/[0.04]" />
+              </div>
+              <div className="my-8 flex-1 flex flex-col justify-center">
+                <div className="w-full h-[220px] rounded-2xl bg-[#FAF7F2] border border-black/[0.04]" />
+              </div>
+              <div className="flex justify-between pt-4 border-t border-black/[0.04]">
+                <div className="w-32 h-4 rounded-md bg-black/[0.04]" />
+                <div className="w-28 h-4 rounded-md bg-black/[0.04]" />
+              </div>
+            </div>
+
+            <div className="lg:col-span-4 bg-white border border-black/[0.08] rounded-3xl p-8 sm:p-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] min-h-[480px] flex flex-col justify-between animate-pulse">
+              <div className="space-y-6">
+                <div className="w-full h-11 rounded-2xl bg-black/[0.04]" />
+                <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] space-y-3">
+                  <div className="flex justify-between">
+                    <div className="w-16 h-3 rounded bg-black/[0.06]" />
+                    <div className="w-20 h-3 rounded bg-black/[0.06]" />
+                  </div>
+                  <div className="w-36 h-9 rounded-lg bg-black/[0.08]" />
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    <div className="h-7 rounded-lg bg-black/[0.06]" />
+                    <div className="h-7 rounded-lg bg-black/[0.06]" />
+                    <div className="h-7 rounded-lg bg-black/[0.06]" />
+                  </div>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <div className="w-16 h-4 rounded bg-black/[0.04]" />
+                  <div className="w-24 h-4 rounded bg-black/[0.06]" />
+                </div>
+              </div>
+              <div className="w-full h-14 rounded-2xl bg-[#111113]/15" />
+            </div>
           </div>
-        </div>
+
+          {/* SKELETON 3: ADVANCED MODULE ROADMAP */}
+          <div className="bg-white border border-black/[0.08] rounded-3xl p-8 sm:p-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-8 animate-pulse">
+            <div className="flex items-center justify-between pb-6 border-b border-black/[0.06]">
+              <div className="w-48 h-6 rounded-lg bg-black/[0.06]" />
+              <div className="w-24 h-4 rounded-md bg-black/[0.04]" />
+            </div>
+            <div className="p-8 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] flex flex-col items-center space-y-4">
+              <div className="w-56 h-10 rounded-xl bg-black/[0.06]" />
+              <div className="w-full max-w-xl h-3 rounded-full bg-black/[0.06]" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="h-44 rounded-2xl bg-black/[0.03] border border-black/[0.04]" />
+              <div className="h-44 rounded-2xl bg-black/[0.03] border border-black/[0.04]" />
+              <div className="h-44 rounded-2xl bg-black/[0.03] border border-black/[0.04]" />
+            </div>
+          </div>
+        </main>
       ) : ventureNotFound || !venture ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center font-mono my-24 space-y-5">
           <div className="w-14 h-14 rounded-3xl bg-white border border-black/[0.08] flex items-center justify-center shadow-xs text-red-500 font-bold text-xl">
@@ -1383,26 +1465,6 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                             </div>
                           </div>
 
-                          {/* Dynamic Balance Error Feedback */}
-                          {hasInsufficientUsdc && (
-                            <div className="flex items-center justify-between text-[11px] text-rose-600 font-mono px-1">
-                              <span>Insufficient USDC Balance</span>
-                              <span className="font-semibold">${userUsdcBalance.toFixed(2)} Available</span>
-                            </div>
-                          )}
-                          {hasInsufficientSell && (
-                            <div className="flex items-center justify-between text-[11px] text-rose-600 font-mono px-1">
-                              <span>Insufficient {isPrimary ? "receipts" : "shares"} to sell</span>
-                              <span className="font-semibold">{maxSell.toLocaleString()} Available</span>
-                            </div>
-                          )}
-                          {hasInsufficientRedeem && (
-                            <div className="flex items-center justify-between text-[11px] text-rose-600 font-mono px-1">
-                              <span>Insufficient receipts to redeem</span>
-                              <span className="font-semibold">{userReceipts.toLocaleString()} Available</span>
-                            </div>
-                          )}
-
                           {/* Estimate */}
                           <div className="flex justify-between items-center text-xs text-[#7A7672] px-1 pt-1">
                             <span>Receive</span>
@@ -1432,11 +1494,11 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               : hasInvalidAmount
                               ? "Enter Valid Amount"
                               : hasInsufficientUsdc
-                              ? `Insufficient USDC ($${userUsdcBalance.toFixed(2)} Available)`
+                              ? "Insufficient USDC"
                               : hasInsufficientSell
-                              ? `Insufficient ${isPrimary ? "Receipts" : venture.symbol} (${maxSell.toLocaleString()} Available)`
+                              ? `Insufficient ${isPrimary ? "Receipts" : venture.symbol}`
                               : hasInsufficientRedeem
-                              ? `Insufficient Receipts (${userReceipts.toLocaleString()} Available)`
+                              ? "Insufficient Receipts"
                               : isBuying
                               ? isPrimary
                                 ? `Buy $${tradeAmount} USDC`
@@ -1487,23 +1549,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               </div>
             ) : (
               <div>
-                <div className="flex items-center gap-2.5">
-                  <h2 className="text-xl font-bold text-[#111113] tracking-tight">Milestone Roadmap &amp; Escrow Security</h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 text-[10px] font-mono font-bold">
-                    Primary Capital Raise
-                  </span>
-                </div>
-                <p className="text-xs text-[#7A7672] mt-1 font-mono max-w-2xl">
-                  Investors hold convertible receipt contracts ($SYMBOL-R0) backed by 75% on-chain escrow. Review deliverables and execution roadmap below. Staking &amp; dividend distribution unlock once the round graduates to Meteora DLMM.
+                <h2 className="text-xl font-bold text-[#111113] tracking-tight">Milestone Roadmap &amp; Escrow Security</h2>
+                <p className="text-xs text-[#7A7672] mt-1 font-mono">
+                  Milestone roadmap protected by 75% smart contract escrow.
                 </p>
               </div>
             )}
-
-            <div className="font-mono text-xs text-[#7A7672] flex items-center gap-3">
-              <span>{venture.ticker}</span>
-              <span className="w-1 h-1 rounded-full bg-black/20" />
-              <span>{isGraduated ? "Graduated DLMM" : isMigrating ? "DLMM Migration" : "Primary Curve"}</span>
-            </div>
           </div>
 
           {/* CONTENT: IF NOT GRADUATED, SHOW COMPREHENSIVE MILESTONE ROADMAP & ESCROW BACKSTOP */}
@@ -1525,8 +1576,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                         </div>
                         <p className="text-xs text-[#7A7672]">
                           {isMigrating
-                            ? "Primary round complete. DLMM liquidity seeding in progress."
-                            : "Primary Capital Accumulation (75% Milestone Escrow Backstopped)"}
+                            ? "Round completed. DLMM liquidity seeding in progress."
+                            : "75% Milestone Escrow Protected"}
                         </p>
                         {/* Clean Technical Progress Bar */}
                         <div className="w-full h-3 bg-white border border-black/[0.08] rounded-full overflow-hidden p-0.5 mx-auto mt-4">
@@ -1550,7 +1601,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 {(() => {
                   const cap = venture.targetFundingCapUsdc || 50000;
                   const escrowAmount = cap * 0.75;
-                  const initialTranche = cap * 0.25;
+                  const initialMilestone = cap * 0.25;
                   return (
                     <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-left">
                       <div className="p-4 rounded-xl bg-white border border-black/[0.06] space-y-1">
@@ -1567,10 +1618,10 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
                       <div className="p-4 rounded-xl bg-white border border-black/[0.06] space-y-1">
                         <span className="text-[#7A7672] text-[10px] uppercase tracking-wider block font-semibold">
-                          Stage 0 Initial Tranche
+                          Initial Allocation
                         </span>
                         <span className="font-bold text-[#111113] text-sm block">
-                          ${initialTranche.toLocaleString()} USDC
+                          ${initialMilestone.toLocaleString()} USDC
                         </span>
                         <span className="text-[10px] text-[#7A7672] block">
                           Released upon round completion
@@ -1597,10 +1648,10 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-black/[0.06]">
                   <h3 className="text-base font-bold text-[#111113]">
-                    Tranche Release Roadmap &amp; Deliverables
+                    Milestone Roadmap &amp; Deliverables
                   </h3>
                   <span className="text-xs text-[#7A7672]">
-                    {(venture.milestones || []).length} Verified Tranches
+                    {(venture.milestones || []).length} Verified Milestones
                   </span>
                 </div>
 
@@ -1622,7 +1673,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="px-2 py-0.5 rounded-md bg-black/5 text-[#111113] font-bold text-[10px] tracking-wider uppercase">
-                              Tranche #{idx + 1}
+                              Milestone #{idx + 1}
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${

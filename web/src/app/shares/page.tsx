@@ -46,9 +46,23 @@ export default function SharesPage() {
 
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [isLoadingHoldings, setIsLoadingHoldings] = useState(false);
-  const [trajectoryMode, setTrajectoryMode] = useState<"TRAJECTORY" | "INVARIANT">("TRAJECTORY");
-  const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
-  const chartSvgRef = useRef<SVGSVGElement | null>(null);
+  // Currency Pill State
+  const [currency, setCurrency] = useState<"USDC" | "EUR">("USDC");
+  const eurRate = 0.92;
+  const currencySymbol = currency === "USDC" ? "$" : "€";
+  const currencyMultiplier = currency === "USDC" ? 1.0 : eurRate;
+
+  // Buttery Lerp Scrubber State (adapted from TradeDexView)
+  const [currentPos, setCurrentPos] = useState<{ x: number; y: number }>({ x: 700, y: 160 });
+  const [scrubbedVal, setScrubbedVal] = useState<number | null>(null);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [isMoving, setIsMoving] = useState<boolean>(false);
+
+  const targetXRef = useRef<number>(700);
+  const currentXRef = useRef<number>(700);
+  const animFrameRef = useRef<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const pathRef = useRef<SVGPathElement | null>(null);
 
   // Live DLMM Prices cache
   const [livePrices, setLivePrices] = useState<Record<string, number>>({
@@ -207,76 +221,124 @@ export default function SharesPage() {
   const totalPnlPercent = totalCostBasis > 0 ? (totalPnlUsdc / totalCostBasis) * 100 : 0;
   const targetExitValuation = totalCostBasis > 0 ? totalCostBasis * 1.5 : 0;
 
-  // Strict Entry-to-Exit Capital Trajectory (Zero synthetic waves)
-  const currentChartPoints: ChartPoint[] = useMemo(() => {
-    if (totalCostBasis === 0 && totalPortfolioValue === 0) {
-      return [
-        { time: "Entry", val: 0, x: 50, y: 170 },
-        { time: "Escrow Floor", val: 0, x: 250, y: 170 },
-        { time: "Current Spot", val: 0, x: 450, y: 170 },
-        { time: "Exit Target", val: 0, x: 650, y: 170 },
-      ];
+  // Smooth Vector Curve & Gradient Area from Acquisition (BUY) to Current Spot (NOW)
+  const { pathD, areaD, yStartVal, yEndVal } = useMemo(() => {
+    const width = 700;
+    const height = 220;
+    if (totalCostBasis <= 0 && totalPortfolioValue <= 0) {
+      const flatY = 160;
+      return {
+        pathD: `M 0 ${flatY} L ${width} ${flatY}`,
+        areaD: `M 0 ${flatY} L ${width} ${flatY} L ${width} ${height} L 0 ${height} Z`,
+        yStartVal: 0,
+        yEndVal: 0,
+      };
     }
 
-    if (trajectoryMode === "INVARIANT") {
-      // Flat Invariant Curve - 100% Capital Preservation
-      return [
-        { time: "Genesis Entry", val: totalCostBasis, x: 50, y: 90 },
-        { time: "Milestone Tranche 1", val: totalCostBasis, x: 250, y: 90 },
-        { time: "Milestone Tranche 2", val: totalCostBasis, x: 450, y: 90 },
-        { time: "Graduation Gate", val: totalCostBasis, x: 650, y: 90 },
-      ];
-    }
-
-    // "TRAJECTORY": Entry (Cost Basis) -> 75% Escrow Floor -> Current Spot -> Exit Target
-    const vals = [totalCostBasis, totalEscrowBackstop, totalPortfolioValue, targetExitValuation];
-    const minVal = Math.min(...vals) * 0.9;
-    const maxVal = Math.max(...vals) * 1.1;
+    const minVal = Math.min(totalCostBasis, totalPortfolioValue) * 0.9;
+    const maxVal = Math.max(totalCostBasis, totalPortfolioValue) * 1.1;
     const range = maxVal - minVal || 1;
 
     const getY = (val: number) => {
-      const normalized = (val - minVal) / range;
-      return Math.round(175 - normalized * 135);
+      const norm = (val - minVal) / range;
+      return Math.round(170 - norm * 115);
     };
 
-    return [
-      { time: "Entry (Cost Basis)", val: totalCostBasis, x: 50, y: getY(totalCostBasis) },
-      { time: "75% Escrow Floor", val: totalEscrowBackstop, x: 250, y: getY(totalEscrowBackstop) },
-      { time: "Current Valuation", val: totalPortfolioValue, x: 450, y: getY(totalPortfolioValue) },
-      { time: "Full Milestone Target", val: targetExitValuation, x: 650, y: getY(targetExitValuation) },
-    ];
-  }, [trajectoryMode, totalCostBasis, totalPortfolioValue, totalEscrowBackstop, targetExitValuation]);
+    const y0 = getY(totalCostBasis);
+    const y1 = getY(totalPortfolioValue);
+    const midY = (y0 + y1) / 2;
 
-  // Construct SVG Path
-  const svgPathD = useMemo(() => {
-    return currentChartPoints.reduce((acc, pt, idx) => {
-      return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
-    }, "");
-  }, [currentChartPoints]);
+    const d = `M 0 ${y0} C 220 ${y0}, 380 ${midY}, 540 ${(y0 + y1 * 3) / 4} C 620 ${y1}, 660 ${y1}, ${width} ${y1}`;
+    const a = `${d} L ${width} ${height} L 0 ${height} Z`;
 
-  const svgAreaD = useMemo(() => {
-    if (currentChartPoints.length === 0) return "";
-    const first = currentChartPoints[0];
-    const last = currentChartPoints[currentChartPoints.length - 1];
-    return `${svgPathD} L ${last.x} 200 L ${first.x} 200 Z`;
-  }, [svgPathD, currentChartPoints]);
+    return {
+      pathD: d,
+      areaD: a,
+      yStartVal: totalCostBasis,
+      yEndVal: totalPortfolioValue,
+    };
+  }, [totalCostBasis, totalPortfolioValue]);
 
-  const handleChartMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!chartSvgRef.current || currentChartPoints.length === 0) return;
-    const rect = chartSvgRef.current.getBoundingClientRect();
-    const relX = ((e.clientX - rect.left) / rect.width) * 700;
+  // Exact point on path via binary search
+  const findPointAtX = useCallback((targetX: number): { x: number; y: number } => {
+    const path = pathRef.current;
+    if (!path) return { x: targetX, y: 160 };
 
-    let closest = currentChartPoints[0];
-    let minDiff = Math.abs(currentChartPoints[0].x - relX);
-    for (let i = 1; i < currentChartPoints.length; i++) {
-      const diff = Math.abs(currentChartPoints[i].x - relX);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = currentChartPoints[i];
+    const totalLen = path.getTotalLength();
+    let low = 0;
+    let high = totalLen;
+    let best = path.getPointAtLength(totalLen);
+
+    for (let i = 0; i < 22; i++) {
+      const mid = (low + high) / 2;
+      const pt = path.getPointAtLength(mid);
+      if (Math.abs(pt.x - targetX) < 0.25) {
+        return { x: pt.x, y: pt.y };
       }
+      if (pt.x < targetX) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+      best = pt;
     }
-    setHoveredPoint(closest);
+
+    return { x: best.x, y: best.y };
+  }, []);
+
+  // Delayed magnetic follower loop for buttery scrubbing
+  const updateScrubberLoop = useCallback(() => {
+    const diff = targetXRef.current - currentXRef.current;
+    if (Math.abs(diff) > 0.15) {
+      currentXRef.current += diff * 0.14;
+      const pt = findPointAtX(currentXRef.current);
+      setCurrentPos(pt);
+
+      const ratio = Math.max(0, Math.min(1, currentXRef.current / 700));
+      const val = yStartVal + ratio * (yEndVal - yStartVal);
+      setScrubbedVal(val);
+      setIsMoving(true);
+
+      animFrameRef.current = requestAnimationFrame(updateScrubberLoop);
+    } else {
+      currentXRef.current = targetXRef.current;
+      const pt = findPointAtX(targetXRef.current);
+      setCurrentPos(pt);
+      const ratio = Math.max(0, Math.min(1, targetXRef.current / 700));
+      setScrubbedVal(targetXRef.current === 700 && !isHovered ? null : yStartVal + ratio * (yEndVal - yStartVal));
+      setIsMoving(false);
+      animFrameRef.current = null;
+    }
+  }, [findPointAtX, yStartVal, yEndVal, isHovered]);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const rawX = e.clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(700, (rawX / rect.width) * 700));
+
+    targetXRef.current = clampedX;
+    setIsHovered(true);
+
+    if (!animFrameRef.current) {
+      animFrameRef.current = requestAnimationFrame(updateScrubberLoop);
+    }
   };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    targetXRef.current = 700;
+    if (!animFrameRef.current) {
+      animFrameRef.current = requestAnimationFrame(updateScrubberLoop);
+    }
+  };
+
+  useEffect(() => {
+    targetXRef.current = 700;
+    currentXRef.current = 700;
+    const pt = findPointAtX(700);
+    setCurrentPos(pt);
+  }, [pathD, findPointAtX]);
 
   const handleConnectClick = async () => {
     const phantom = wallets.find((w) =>
@@ -317,156 +379,121 @@ export default function SharesPage() {
           </div>
         </div>
 
-        {/* UNIFIED INTERACTIVE CAPITAL TRAJECTORY (ZERO SYNTHETIC VOLATILITY) */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block">
+        {/* BUTTERY INTERACTIVE PORTFOLIO VALUATION TERMINAL */}
+        <div className="p-6 sm:p-10 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-8 font-mono">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-black/[0.06]">
+            <div>
+              <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block font-medium">
                 Total Equity Portfolio Valuation
               </span>
-              <div className="text-3xl sm:text-4xl font-bold text-[#111113] tabular-nums">
-                ${connected ? <BezierCounter value={totalPortfolioValue} decimals={2} /> : "0.00"} <span className="text-xs font-normal text-[#7A7672]">USDC</span>
-              </div>
-              <div className="text-xs text-[#7A7672]">
-                {connected
-                  ? `Cost Basis: $${totalCostBasis.toFixed(2)} USDC • 75% Escrow Floor: $${totalEscrowBackstop.toFixed(2)} USDC`
-                  : "Connect wallet to load holdings"}
+              <div className="flex flex-wrap items-baseline gap-3 mt-1.5">
+                <span className="text-3xl sm:text-5xl font-extrabold font-mono text-[#111113] tracking-tight tabular-nums">
+                  {currencySymbol}
+                  {((scrubbedVal !== null ? scrubbedVal : totalPortfolioValue) * currencyMultiplier).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                <span className="text-xs font-mono font-semibold text-[#8E8B88]">
+                  {currency}
+                </span>
+                {totalCostBasis > 0 && (
+                  <span
+                    className={`text-xs font-bold font-mono px-2.5 py-1 rounded-full ${
+                      totalPnlPercent >= 0
+                        ? "text-emerald-700 bg-emerald-50 border border-emerald-200/60"
+                        : "text-rose-600 bg-rose-50 border border-rose-200/60"
+                    }`}
+                  >
+                    {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent.toFixed(1)}%
+                  </span>
+                )}
+                {isHovered && scrubbedVal !== null && (
+                  <span className="text-xs text-[#7A7672] ml-1">
+                    {currentPos.x < 150 ? "@ Buy Entry" : currentPos.x > 550 ? "@ Current Spot" : "@ Holding"}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Right Metric Cluster & Mode Selector */}
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block">
-                  Escrow Backstop
-                </span>
-                <span className="text-base sm:text-lg font-bold text-emerald-700">
-                  ${connected ? totalEscrowBackstop.toFixed(2) : "0.00"}
-                </span>
-                <span className="text-[10px] text-[#7A7672] block">75% Smart Contract</span>
-              </div>
-
-              <div className="space-y-0.5">
-                <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block">
-                  Net Return
-                </span>
-                <span className={`text-base sm:text-lg font-bold ${totalPnlUsdc >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
-                  {connected ? `${totalPnlUsdc >= 0 ? "+" : ""}$${totalPnlUsdc.toFixed(2)}` : "$0.00"}
-                </span>
-                <span className="text-[10px] text-[#7A7672] block">
-                  {connected ? `${totalPnlPercent >= 0 ? "+" : ""}${totalPnlPercent.toFixed(1)}% Spot` : "0.0%"}
-                </span>
-              </div>
-
-              {/* Trajectory Mode Selector */}
-              <div className="flex p-1 bg-black/[0.03] rounded-xl text-xs gap-1">
-                {(["TRAJECTORY", "INVARIANT"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setTrajectoryMode(mode)}
-                    className={`relative px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-[11px] font-semibold ${
-                      trajectoryMode === mode ? "text-white font-bold" : "text-[#7A7672] hover:text-[#111113]"
-                    }`}
-                  >
-                    {trajectoryMode === mode && (
-                      <motion.div
-                        layoutId="portfolioTfPill"
-                        className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
-                        transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                      />
-                    )}
-                    <span className="relative z-10">
-                      {mode === "TRAJECTORY" ? "Trajectory" : "Flat Invariant"}
-                    </span>
-                  </button>
-                ))}
-              </div>
+            {/* Currency Pill Switcher (USDC / EUR) */}
+            <div className="flex items-center gap-1 p-1 bg-black/[0.03] rounded-xl self-start sm:self-auto">
+              {(["USDC", "EUR"] as const).map((curr) => (
+                <button
+                  key={curr}
+                  onClick={() => setCurrency(curr)}
+                  className={`relative px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    currency === curr ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
+                  }`}
+                >
+                  {currency === curr && (
+                    <motion.div
+                      layoutId="sharesCurrencyPill"
+                      className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
+                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{curr}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Interactive SVG Canvas */}
-          <div className="relative w-full h-[220px]">
+          {/* Spacious Buttery Interactive SVG Canvas */}
+          <div className="relative w-full h-[280px] sm:h-[340px]">
             <svg
-              ref={chartSvgRef}
-              viewBox="0 0 700 200"
+              ref={svgRef}
+              viewBox="0 0 700 220"
               preserveAspectRatio="none"
               className="w-full h-full overflow-visible cursor-crosshair select-none"
-              onMouseMove={handleChartMouseMove}
-              onMouseLeave={() => setHoveredPoint(null)}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
             >
               <defs>
                 <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#FF5C18" stopOpacity="0.22" />
+                  <stop offset="0%" stopColor="#FF5C18" stopOpacity="0.18" />
                   <stop offset="100%" stopColor="#FF5C18" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
 
-              <path d={svgAreaD} fill="url(#equityGradient)" />
+              {/* Gradient Area Fill under Curve */}
+              <path d={areaD} fill="url(#equityGradient)" className="pointer-events-none" />
+
+              {/* Main Crisp Vector Line */}
               <path
-                d={svgPathD}
+                ref={pathRef}
+                d={pathD}
                 fill="none"
                 stroke="#FF5C18"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="pointer-events-none"
               />
 
-              {/* Render Nodes for each trajectory waypoint */}
-              {currentChartPoints.map((pt, idx) => (
-                <g key={idx}>
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="4"
-                    fill="#111113"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.5"
-                  />
-                  <text
-                    x={pt.x}
-                    y={pt.y > 150 ? pt.y - 12 : pt.y + 18}
-                    textAnchor="middle"
-                    className="text-[9px] fill-[#7A7672] font-mono pointer-events-none"
-                  >
-                    {pt.time}
-                  </text>
-                </g>
-              ))}
-
-              {hoveredPoint && (
-                <>
-                  <line
-                    x1={hoveredPoint.x}
-                    y1="0"
-                    x2={hoveredPoint.x}
-                    y2="200"
-                    stroke="#111113"
-                    strokeWidth="1"
-                    strokeDasharray="3 3"
-                    strokeOpacity="0.4"
-                  />
-                  <circle
-                    cx={hoveredPoint.x}
-                    cy={hoveredPoint.y}
-                    r="6"
-                    fill="#FF5C18"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                  />
-                </>
-              )}
+              {/* Vertical Guideline */}
+              <g transform={`translate(${currentPos.x}, 0)`} className="pointer-events-none">
+                <line
+                  x1="0"
+                  y1="10"
+                  x2="0"
+                  y2="215"
+                  stroke="#FF5C18"
+                  strokeWidth="1.2"
+                  strokeDasharray="3 3"
+                  strokeOpacity={isHovered ? 0.75 : 0.3}
+                />
+              </g>
             </svg>
 
-            <div className="flex justify-between font-mono text-xs text-[#7A7672] pt-4 border-t border-black/[0.04] min-h-[38px] items-center">
-              <span>
-                {hoveredPoint
-                  ? `${hoveredPoint.time} • $${hoveredPoint.val.toFixed(2)} USDC`
-                  : `${holdings.length} Active Positions • Solana Devnet Invariant`}
-              </span>
-              <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 font-semibold">
-                75% Escrow Floor Protected
-              </span>
-            </div>
+            {/* Glowing Scrubber Point */}
+            <div
+              style={{
+                left: `${(currentPos.x / 700) * 100}%`,
+                top: `${(currentPos.y / 220) * 100}%`,
+              }}
+              className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white border-[2.5px] border-[#FF5C18] shadow-[0_0_12px_rgba(255,92,24,0.5)] pointer-events-none z-20"
+            />
           </div>
         </div>
 

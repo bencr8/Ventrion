@@ -31,7 +31,18 @@ export default function VenturesPage() {
   const [sortBy, setSortBy] = useState<SortOption>("highest_mcap");
 
   // Live Ventures from Server-Side 10s Cache Daemon
-  const [liveVentures, setLiveVentures] = useState<Venture[]>([]);
+  const [liveVentures, setLiveVentures] = useState<Venture[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = sessionStorage.getItem("ventrion_live_ventures");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [isLoadingLive, setIsLoadingLive] = useState(false);
 
   // Poll 10-second Server Cache Daemon
@@ -57,6 +68,9 @@ export default function VenturesPage() {
 
         if (result?.success && Array.isArray(result?.data) && isMounted) {
           setLiveVentures(result.data);
+          try {
+            sessionStorage.setItem("ventrion_live_ventures", JSON.stringify(result.data));
+          } catch {}
         }
       } catch (err) {
         // Fall back gracefully to verified state
