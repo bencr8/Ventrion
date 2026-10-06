@@ -89,16 +89,30 @@ async function postToTxApi(endpoint: string, body: Record<string, any>): Promise
         body: JSON.stringify(body),
       });
 
+      const json = await res.json().catch(() => null);
+
       if (res.ok) {
-        const json = await res.json();
-        if (json.success) {
+        if (json?.success) {
           return json;
-        } else if (json.error) {
+        } else if (json?.error) {
+          throw new Error(json.error);
+        }
+        return json;
+      } else {
+        if (json?.error) {
           throw new Error(json.error);
         }
       }
     } catch (e: any) {
       lastError = e;
+      if (
+        e.message &&
+        !e.message.startsWith("Failed to fetch") &&
+        !e.message.startsWith("NetworkError") &&
+        !e.message.includes("Unexpected token")
+      ) {
+        throw e;
+      }
     }
   }
 
@@ -262,8 +276,8 @@ export async function executeContributeRound(
   // 4. Broadcast raw transaction
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: false,
-    preflightCommitment: "confirmed",
+    skipPreflight: true,
+    maxRetries: 5,
   });
 
   // 5. Confirm on-chain
@@ -321,8 +335,8 @@ export async function executeSellPrimaryRound(
   // 4. Broadcast raw transaction
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: false,
-    preflightCommitment: "confirmed",
+    skipPreflight: true,
+    maxRetries: 5,
   });
 
   // 5. Confirm on-chain
@@ -370,8 +384,8 @@ export async function executeRedeemShares(
   const signedTx = await wallet.signTransaction(transaction);
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: false,
-    preflightCommitment: "confirmed",
+    skipPreflight: true,
+    maxRetries: 5,
   });
 
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");
@@ -498,8 +512,8 @@ export async function executeDlmmSwap(
   const signedTx = await wallet.signTransaction(transaction);
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: false,
-    preflightCommitment: "confirmed",
+    skipPreflight: true,
+    maxRetries: 5,
   });
 
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");

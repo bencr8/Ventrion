@@ -98,13 +98,20 @@ export function SolanaWalletProvider({
     () =>
       process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
       process.env.NEXT_PUBLIC_RPC_URL ||
-      clusterApiUrl(network),
-    [network]
+      "https://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56",
+    []
+  );
+
+  const wsEndpoint = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_SOLANA_WS_URL ||
+      "wss://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56",
+    []
   );
 
   const connection = useMemo(
-    () => new Connection(endpoint, "confirmed"),
-    [endpoint]
+    () => new Connection(endpoint, { commitment: "confirmed", wsEndpoint }),
+    [endpoint, wsEndpoint]
   );
 
   return (

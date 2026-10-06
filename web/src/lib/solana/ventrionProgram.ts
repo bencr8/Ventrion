@@ -43,7 +43,9 @@ export const QCMP_METEORA_DLMM_POOL = new PublicKey(
 export const METAPLEX_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
-export const SOLANA_DEVNET_RPC = "https://api.devnet.solana.com";
+export const SOLANA_DEVNET_RPC =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+  "https://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56";
 
 export const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"

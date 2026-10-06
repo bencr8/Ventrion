@@ -5,8 +5,10 @@ export const DIVIDEND_PRECISION = 1_000_000_000_000_000_000; // 1e18 (ACC_PRECIS
 
 // =============================================================================
 // SOLANA DEVNET DEPLOYMENT CONSTANTS & ADDRESSES (LIVE CLUSTER VERIFIED)
-// =============================================================================
-export const DEVNET_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+export const HELIUS_DEVNET_RPC = "https://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56";
+export const HELIUS_DEVNET_WSS = "wss://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56";
+export const DEVNET_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || HELIUS_DEVNET_RPC;
+export const DEVNET_WSS_URL = process.env.NEXT_PUBLIC_SOLANA_WS_URL || HELIUS_DEVNET_WSS;
 export const DEVNET_PROGRAM_ID = "37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8";
 export const DEVNET_DEPLOYER_KEY = "2K9r52f1ZxuB1BQ1hhZWFgk1cGPcf7ucdvDHkGgf82TV";
 export const DEVNET_GLOBAL_CONFIG_PDA = "9W5BqZ32GkZyhbs6KqhfWCNwi1KXNiZemBerMsb2n57M";
