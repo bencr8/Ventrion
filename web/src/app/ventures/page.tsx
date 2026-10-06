@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
@@ -24,6 +25,7 @@ type LifecyclePhase = "Raising" | "Migrating" | "Funded";
 type SortOption = "highest_mcap" | "highest_volume" | "progress" | "newest";
 
 export default function VenturesPage() {
+  const router = useRouter();
   const [selectedPhase, setSelectedPhase] = useState<LifecyclePhase>("Raising");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("highest_mcap");
@@ -317,39 +319,38 @@ export default function VenturesPage() {
                     return (
                       <tr
                         key={v.mintAddress || v.id}
-                        className="hover:bg-black/[0.015] transition-colors group cursor-pointer"
+                        onClick={() => router.push(`/ventures/${v.mintAddress || v.id}`)}
+                        className="hover:bg-black/[0.02] transition-colors group cursor-pointer"
                       >
                         {/* Asset Column (Rounded Picture replacing black ticker block) */}
                         <td className="py-3.5 px-5">
-                          <Link href={`/ventures/${v.mintAddress}`} className="block">
-                            <div className="flex items-center gap-3">
-                              {/* Round-cornered logo replacing black square */}
-                              <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#111113]/5 border border-black/[0.08] shrink-0 shadow-2xs flex items-center justify-center">
-                                {v.logoUrl && v.logoUrl.startsWith("http") ? (
-                                  <img
-                                    src={v.logoUrl}
-                                    alt={cleanName}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-[#111113] text-white flex items-center justify-center font-mono font-bold text-xs">
-                                    {v.symbol?.slice(0, 4) || "VENT"}
-                                  </div>
-                                )}
+                          <div className="flex items-center gap-3">
+                            {/* Round-cornered logo replacing black square */}
+                            <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#111113]/5 border border-black/[0.08] shrink-0 shadow-2xs flex items-center justify-center">
+                              {v.logoUrl && v.logoUrl.startsWith("http") ? (
+                                <img
+                                  src={v.logoUrl}
+                                  alt={cleanName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-[#111113] text-white flex items-center justify-center font-mono font-bold text-xs">
+                                  {v.symbol?.slice(0, 4) || "VENT"}
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-[#111113] group-hover:text-[#FF5C18] transition-colors flex items-center gap-1.5">
+                                <span>{cleanName}</span>
+                                <span className="font-mono text-[11px] font-bold text-[#8E8B88]">
+                                  ({v.ticker || `$${v.symbol}`})
+                                </span>
                               </div>
-                              <div>
-                                <div className="font-semibold text-[#111113] group-hover:text-[#FF5C18] transition-colors flex items-center gap-1.5">
-                                  <span>{cleanName}</span>
-                                  <span className="font-mono text-[11px] font-bold text-[#8E8B88]">
-                                    ({v.ticker || `$${v.symbol}`})
-                                  </span>
-                                </div>
-                                <div className="text-[11px] font-mono text-[#8E8B88]">
-                                  {v.category || "Ventrion Protocol"}
-                                </div>
+                              <div className="text-[11px] font-mono text-[#8E8B88]">
+                                {v.category || "Ventrion Protocol"}
                               </div>
                             </div>
-                          </Link>
+                          </div>
                         </td>
 
                         {/* Share Price */}
@@ -415,7 +416,7 @@ export default function VenturesPage() {
                             <span className="font-semibold text-emerald-700">
                               {v.currentDividendYield > 0
                                 ? `${v.currentDividendYield.toFixed(1)}% APY`
-                                : "Active"}
+                                : "0.0% APY"}
                             </span>
                           ) : (
                             <span className="text-[#555]">
@@ -444,9 +445,10 @@ export default function VenturesPage() {
                           {selectedPhase === "Raising" ? (
                             <Link
                               href={`/ventures/${v.id || v.mintAddress}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#111113] hover:bg-black text-white text-xs font-semibold font-mono transition-transform active:scale-95 shadow-2xs"
                             >
-                              <span>Participate</span>
+                              <span>Buy</span>
                               <ArrowRight className="w-3 h-3 text-[#FF5C18]" />
                             </Link>
                           ) : selectedPhase === "Funded" ? (
@@ -465,18 +467,20 @@ export default function VenturesPage() {
                               )}
                               <Link
                                 href={`/ventures/${v.id || v.mintAddress}`}
+                                onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#111113] hover:bg-black text-white text-xs font-mono font-medium transition-transform active:scale-95"
                               >
-                                <span>Cap Table</span>
+                                <span>Overview</span>
                                 <ArrowUpRight className="w-3 h-3" />
                               </Link>
                             </div>
                           ) : (
                             <Link
                               href={`/ventures/${v.id || v.mintAddress}`}
+                              onClick={(e) => e.stopPropagation()}
                               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-black/[0.05] text-[#555] text-xs font-mono font-medium"
                             >
-                              <span>Inspect</span>
+                              <span>View</span>
                               <ArrowUpRight className="w-3 h-3" />
                             </Link>
                           )}

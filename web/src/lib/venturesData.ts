@@ -66,6 +66,9 @@ export interface Venture {
   vTrustTier: VTrustTier;
   schufaRating: VTrustTier;
   totalDividendsPaidUsdc: number;
+  totalStakedInVaults?: number;
+  totalDividendsDistributed?: number;
+  dividendSplitBps?: number;
   currentApy: number;
   activeRound: number;
   milestones: MilestoneItem[];

@@ -248,7 +248,6 @@ export default function LaunchVenturePage() {
 
     try {
       setLaunchStepIndex(1); // Building transaction & deriving PDAs
-      await new Promise((r) => setTimeout(r, 400));
 
       let effectiveUri = metadataUri;
       if (!effectiveUri) {
@@ -305,17 +304,11 @@ export default function LaunchVenturePage() {
 
       setLaunchStepIndex(3); // Broadcasted & confirmed on Solana Devnet
       setConfirmedTx(signature);
-      await new Promise((r) => setTimeout(r, 600));
-
       setLaunchStepIndex(4); // Finalizing genesis
-      await new Promise((r) => setTimeout(r, 1200));
 
       // Redirect directly to the launched venture terminal by contract address
       const targetUrl = `/ventures/${companyMint}`;
       router.push(targetUrl);
-      setTimeout(() => {
-        window.location.href = `/ventures/${companyMint}/`;
-      }, 500);
     } catch (err: any) {
       console.error("Genesis launch failed:", err);
       setIsLaunching(false);

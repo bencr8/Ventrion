@@ -19,6 +19,7 @@ import {
   getVenturePDA,
   getFundingRoundPDA,
   getReceiptMintPDA,
+  getInvestorVaultPDA,
 } from "../../../lib/solana/ventrionProgram";
 import {
   executeContributeRound,
@@ -247,7 +248,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const [stakeAmount, setStakeAmount] = useState<number>(5000);
   const [isStakeFocused, setIsStakeFocused] = useState<boolean>(false);
   const stakeInputRef = useRef<HTMLInputElement | null>(null);
-  const [unclaimedDividends, setUnclaimedDividends] = useState<number>(89.15);
+  const [unclaimedDividends, setUnclaimedDividends] = useState<number>(0);
+  const [userStakedShares, setUserStakedShares] = useState<number>(0);
+  const [totalClaimedDividends, setTotalClaimedDividends] = useState<number>(0);
 
   // Milestone Governance States
   const [selectedMilestone, setSelectedMilestone] = useState<MilestoneItem>(() => {
@@ -261,7 +264,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         amountUsdc: 15000,
         targetDays: 30,
         status: "completed",
-        votesFor: 100,
+        votesFor: 0,
         votesAgainst: 0,
         vetoPercentage: 0,
       }
@@ -297,7 +300,10 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     if (!wallet.connected || !wallet.publicKey) {
       setUserReceipts(0);
       setUserShares(0);
+      setUserStakedShares(0);
       setUserUsdcBalance(0);
+      setUnclaimedDividends(0);
+      setTotalClaimedDividends(0);
       return;
     }
 
@@ -337,6 +343,31 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         } catch {}
       }
       setUserReceipts(receipts);
+
+      // 4. On-chain Investor Vault (Staked shares & Unclaimed dividends)
+      if (venture?.mintAddress) {
+        try {
+          const [vPda] = getVenturePDA(new PublicKey(venture.mintAddress));
+          const [invVaultPda] = getInvestorVaultPDA(vPda, wallet.publicKey);
+          const vAcc = await connection.getAccountInfo(invVaultPda);
+          if (vAcc && vAcc.data.length >= 154) {
+            const stakedAmount = vAcc.data.readBigUInt64LE(72);
+            setUserStakedShares(Number(stakedAmount) / 1e6);
+            const pendingUsdc = vAcc.data.readBigUInt64LE(138);
+            setUnclaimedDividends(Number(pendingUsdc) / 1e6);
+            const claimedUsdc = vAcc.data.readBigUInt64LE(146);
+            setTotalClaimedDividends(Number(claimedUsdc) / 1e6);
+          } else {
+            setUserStakedShares(0);
+            setUnclaimedDividends(0);
+            setTotalClaimedDividends(0);
+          }
+        } catch {
+          setUserStakedShares(0);
+          setUnclaimedDividends(0);
+          setTotalClaimedDividends(0);
+        }
+      }
     } catch (e) {
       console.warn("Could not fetch user devnet balances:", e);
     }
@@ -357,7 +388,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   }, [lockDays]);
 
   const effectiveApy = useMemo(() => {
-    const base = (venture?.currentDividendYield && venture.currentDividendYield > 0) ? venture.currentDividendYield : 14.8;
+    const base = (venture?.currentDividendYield && venture.currentDividendYield > 0) ? venture.currentDividendYield : 0;
     return base * multiplier;
   }, [venture?.currentDividendYield, multiplier]);
 
@@ -435,15 +466,32 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     setHoveredPoint(closest);
   };
 
-  // Staking Depth Ladder Data (Order Book Representation with all 6 Manifest Tiers)
-  const stakingDepthLadder = useMemo(() => [
-    { tier: "730d (2Y)", multiplier: "3.00x", days: 730, lockedShares: 384500, percentage: 44.7, depthWidth: "85%" },
-    { tier: "365d (1Y)", multiplier: "2.00x", days: 365, lockedShares: 220000, percentage: 25.6, depthWidth: "55%" },
-    { tier: "180d", multiplier: "1.75x", days: 180, lockedShares: 145000, percentage: 16.8, depthWidth: "38%" },
-    { tier: "90d", multiplier: "1.50x", days: 90, lockedShares: 68500, percentage: 8.0, depthWidth: "22%" },
-    { tier: "30d", multiplier: "1.20x", days: 30, lockedShares: 25000, percentage: 2.9, depthWidth: "15%" },
-    { tier: "Liquid", multiplier: "1.00x", days: 0, lockedShares: 17000, percentage: 2.0, depthWidth: "10%" },
-  ], []);
+  // Staking Depth Ladder Data (Live On-Chain Staking Positions)
+  const stakingDepthLadder = useMemo(() => {
+    const totalStaked = venture?.totalStakedInVaults || 0;
+    const tiers = [
+      { tier: "730d (2Y)", multiplier: "3.00x", days: 730 },
+      { tier: "365d (1Y)", multiplier: "2.00x", days: 365 },
+      { tier: "180d", multiplier: "1.75x", days: 180 },
+      { tier: "90d", multiplier: "1.50x", days: 90 },
+      { tier: "30d", multiplier: "1.20x", days: 30 },
+      { tier: "Liquid", multiplier: "1.00x", days: 0 },
+    ];
+    return tiers.map((t) => {
+      const isSelected = lockDays === t.days;
+      const tierShares = (userStakedShares > 0 && isSelected)
+        ? userStakedShares
+        : (totalStaked > 0 && isSelected ? totalStaked : 0);
+      const pct = totalStaked > 0 ? (tierShares / totalStaked) * 100 : (tierShares > 0 ? 100 : 0);
+      const depthWidth = pct > 0 ? `${Math.min(100, Math.max(12, pct))}%` : "0%";
+      return {
+        ...t,
+        lockedShares: tierShares,
+        percentage: Number(pct.toFixed(1)),
+        depthWidth,
+      };
+    });
+  }, [venture?.totalStakedInVaults, lockDays, userStakedShares]);
 
   // Handlers for Devnet Transactions
   const handleExecuteTrade = async () => {
@@ -456,7 +504,16 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
+    if (isMigrating) {
+      setTxError("Trading disabled: Venture is currently migrating to Meteora DLMM.");
+      return;
+    }
+
     if (tradeAction === "REDEEM") {
+      if (!isGraduated) {
+        setTxError("Redemption is only available once the venture has reached Funded status.");
+        return;
+      }
       if (!wallet.publicKey) {
         setTxError("Connect your Solana wallet to redeem primary receipts.");
         return;
@@ -485,11 +542,11 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
     if (isPrimary && tradeAction === "BUY") {
       if (!wallet.publicKey) {
-        setTxError("Connect your Solana wallet to allocate in primary raise.");
+        setTxError("Connect your Solana wallet to buy in primary raise.");
         return;
       }
       try {
-        setTxLoading(`Allocating $${tradeAmount} USDC on Devnet...`);
+        setTxLoading(`Buying $${tradeAmount} USDC on Devnet...`);
         const { signature } = await executeContributeRound(
           {
             investorPubkey: wallet.publicKey.toBase58(),
@@ -501,7 +558,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         );
         setTxSignature(signature);
         const acquired = Math.floor(tradeAmount / (venture.sharePriceUsdc || 0.1));
-        setTxSuccess(`Allocated $${tradeAmount} USDC for ${acquired.toLocaleString()} $${venture.symbol}-R0 on Devnet!`);
+        setTxSuccess(`Bought $${tradeAmount} USDC for ${acquired.toLocaleString()} $${venture.symbol}-R0 on Devnet!`);
         await refreshUserBalances();
       } catch (err: any) {
         setTxError(err.message || "Contribution transaction failed on Solana devnet.");
@@ -1013,8 +1070,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 {(["BUY", "SELL"] as const).map((mode) => (
                   <button
                     key={mode}
+                    disabled={isMigrating}
                     onClick={() => setTradeAction(mode)}
-                    className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer ${
+                    className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                       tradeAction === mode ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
                     }`}
                   >
@@ -1026,11 +1084,11 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       />
                     )}
                     <span className="relative z-10">
-                      {mode === "BUY" ? (isPrimary ? "Allocate" : "Buy") : "Sell"}
+                      {mode === "BUY" ? "Buy" : "Sell"}
                     </span>
                   </button>
                 ))}
-                {isPrimary && (
+                {isGraduated && (
                   <button
                     onClick={() => setTradeAction("REDEEM")}
                     className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer ${
@@ -1049,120 +1107,135 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 )}
               </div>
 
-              {/* Tactile Input Container - Click anywhere to focus */}
-              <div className="space-y-3 font-mono">
-                <div
-                  onClick={() => tradeInputRef.current?.focus()}
-                  className={`p-5 rounded-2xl border transition-all duration-200 cursor-text ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                    isInputFocused
-                      ? "bg-white border-[#111113] shadow-[0_8px_24px_rgba(0,0,0,0.06)] scale-[1.01]"
-                      : "bg-[#FAF7F2] border-black/[0.06]"
-                  }`}
-                >
-                  <div className="flex justify-between text-xs text-[#7A7672] mb-1">
-                    <span>
-                      {tradeAction === "BUY" ? "USDC" : isPrimary ? `${venture.symbol} Receipts` : venture.symbol}
-                    </span>
-                    <span>
-                      Bal {tradeAction === "BUY" ? userUsdcBalance.toLocaleString() : (isPrimary ? userReceipts : userShares).toLocaleString()}
-                    </span>
+              {isMigrating ? (
+                <div className="py-8 px-6 rounded-2xl bg-amber-50 border border-amber-200/80 text-center space-y-3 font-mono">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span>Migration in Progress</span>
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <input
-                      ref={tradeInputRef}
-                      type="number"
-                      value={tradeAmount}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
-                      onChange={(e) => setTradeAmount(Math.max(0, Number(e.target.value)))}
-                      className="w-full bg-transparent text-3xl font-bold text-[#111113] focus:outline-none tabular-nums"
-                    />
-                    <span className="text-xs font-bold text-[#7A7672] shrink-0 ml-2">
-                      {tradeAction === "BUY" ? "USDC" : venture.symbol}
-                    </span>
-                  </div>
-
-                  {/* Exactly 3 Money Options: $50, $250, MAX */}
-                  <div className="grid grid-cols-3 gap-2 pt-3 mt-2 border-t border-black/[0.04]">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTradeAmount(50);
-                        tradeInputRef.current?.focus();
-                      }}
-                      className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                        tradeAmount === 50
-                          ? "bg-[#111113] text-white border-[#111113]"
-                          : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
-                      }`}
-                    >
-                      $50
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTradeAmount(250);
-                        tradeInputRef.current?.focus();
-                      }}
-                      className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                        tradeAmount === 250
-                          ? "bg-[#111113] text-white border-[#111113]"
-                          : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
-                      }`}
-                    >
-                      $250
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTradeAmount(tradeAction === "BUY" ? userUsdcBalance : (isPrimary ? userReceipts : userShares));
-                        tradeInputRef.current?.focus();
-                      }}
-                      className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                        tradeAmount === (tradeAction === "BUY" ? userUsdcBalance : (isPrimary ? userReceipts : userShares))
-                          ? "bg-[#111113] text-white border-[#111113]"
-                          : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
-                      }`}
-                    >
-                      MAX
-                    </button>
-                  </div>
+                  <div className="text-sm font-bold text-[#111113]">100% Target Reached</div>
+                  <p className="text-xs text-[#7A7672] max-w-sm mx-auto leading-relaxed">
+                    Protocol verification voting and automated 17% Meteora DLMM pool seeding are in progress. Trading & redemption will unlock upon graduation.
+                  </p>
                 </div>
+              ) : (
+                <>
+                  {/* Tactile Input Container - Click anywhere to focus */}
+                  <div className="space-y-3 font-mono">
+                    <div
+                      onClick={() => tradeInputRef.current?.focus()}
+                      className={`p-5 rounded-2xl border transition-all duration-200 cursor-text ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                        isInputFocused
+                          ? "bg-white border-[#111113] shadow-[0_8px_24px_rgba(0,0,0,0.06)] scale-[1.01]"
+                          : "bg-[#FAF7F2] border-black/[0.06]"
+                      }`}
+                    >
+                      <div className="flex justify-between text-xs text-[#7A7672] mb-1">
+                        <span>
+                          {tradeAction === "BUY" ? "USDC" : isPrimary ? `${venture.symbol} Receipts` : venture.symbol}
+                        </span>
+                        <span>
+                          Bal {tradeAction === "BUY" ? userUsdcBalance.toLocaleString() : (isPrimary ? userReceipts : userShares).toLocaleString()}
+                        </span>
+                      </div>
 
-                {/* Estimate */}
-                <div className="flex justify-between items-center text-xs text-[#7A7672] px-1">
-                  <span>Receive</span>
-                  <span className="font-bold text-[#111113] text-sm tabular-nums">
-                    {tradeAction === "BUY"
-                      ? `${(tradeAmount / venture.sharePriceUsdc).toFixed(1)} ${venture.symbol}`
-                      : `$${(tradeAmount * venture.sharePriceUsdc).toFixed(2)} USDC`}
-                  </span>
-                </div>
-              </div>
+                      <div className="flex items-center justify-between">
+                        <input
+                          ref={tradeInputRef}
+                          type="number"
+                          value={tradeAmount}
+                          onFocus={() => setIsInputFocused(true)}
+                          onBlur={() => setIsInputFocused(false)}
+                          onChange={(e) => setTradeAmount(Math.max(0, Number(e.target.value)))}
+                          className="w-full bg-transparent text-3xl font-bold text-[#111113] focus:outline-none tabular-nums"
+                        />
+                        <span className="text-xs font-bold text-[#7A7672] shrink-0 ml-2">
+                          {tradeAction === "BUY" ? "USDC" : venture.symbol}
+                        </span>
+                      </div>
 
-              {/* Action Button */}
-              <button
-                onClick={handleExecuteTrade}
-                disabled={!!txLoading || !isOnChainVerified || !venture}
-                className="relative overflow-hidden w-full py-4 rounded-2xl bg-[#121214] text-white text-xs font-mono font-bold tracking-wider uppercase transition-all duration-300 hover:scale-[1.015] active:scale-[0.985] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_6px_20px_-4px_rgba(0,0,0,0.14)] flex items-center justify-center gap-2 cursor-pointer outline-none group disabled:opacity-50"
-              >
-                <div className="absolute -inset-1 rounded-2xl bg-[#FF5C18]/30 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#FF6B35] via-[#FF5C18] to-[#FA5416] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] origin-left -translate-x-full group-hover:translate-x-0 pointer-events-none" />
-                <span className="relative z-10 font-bold">
-                  {txLoading
-                    ? "Processing..."
-                    : !isOnChainVerified
-                    ? "Contract Not On-Chain"
-                    : tradeAction === "BUY"
-                    ? isPrimary
-                      ? `Allocate $${tradeAmount} USDC`
-                      : `Buy ${venture.symbol}`
-                    : tradeAction === "SELL"
-                    ? `Sell ${venture.symbol}`
-                    : `Redeem Receipts`}
-                </span>
-              </button>
+                      {/* Exactly 3 Money Options: $50, $250, MAX */}
+                      <div className="grid grid-cols-3 gap-2 pt-3 mt-2 border-t border-black/[0.04]">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTradeAmount(50);
+                            tradeInputRef.current?.focus();
+                          }}
+                          className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                            tradeAmount === 50
+                              ? "bg-[#111113] text-white border-[#111113]"
+                              : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
+                          }`}
+                        >
+                          $50
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTradeAmount(250);
+                            tradeInputRef.current?.focus();
+                          }}
+                          className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                            tradeAmount === 250
+                              ? "bg-[#111113] text-white border-[#111113]"
+                              : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
+                          }`}
+                        >
+                          $250
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTradeAmount(tradeAction === "BUY" ? userUsdcBalance : (isPrimary ? userReceipts : userShares));
+                            tradeInputRef.current?.focus();
+                          }}
+                          className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                            tradeAmount === (tradeAction === "BUY" ? userUsdcBalance : (isPrimary ? userReceipts : userShares))
+                              ? "bg-[#111113] text-white border-[#111113]"
+                              : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
+                          }`}
+                        >
+                          MAX
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Estimate */}
+                    <div className="flex justify-between items-center text-xs text-[#7A7672] px-1">
+                      <span>Receive</span>
+                      <span className="font-bold text-[#111113] text-sm tabular-nums">
+                        {tradeAction === "BUY"
+                          ? `${(tradeAmount / venture.sharePriceUsdc).toFixed(1)} ${venture.symbol}`
+                          : `$${(tradeAmount * venture.sharePriceUsdc).toFixed(2)} USDC`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <button
+                    onClick={handleExecuteTrade}
+                    disabled={!!txLoading || !isOnChainVerified || !venture || isMigrating}
+                    className="relative overflow-hidden w-full py-4 rounded-2xl bg-[#121214] text-white text-xs font-mono font-bold tracking-wider uppercase transition-all duration-300 hover:scale-[1.015] active:scale-[0.985] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_6px_20px_-4px_rgba(0,0,0,0.14)] flex items-center justify-center gap-2 cursor-pointer outline-none group disabled:opacity-50"
+                  >
+                    <div className="absolute -inset-1 rounded-2xl bg-[#FF5C18]/30 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#FF6B35] via-[#FF5C18] to-[#FA5416] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] origin-left -translate-x-full group-hover:translate-x-0 pointer-events-none" />
+                    <span className="relative z-10 font-bold">
+                      {txLoading
+                        ? "Processing..."
+                        : !isOnChainVerified
+                        ? "Contract Not On-Chain"
+                        : tradeAction === "BUY"
+                        ? isPrimary
+                          ? `Buy $${tradeAmount} USDC`
+                          : `Buy ${venture.symbol}`
+                        : tradeAction === "SELL"
+                        ? `Sell ${venture.symbol}`
+                        : `Redeem Receipts`}
+                    </span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1277,7 +1350,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     <div className="flex justify-between text-xs text-[#7A7672] mb-2 px-1">
                       <span>{venture.symbol}</span>
                       <span>
-                        Bal {userShares > 0 ? userShares.toLocaleString() : (isPrimary ? userReceipts.toLocaleString() : "120,000")}
+                        Bal {userShares > 0 ? userShares.toLocaleString() : "0"} {venture.symbol}
+                        {userStakedShares > 0 && ` (${userStakedShares.toLocaleString()} Staked)`}
                       </span>
                     </div>
 
@@ -1298,7 +1372,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setStakeAmount(1000);
+                          setStakeAmount(Math.min(1000, userShares));
                           stakeInputRef.current?.focus();
                         }}
                         className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
@@ -1312,7 +1386,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setStakeAmount(5000);
+                          setStakeAmount(Math.min(5000, userShares));
                           stakeInputRef.current?.focus();
                         }}
                         className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
@@ -1326,12 +1400,11 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const maxVal = userShares > 0 ? userShares : (isPrimary ? userReceipts : 120000);
-                          setStakeAmount(maxVal);
+                          setStakeAmount(userShares > 0 ? userShares : 0);
                           stakeInputRef.current?.focus();
                         }}
                         className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                          stakeAmount === (userShares > 0 ? userShares : (isPrimary ? userReceipts : 120000))
+                          stakeAmount === userShares && userShares > 0
                             ? "bg-[#111113] text-white border-[#111113]"
                             : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
                         }`}
@@ -1367,7 +1440,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     Vault Maturity Depth
                   </span>
                   <span className="text-[11px] font-bold text-[#111113] tabular-nums">
-                    860,000 Staked
+                    {(venture?.totalStakedInVaults || userStakedShares || 0).toLocaleString()} Staked
                   </span>
                 </div>
 
@@ -1390,7 +1463,6 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                             : "border-black/[0.04] hover:border-black/20 hover:bg-black/[0.01]"
                         }`}
                       >
-                        {/* IMMER dieser rote/orange Hintergrund */}
                         <div
                           style={{ width: row.depthWidth }}
                           className={`absolute inset-y-0 left-0 pointer-events-none rounded-lg transition-all ${
@@ -1427,8 +1499,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 </div>
 
                 <div className="pt-2.5 border-t border-black/[0.06] flex items-center justify-between text-[#7A7672] text-[11px]">
-                  <span>$1,075,000 USDC TVL</span>
-                  <span className="font-bold text-[#111113]">86.0% Staked</span>
+                  <span>${((venture?.totalStakedInVaults || userStakedShares || 0) * (venture.sharePriceUsdc || 0.1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC TVL</span>
+                  <span className="font-bold text-[#111113]">
+                    {venture?.totalShares && venture.totalShares > 0
+                      ? (((venture?.totalStakedInVaults || userStakedShares || 0) / venture.totalShares) * 100).toFixed(1)
+                      : "0.0"}% Staked
+                  </span>
                 </div>
               </div>
             </div>
@@ -1468,17 +1544,23 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div className="p-5 rounded-xl bg-white border border-black/[0.06] space-y-1 text-center hover:border-black/20 transition-colors">
                     <span className="text-[#7A7672] text-[11px] uppercase tracking-wider block">Revenue Split</span>
-                    <span className="text-2xl font-bold text-[#111113] block tabular-nums">20.0%</span>
+                    <span className="text-2xl font-bold text-[#111113] block tabular-nums">
+                      {venture?.dividendSplitBps ? `${(venture.dividendSplitBps / 100).toFixed(1)}%` : "100.0% Net"}
+                    </span>
                   </div>
 
                   <div className="p-5 rounded-xl bg-white border border-black/[0.06] space-y-1 text-center hover:border-black/20 transition-colors">
                     <span className="text-[#7A7672] text-[11px] uppercase tracking-wider block">Annual Run-Rate</span>
-                    <span className="text-2xl font-bold text-[#111113] block tabular-nums">$482,000</span>
+                    <span className="text-2xl font-bold text-[#111113] block tabular-nums">
+                      ${(venture?.totalDividendsDistributed ? venture.totalDividendsDistributed * 12 : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
 
                   <div className="p-5 rounded-xl bg-white border border-black/[0.06] space-y-1 text-center hover:border-black/20 transition-colors">
                     <span className="text-[#7A7672] text-[11px] uppercase tracking-wider block">Total Distributed</span>
-                    <span className="text-2xl font-bold text-[#111113] block tabular-nums">$128,450</span>
+                    <span className="text-2xl font-bold text-[#111113] block tabular-nums">
+                      ${(venture?.totalDividendsDistributed || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1490,39 +1572,41 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     Distribution Ledger
                   </span>
                   <span className="text-[11px] text-[#7A7672]">
-                    Recent
+                    On-Chain Devnet
                   </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  {[
-                    { source: "Commercial Settlement", amount: "+$1,240.00", time: "2h ago", tx: "9k2x...m41a" },
-                    { source: "Hardware Operations", amount: "+$3,850.00", time: "1d ago", tx: "3c8d...7e21" },
-                    { source: "Compute Node Cluster", amount: "+$6,120.00", time: "3d ago", tx: "6f1a...4d90" },
-                    { source: "DLMM Protocol Split", amount: "+$940.00", time: "5d ago", tx: "1e5b...8a33" },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-lg border border-black/[0.04] hover:border-black/20 hover:bg-black/[0.01] transition-all flex items-center justify-between"
-                    >
-                      <div className="space-y-0.5">
-                        <span className="font-bold text-[#111113] block">{item.source}</span>
-                        <div className="flex items-center gap-2 text-[10px] text-[#7A7672]">
-                          <span>{item.time}</span>
-                          <span>•</span>
-                          <span className="text-[#111113]/70">{item.tx}</span>
-                        </div>
+                <div className="space-y-2 py-2">
+                  {(venture?.totalDividendsDistributed && venture.totalDividendsDistributed > 0) ? (
+                    <div className="p-3 rounded-lg border border-black/[0.06] bg-[#FAF7F2] space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-[#111113]">Dividend Vault Payout</span>
+                        <span className="font-bold text-emerald-600 text-sm">
+                          +${venture.totalDividendsDistributed.toFixed(2)} USDC
+                        </span>
                       </div>
-                      <span className="font-bold text-[#111113] text-sm tabular-nums">
-                        {item.amount}
-                      </span>
+                      <div className="text-[10px] text-[#7A7672] flex items-center justify-between">
+                        <span>Settled to Shareholder Vaults</span>
+                        <span className="text-emerald-700 font-semibold">Verified</span>
+                      </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="p-4 rounded-xl border border-dashed border-black/[0.1] bg-[#FAF7F2] text-center space-y-2">
+                      <p className="text-xs text-[#7A7672]">
+                        No dividend distributions on-chain yet.
+                      </p>
+                      <p className="text-[10px] text-[#8E8B88]">
+                        When enterprise deposits revenue into the Dividend Vault on Devnet, payouts accrue pro-rata to staked shareholders.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2.5 border-t border-black/[0.06] flex items-center justify-between text-[#7A7672] text-[11px]">
-                  <span>48 Historical Distributions</span>
-                  <span className="font-semibold text-[#111113]">Settled</span>
+                  <span>Dividend Accumulator: O(1)</span>
+                  <span className="font-semibold text-[#111113]">
+                    {venture?.totalDividendsDistributed && venture.totalDividendsDistributed > 0 ? "Active" : "Awaiting Deposit"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1598,20 +1682,28 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       </div>
 
                       {/* Quorum Progress Bar */}
-                      <div className="w-full max-w-md space-y-2">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-[#7A7672]">Quorum Status</span>
-                          <span className="font-bold text-[#111113] tabular-nums">
-                            {userVote === "APPROVE" ? "84.2%" : "74.2%"} / 50.0% Required
-                          </span>
-                        </div>
-                        <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-black/[0.06] p-0.5">
-                          <div
-                            style={{ width: userVote === "APPROVE" ? "84.2%" : "74.2%" }}
-                            className="h-full bg-[#111113] rounded-full transition-all duration-300"
-                          />
-                        </div>
-                      </div>
+                      {(() => {
+                        const votesFor = (selectedMilestone?.votesFor || 0) + (userVote === "APPROVE" ? 1 : 0);
+                        const votesAgainst = (selectedMilestone?.votesAgainst || 0) + (userVote === "VETO" ? 1 : 0);
+                        const totalVotes = votesFor + votesAgainst;
+                        const quorumPct = totalVotes > 0 ? (votesFor / totalVotes) * 100 : 0;
+                        return (
+                          <div className="w-full max-w-md space-y-2">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-[#7A7672]">Quorum Status</span>
+                              <span className="font-bold text-[#111113] tabular-nums">
+                                {quorumPct.toFixed(1)}% / 50.0% Required
+                              </span>
+                            </div>
+                            <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-black/[0.06] p-0.5">
+                              <div
+                                style={{ width: `${Math.min(100, quorumPct)}%` }}
+                                className="h-full bg-[#111113] rounded-full transition-all duration-300"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Vote Action Area */}
                       <div className="w-full max-w-md">

@@ -17,6 +17,7 @@ import { Navbar } from "../../components/common/Navbar";
 import { BezierCounter } from "../../components/common/BezierCounter";
 import {
   claimInvestorDividends,
+  getVenturePDA,
   getInvestorVaultPDA,
   PILOT_VENTURE_1_PVENT_MINT,
   PILOT_VENTURE_2_QCMP_MINT,
@@ -72,10 +73,11 @@ export default function DividendsPage() {
 
       // 1. QCMP Vault PDA
       try {
-        const [qcmpPda] = getInvestorVaultPDA(PILOT_VENTURE_2_QCMP_MINT, publicKey);
+        const [qcmpVenture] = getVenturePDA(PILOT_VENTURE_2_QCMP_MINT);
+        const [qcmpPda] = getInvestorVaultPDA(qcmpVenture, publicKey);
         const info = await connection.getAccountInfo(qcmpPda);
-        if (info && info.data.length >= 130) {
-          const pending = info.data.readBigUInt64LE(88);
+        if (info && info.data.length >= 146) {
+          const pending = info.data.readBigUInt64LE(138);
           setQcmpClaimable(Number(pending) / 1e6);
         } else {
           setQcmpClaimable(0);
@@ -86,10 +88,11 @@ export default function DividendsPage() {
 
       // 2. PVENT Vault PDA
       try {
-        const [pventPda] = getInvestorVaultPDA(PILOT_VENTURE_1_PVENT_MINT, publicKey);
+        const [pventVenture] = getVenturePDA(PILOT_VENTURE_1_PVENT_MINT);
+        const [pventPda] = getInvestorVaultPDA(pventVenture, publicKey);
         const info = await connection.getAccountInfo(pventPda);
-        if (info && info.data.length >= 130) {
-          const pending = info.data.readBigUInt64LE(88);
+        if (info && info.data.length >= 146) {
+          const pending = info.data.readBigUInt64LE(138);
           setPventClaimable(Number(pending) / 1e6);
         } else {
           setPventClaimable(0);
