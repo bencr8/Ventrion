@@ -278,9 +278,12 @@ export function Navbar({ activeTab }: NavbarProps) {
           <Link href="/" className="flex items-center gap-3 cursor-pointer group">
             <div className="w-8 h-8 rounded-[10px] bg-[#111113] flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.22),0_3px_10px_rgba(253,107,59,0.18)] group-hover:scale-105 transition-all overflow-hidden p-1.5">
               <img
-                src="/preview/ventrion-logo.png"
+                src="/ventrion-logo.png"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/ventrion-logo.png";
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.indexOf("/ventrion/ventrion-logo.png") === -1 && target.src.indexOf("/preview/ventrion-logo.png") === -1) {
+                    target.src = "/ventrion/ventrion-logo.png";
+                  }
                 }}
                 alt="Ventrion Logo"
                 className="w-full h-full object-contain filter drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
@@ -295,7 +298,11 @@ export function Navbar({ activeTab }: NavbarProps) {
           <nav className="hidden md:flex items-center gap-1 bg-black/[0.03] p-1 rounded-full border border-black/[0.04]">
             {navItems.map((item) => {
               const isActive =
-                item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                item.href === "/"
+                  ? pathname === "/"
+                  : item.href === "/ventures"
+                  ? pathname === "/ventures"
+                  : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.label}

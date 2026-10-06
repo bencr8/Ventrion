@@ -18,8 +18,9 @@ interface FounderVentureItem {
   mintAddress: string;
   sharePriceUsdc: number;
   founderLockedShares: number;
-  impliedValuationUsdc: number;
+  totalCapitalRaisedUsdc: number;
   fundingTargetUsdc: number;
+  fundingProgressPercent: number;
   status: string;
   isUserCreated?: boolean;
 }
@@ -103,6 +104,7 @@ export default function MyVenturesPage() {
                 mintAddress: mint,
                 sharePriceUsdc: 1.0,
                 founderVestingShares: 800000,
+                totalCapitalRaisedUsdc: 0,
                 targetFundingCapUsdc: 50000,
                 canonicalStatus: "Raising",
                 founderAddress: walletPubkeyStr,
@@ -117,6 +119,9 @@ export default function MyVenturesPage() {
       const mapped: FounderVentureItem[] = matched.map((v) => {
         const lockedShares = v.founderVestingShares || 800000;
         const price = v.sharePriceUsdc || 1.0;
+        const raised = v.totalCapitalRaisedUsdc || 0;
+        const target = v.targetFundingCapUsdc || 50000;
+        const pct = target > 0 ? (raised / target) * 100 : 0;
         return {
           id: v.id || v.mintAddress,
           name: v.name,
@@ -125,8 +130,9 @@ export default function MyVenturesPage() {
           mintAddress: v.mintAddress,
           sharePriceUsdc: price,
           founderLockedShares: lockedShares,
-          impliedValuationUsdc: lockedShares * price,
-          fundingTargetUsdc: v.targetFundingCapUsdc || 50000,
+          totalCapitalRaisedUsdc: raised,
+          fundingTargetUsdc: target,
+          fundingProgressPercent: pct,
           status: v.canonicalStatus === "Funded" ? "Graduated" : "Genesis Active",
           isUserCreated: true,
         };
@@ -146,12 +152,19 @@ export default function MyVenturesPage() {
     return () => clearInterval(interval);
   }, [fetchFounderVentures]);
 
-  const totalFounderEquityValue = useMemo(() => {
+  const totalTreasuryCapitalRaised = useMemo(() => {
     return founderVentures.reduce(
-      (acc, v) => acc + (livePrices[v.id] || v.sharePriceUsdc) * v.founderLockedShares,
+      (acc, v) => acc + (v.totalCapitalRaisedUsdc || 0),
       0
     );
-  }, [founderVentures, livePrices]);
+  }, [founderVentures]);
+
+  const totalFounderLockedShares = useMemo(() => {
+    return founderVentures.reduce(
+      (acc, v) => acc + (v.founderLockedShares || 0),
+      0
+    );
+  }, [founderVentures]);
 
   return (
     <div className="min-h-screen w-full bg-[#FAF7F2] flex flex-col justify-between selection:bg-[#FF5C18]/15 font-jakarta antialiased">
@@ -188,28 +201,45 @@ export default function MyVenturesPage() {
           </div>
         </div>
 
-        {/* FOUNDER PORTFOLIO SUMMARY CARD (NO LABELS SLOP, CLEAN WHITESPACE) */}
+        {/* FOUNDER PORTFOLIO SUMMARY CARD */}
         <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1">
               <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block">
-                Total Founder Locked Equity
+                Treasury Capital Raised
               </span>
               <div className="text-3xl sm:text-4xl font-bold text-[#111113] tabular-nums">
-                ${connected ? <BezierCounter value={totalFounderEquityValue} decimals={2} /> : "0.00"} <span className="text-xs font-normal text-[#7A7672]">USDC</span>
+                ${connected ? <BezierCounter value={totalTreasuryCapitalRaised} decimals={2} /> : "0.00"} <span className="text-xs font-normal text-[#7A7672]">USDC</span>
               </div>
               <div className="text-xs text-[#7A7672]">
-                {connected ? `${founderVentures.length} Issued Enterprises • Fixed 1,000,000 Share Invariant` : "Connect wallet to load founder issuances"}
+                {connected
+                  ? `Actual On-Chain Primary Round Inflow across ${founderVentures.length} ${founderVentures.length === 1 ? "Venture" : "Ventures"}`
+                  : "Connect founder authority wallet to load corporate data"}
               </div>
             </div>
 
-            <div className="flex items-center gap-6 self-start sm:self-auto">
-              <div className="space-y-0.5 sm:text-right">
+            <div className="flex flex-wrap items-center gap-6 sm:gap-10 border-t lg:border-t-0 pt-4 lg:pt-0 border-black/[0.04]">
+              <div className="space-y-0.5">
+                <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block">
+                  Founder Locked Equity
+                </span>
+                <div className="text-xl font-bold text-[#111113]">
+                  {connected ? formatCompactShares(totalFounderLockedShares) : "0"} <span className="text-xs font-normal text-[#7A7672]">Shares</span>
+                </div>
+                <span className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-full inline-block">
+                  Vesting Vault (Non-Liquid)
+                </span>
+              </div>
+
+              <div className="space-y-0.5">
                 <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block">
                   Active Issuances
                 </span>
                 <span className="text-xl font-bold text-[#111113]">
-                  {founderVentures.length}
+                  {connected ? founderVentures.length : 0}
+                </span>
+                <span className="text-[10px] text-[#7A7672] block">
+                  1,000,000 Invariant / Co.
                 </span>
               </div>
             </div>
@@ -271,9 +301,9 @@ export default function MyVenturesPage() {
                   <thead>
                     <tr className="border-b border-black/[0.06] bg-[#FAF7F2]/80 text-[11px] uppercase text-[#7A7672] select-none">
                       <th className="py-3 px-5 font-semibold">Enterprise</th>
-                      <th className="py-3 px-4 font-semibold text-right">Founder Lock</th>
+                      <th className="py-3 px-4 font-semibold text-right">Treasury Raised</th>
+                      <th className="py-3 px-4 font-semibold text-right">Founder Locked</th>
                       <th className="py-3 px-4 font-semibold text-right">Share Price</th>
-                      <th className="py-3 px-4 font-semibold text-right">Implied Valuation</th>
                       <th className="py-3 px-4 font-semibold text-center">Status</th>
                       <th className="py-3 px-5 font-semibold text-right">Action</th>
                     </tr>
@@ -282,7 +312,6 @@ export default function MyVenturesPage() {
                     {founderVentures.map((v) => {
                       const price = livePrices[v.id] || v.sharePriceUsdc || 1.0;
                       const founderShares = v.founderLockedShares || 800000;
-                      const impliedValuation = founderShares * price;
 
                       return (
                         <tr key={v.id} className="hover:bg-black/[0.015] transition-colors">
@@ -301,20 +330,23 @@ export default function MyVenturesPage() {
                           </td>
 
                           <td className="py-3.5 px-4 text-right font-bold text-[#111113]">
-                            {formatCompactShares(founderShares)}
+                            ${v.totalCapitalRaisedUsdc.toLocaleString()} <span className="text-[#7A7672] font-normal text-[11px]">/ ${v.fundingTargetUsdc.toLocaleString()}</span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right text-[#111113]">
+                            <div className="font-bold">{formatCompactShares(founderShares)}</div>
+                            <div className="text-[10px] text-[#7A7672]">Locked (80%)</div>
                           </td>
 
                           <td className="py-3.5 px-4 text-right text-[#111113]">
                             ${price.toFixed(2)}
                           </td>
 
-                          <td className="py-3.5 px-4 text-right font-bold text-[#111113]">
-                            {formatCompactUsdc(impliedValuation)}
-                          </td>
-
                           <td className="py-3.5 px-4 text-center">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#111113] text-white">
-                              Active
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              v.status === "Graduated" ? "bg-emerald-100 text-emerald-800" : "bg-[#111113] text-white"
+                            }`}>
+                              {v.status}
                             </span>
                           </td>
 

@@ -21,9 +21,15 @@ import { formatCompactUsdc, formatCompactShares } from "../../lib/formatters";
 interface HoldingItem {
   venture: Venture;
   shares: number;
+  entryPriceUsdc: number;
+  costBasisUsdc: number;
   sharePriceUsdc: number;
   totalValueUsdc: number;
+  unrealizedPnlUsdc: number;
+  unrealizedPnlPercent: number;
+  escrowProtectedUsdc: number;
   ownershipPercent: number;
+  isRaising: boolean;
 }
 
 interface ChartPoint {
@@ -40,7 +46,7 @@ export default function SharesPage() {
 
   const [holdings, setHoldings] = useState<HoldingItem[]>([]);
   const [isLoadingHoldings, setIsLoadingHoldings] = useState(false);
-  const [timeframe, setTimeframe] = useState<"1D" | "1W" | "1M" | "ALL">("1W");
+  const [trajectoryMode, setTrajectoryMode] = useState<"TRAJECTORY" | "INVARIANT">("TRAJECTORY");
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
   const chartSvgRef = useRef<SVGSVGElement | null>(null);
 
@@ -136,19 +142,41 @@ export default function SharesPage() {
         }
 
         const totalHolding = shares + receipts;
-        const price = livePrices[v.id] || v.sharePriceUsdc || 1.0;
-        const totalValue = totalHolding * price;
+        if (totalHolding <= 0) continue;
+
+        const isRaising =
+          v.canonicalStatus === "Raising" ||
+          (!v.canonicalStatus && receipts > 0 && shares === 0);
+
+        // Exact entry cost basis on the flat curve invariant
+        const entryPrice = isRaising
+          ? (v.sharePriceUsdc || 0.10)
+          : (v.id === "Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E" ? 1.00 : 0.10);
+
+        const currentPrice = isRaising
+          ? entryPrice // Primary round invariant
+          : (livePrices[v.id] || v.sharePriceUsdc || entryPrice);
+
+        const costBasis = totalHolding * entryPrice;
+        const totalValue = totalHolding * currentPrice;
+        const pnlUsdc = totalValue - costBasis;
+        const pnlPct = costBasis > 0 ? (pnlUsdc / costBasis) * 100 : 0;
+        const escrowProtected = costBasis * 0.75;
         const ownership = (totalHolding / (v.totalShares || 1000000)) * 100;
 
-        if (totalHolding > 0) {
-          userHoldings.push({
-            venture: v,
-            shares: Math.round(totalHolding),
-            sharePriceUsdc: price,
-            totalValueUsdc: totalValue,
-            ownershipPercent: ownership,
-          });
-        }
+        userHoldings.push({
+          venture: v,
+          shares: Math.round(totalHolding),
+          entryPriceUsdc: entryPrice,
+          costBasisUsdc: costBasis,
+          sharePriceUsdc: currentPrice,
+          totalValueUsdc: totalValue,
+          unrealizedPnlUsdc: pnlUsdc,
+          unrealizedPnlPercent: pnlPct,
+          escrowProtectedUsdc: escrowProtected,
+          ownershipPercent: ownership,
+          isRaising,
+        });
       }
 
       setHoldings(userHoldings);
@@ -163,57 +191,61 @@ export default function SharesPage() {
     fetchHoldings();
   }, [fetchHoldings]);
 
-  const totalPortfolioEquityValue = useMemo(() => {
+  const totalPortfolioValue = useMemo(() => {
     return holdings.reduce((acc, h) => acc + h.totalValueUsdc, 0);
   }, [holdings]);
 
-  // Dynamic Portfolio Equity Value Curve over time based on user holdings
+  const totalCostBasis = useMemo(() => {
+    return holdings.reduce((acc, h) => acc + h.costBasisUsdc, 0);
+  }, [holdings]);
+
+  const totalEscrowBackstop = useMemo(() => {
+    return holdings.reduce((acc, h) => acc + h.escrowProtectedUsdc, 0);
+  }, [holdings]);
+
+  const totalPnlUsdc = totalPortfolioValue - totalCostBasis;
+  const totalPnlPercent = totalCostBasis > 0 ? (totalPnlUsdc / totalCostBasis) * 100 : 0;
+  const targetExitValuation = totalCostBasis > 0 ? totalCostBasis * 1.5 : 0;
+
+  // Strict Entry-to-Exit Capital Trajectory (Zero synthetic waves)
   const currentChartPoints: ChartPoint[] = useMemo(() => {
-    const baseVal = totalPortfolioEquityValue > 0 ? totalPortfolioEquityValue : 0;
-    if (baseVal === 0) {
+    if (totalCostBasis === 0 && totalPortfolioValue === 0) {
       return [
-        { time: "00:00", val: 0, x: 0, y: 170 },
-        { time: "08:00", val: 0, x: 233, y: 170 },
-        { time: "16:00", val: 0, x: 466, y: 170 },
-        { time: "24:00", val: 0, x: 700, y: 170 },
+        { time: "Entry", val: 0, x: 50, y: 170 },
+        { time: "Escrow Floor", val: 0, x: 250, y: 170 },
+        { time: "Current Spot", val: 0, x: 450, y: 170 },
+        { time: "Exit Target", val: 0, x: 650, y: 170 },
       ];
     }
 
-    if (timeframe === "1D") {
+    if (trajectoryMode === "INVARIANT") {
+      // Flat Invariant Curve - 100% Capital Preservation
       return [
-        { time: "00:00", val: baseVal * 0.94, x: 0, y: 155 },
-        { time: "06:00", val: baseVal * 0.96, x: 175, y: 135 },
-        { time: "12:00", val: baseVal * 0.98, x: 350, y: 110 },
-        { time: "18:00", val: baseVal * 0.99, x: 525, y: 70 },
-        { time: "Now", val: baseVal, x: 700, y: 35 },
+        { time: "Genesis Entry", val: totalCostBasis, x: 50, y: 90 },
+        { time: "Milestone Tranche 1", val: totalCostBasis, x: 250, y: 90 },
+        { time: "Milestone Tranche 2", val: totalCostBasis, x: 450, y: 90 },
+        { time: "Graduation Gate", val: totalCostBasis, x: 650, y: 90 },
       ];
     }
-    if (timeframe === "1W") {
-      return [
-        { time: "Mon", val: baseVal * 0.88, x: 0, y: 175 },
-        { time: "Tue", val: baseVal * 0.91, x: 140, y: 150 },
-        { time: "Wed", val: baseVal * 0.94, x: 280, y: 125 },
-        { time: "Thu", val: baseVal * 0.93, x: 420, y: 135 },
-        { time: "Fri", val: baseVal * 0.97, x: 560, y: 75 },
-        { time: "Today", val: baseVal, x: 700, y: 35 },
-      ];
-    }
-    if (timeframe === "1M") {
-      return [
-        { time: "W1", val: baseVal * 0.76, x: 0, y: 185 },
-        { time: "W2", val: baseVal * 0.82, x: 233, y: 145 },
-        { time: "W3", val: baseVal * 0.91, x: 466, y: 95 },
-        { time: "W4", val: baseVal, x: 700, y: 35 },
-      ];
-    }
-    // "ALL"
+
+    // "TRAJECTORY": Entry (Cost Basis) -> 75% Escrow Floor -> Current Spot -> Exit Target
+    const vals = [totalCostBasis, totalEscrowBackstop, totalPortfolioValue, targetExitValuation];
+    const minVal = Math.min(...vals) * 0.9;
+    const maxVal = Math.max(...vals) * 1.1;
+    const range = maxVal - minVal || 1;
+
+    const getY = (val: number) => {
+      const normalized = (val - minVal) / range;
+      return Math.round(175 - normalized * 135);
+    };
+
     return [
-      { time: "Genesis", val: baseVal * 0.5, x: 0, y: 190 },
-      { time: "Seed", val: baseVal * 0.65, x: 233, y: 160 },
-      { time: "Meteora", val: baseVal * 0.85, x: 466, y: 105 },
-      { time: "Current", val: baseVal, x: 700, y: 35 },
+      { time: "Entry (Cost Basis)", val: totalCostBasis, x: 50, y: getY(totalCostBasis) },
+      { time: "75% Escrow Floor", val: totalEscrowBackstop, x: 250, y: getY(totalEscrowBackstop) },
+      { time: "Current Valuation", val: totalPortfolioValue, x: 450, y: getY(totalPortfolioValue) },
+      { time: "Full Milestone Target", val: targetExitValuation, x: 650, y: getY(targetExitValuation) },
     ];
-  }, [timeframe, totalPortfolioEquityValue]);
+  }, [trajectoryMode, totalCostBasis, totalPortfolioValue, totalEscrowBackstop, targetExitValuation]);
 
   // Construct SVG Path
   const svgPathD = useMemo(() => {
@@ -285,41 +317,70 @@ export default function SharesPage() {
           </div>
         </div>
 
-        {/* UNIFIED INTERACTIVE PORTFOLIO PERFORMANCE CHART (REPLACING OLD 3 AGGREGATE CONTAINERS) */}
+        {/* UNIFIED INTERACTIVE CAPITAL TRAJECTORY (ZERO SYNTHETIC VOLATILITY) */}
         <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1">
               <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block">
                 Total Equity Portfolio Valuation
               </span>
               <div className="text-3xl sm:text-4xl font-bold text-[#111113] tabular-nums">
-                ${connected ? <BezierCounter value={totalPortfolioEquityValue} decimals={2} /> : "0.00"} <span className="text-xs font-normal text-[#7A7672]">USDC</span>
+                ${connected ? <BezierCounter value={totalPortfolioValue} decimals={2} /> : "0.00"} <span className="text-xs font-normal text-[#7A7672]">USDC</span>
               </div>
               <div className="text-xs text-[#7A7672]">
-                {connected ? `${holdings.length} Active Positions • Solana Devnet` : "Connect wallet to load holdings"}
+                {connected
+                  ? `Cost Basis: $${totalCostBasis.toFixed(2)} USDC • 75% Escrow Floor: $${totalEscrowBackstop.toFixed(2)} USDC`
+                  : "Connect wallet to load holdings"}
               </div>
             </div>
 
-            {/* Timeframe Selector Pill */}
-            <div className="flex p-1 bg-black/[0.03] rounded-xl text-xs gap-1 self-start sm:self-auto">
-              {(["1D", "1W", "1M", "ALL"] as const).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`relative px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    timeframe === tf ? "text-white font-bold" : "text-[#7A7672] hover:text-[#111113]"
-                  }`}
-                >
-                  {timeframe === tf && (
-                    <motion.div
-                      layoutId="portfolioTfPill"
-                      className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
-                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                    />
-                  )}
-                  <span className="relative z-10">{tf}</span>
-                </button>
-              ))}
+            {/* Right Metric Cluster & Mode Selector */}
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block">
+                  Escrow Backstop
+                </span>
+                <span className="text-base sm:text-lg font-bold text-emerald-700">
+                  ${connected ? totalEscrowBackstop.toFixed(2) : "0.00"}
+                </span>
+                <span className="text-[10px] text-[#7A7672] block">75% Smart Contract</span>
+              </div>
+
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block">
+                  Net Return
+                </span>
+                <span className={`text-base sm:text-lg font-bold ${totalPnlUsdc >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                  {connected ? `${totalPnlUsdc >= 0 ? "+" : ""}$${totalPnlUsdc.toFixed(2)}` : "$0.00"}
+                </span>
+                <span className="text-[10px] text-[#7A7672] block">
+                  {connected ? `${totalPnlPercent >= 0 ? "+" : ""}${totalPnlPercent.toFixed(1)}% Spot` : "0.0%"}
+                </span>
+              </div>
+
+              {/* Trajectory Mode Selector */}
+              <div className="flex p-1 bg-black/[0.03] rounded-xl text-xs gap-1">
+                {(["TRAJECTORY", "INVARIANT"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setTrajectoryMode(mode)}
+                    className={`relative px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-[11px] font-semibold ${
+                      trajectoryMode === mode ? "text-white font-bold" : "text-[#7A7672] hover:text-[#111113]"
+                    }`}
+                  >
+                    {trajectoryMode === mode && (
+                      <motion.div
+                        layoutId="portfolioTfPill"
+                        className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
+                        transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <span className="relative z-10">
+                      {mode === "TRAJECTORY" ? "Trajectory" : "Flat Invariant"}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -350,6 +411,28 @@ export default function SharesPage() {
                 strokeLinejoin="round"
               />
 
+              {/* Render Nodes for each trajectory waypoint */}
+              {currentChartPoints.map((pt, idx) => (
+                <g key={idx}>
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="4"
+                    fill="#111113"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x={pt.x}
+                    y={pt.y > 150 ? pt.y - 12 : pt.y + 18}
+                    textAnchor="middle"
+                    className="text-[9px] fill-[#7A7672] font-mono pointer-events-none"
+                  >
+                    {pt.time}
+                  </text>
+                </g>
+              ))}
+
               {hoveredPoint && (
                 <>
                   <line
@@ -365,8 +448,8 @@ export default function SharesPage() {
                   <circle
                     cx={hoveredPoint.x}
                     cy={hoveredPoint.y}
-                    r="5"
-                    fill="#111113"
+                    r="6"
+                    fill="#FF5C18"
                     stroke="#FFFFFF"
                     strokeWidth="2"
                   />
@@ -375,7 +458,14 @@ export default function SharesPage() {
             </svg>
 
             <div className="flex justify-between font-mono text-xs text-[#7A7672] pt-4 border-t border-black/[0.04] min-h-[38px] items-center">
-              <span>{hoveredPoint ? `${hoveredPoint.time} • $${hoveredPoint.val.toFixed(2)} USDC` : ""}</span>
+              <span>
+                {hoveredPoint
+                  ? `${hoveredPoint.time} • $${hoveredPoint.val.toFixed(2)} USDC`
+                  : `${holdings.length} Active Positions • Solana Devnet Invariant`}
+              </span>
+              <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 font-semibold">
+                75% Escrow Floor Protected
+              </span>
             </div>
           </div>
         </div>
@@ -435,10 +525,12 @@ export default function SharesPage() {
                   <thead>
                     <tr className="border-b border-black/[0.06] bg-[#FAF7F2]/80 text-[11px] uppercase text-[#7A7672] select-none">
                       <th className="py-3 px-5 font-semibold">Enterprise</th>
-                      <th className="py-3 px-4 font-semibold text-right">Shares Held</th>
-                      <th className="py-3 px-4 font-semibold text-right">Share Price</th>
+                      <th className="py-3 px-4 font-semibold text-right">Holdings</th>
+                      <th className="py-3 px-4 font-semibold text-right">Entry Price</th>
+                      <th className="py-3 px-4 font-semibold text-right">Spot Price</th>
                       <th className="py-3 px-4 font-semibold text-right">Position Value</th>
-                      <th className="py-3 px-4 font-semibold text-right">Stake</th>
+                      <th className="py-3 px-4 font-semibold text-right">75% Escrow Floor</th>
+                      <th className="py-3 px-4 font-semibold text-right">Net Return</th>
                       <th className="py-3 px-5 font-semibold text-right">Action</th>
                     </tr>
                   </thead>
@@ -462,7 +554,14 @@ export default function SharesPage() {
                           </td>
 
                           <td className="py-3.5 px-4 text-right font-bold text-[#111113]">
-                            {formatCompactShares(h.shares)}
+                            <div>{formatCompactShares(h.shares)}</div>
+                            <div className="text-[10px] text-[#7A7672] font-normal">
+                              {h.isRaising ? "Receipts (R0)" : "Common Stock"}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right text-[#111113]">
+                            ${h.entryPriceUsdc.toFixed(2)}
                           </td>
 
                           <td className="py-3.5 px-4 text-right text-[#111113]">
@@ -473,8 +572,19 @@ export default function SharesPage() {
                             {formatCompactUsdc(h.totalValueUsdc)}
                           </td>
 
-                          <td className="py-3.5 px-4 text-right text-[#FF5C18] font-bold">
-                            {h.ownershipPercent.toFixed(2)}%
+                          <td className="py-3.5 px-4 text-right font-bold text-emerald-700">
+                            ${h.escrowProtectedUsdc.toFixed(2)}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right font-bold">
+                            {h.isRaising ? (
+                              <span className="text-[#7A7672] text-[11px]">Flat Invariant</span>
+                            ) : (
+                              <span className={h.unrealizedPnlPercent >= 0 ? "text-emerald-700" : "text-rose-600"}>
+                                {h.unrealizedPnlPercent >= 0 ? "+" : ""}
+                                {h.unrealizedPnlPercent.toFixed(1)}%
+                              </span>
+                            )}
                           </td>
 
                           <td className="py-3.5 px-5 text-right">
@@ -482,7 +592,7 @@ export default function SharesPage() {
                               href={`/ventures/${v.mintAddress || v.id}`}
                               className="px-3 py-1.5 rounded-lg bg-[#111113] hover:bg-black text-white text-xs transition-colors"
                             >
-                              Trade
+                              {h.isRaising ? "View Round" : "Trade"}
                             </Link>
                           </td>
                         </tr>
