@@ -1549,185 +1549,172 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               </div>
             ) : (
               <div>
-                <h2 className="text-xl font-bold text-[#111113] tracking-tight">Milestone Roadmap &amp; Escrow Security</h2>
-                <p className="text-xs text-[#7A7672] mt-1 font-mono">
-                  Milestone roadmap protected by 75% smart contract escrow.
-                </p>
+                <h2 className="text-xl font-bold text-[#111113] tracking-tight">Enterprise Capital Raise</h2>
+                <div className="text-xs text-[#7A7672] mt-1 font-mono">
+                  Fixed Allocation Invariant • Primary Capital Structure
+                </div>
               </div>
             )}
           </div>
 
-          {/* CONTENT: IF NOT GRADUATED, SHOW COMPREHENSIVE MILESTONE ROADMAP & ESCROW BACKSTOP */}
+          {/* CONTENT: IF NOT GRADUATED, SHOW CLEAN MINIMALIST RAISING CONFIG & MILESTONES */}
           {!isGraduated ? (
-            <div className="space-y-8 font-mono">
-              {/* Capital Accumulation & Escrow Status Overview */}
-              <div className="p-8 sm:p-10 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] flex flex-col items-center justify-center text-center space-y-6">
-                <div className="space-y-1 w-full max-w-xl">
-                  {(() => {
-                    const cap = venture.targetFundingCapUsdc || 50000;
-                    const raised = typeof venture.totalCapitalRaisedUsdc === "number" ? venture.totalCapitalRaisedUsdc : (venture.lockedEscrowUsdc || 0);
-                    const pct = Math.min(100, Math.max(0, typeof venture.fundingProgressPercent === "number" ? venture.fundingProgressPercent : (cap > 0 ? (raised / cap) * 100 : 0)));
-                    return (
-                      <>
-                        <div className="text-3xl sm:text-5xl font-bold text-[#111113] tabular-nums tracking-tight">
-                          {isMigrating
-                            ? "170,000 Common Shares Locked"
-                            : `$${(raised / 1000).toFixed(1)}k / $${(cap / 1000).toFixed(1)}k USDC`}
-                        </div>
-                        <p className="text-xs text-[#7A7672]">
-                          {isMigrating
-                            ? "Round completed. DLMM liquidity seeding in progress."
-                            : "75% Milestone Escrow Protected"}
-                        </p>
-                        {/* Clean Technical Progress Bar */}
-                        <div className="w-full h-3 bg-white border border-black/[0.08] rounded-full overflow-hidden p-0.5 mx-auto mt-4">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${isMigrating ? 100 : pct}%` }}
-                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                            className="h-full bg-[#111113] rounded-full"
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-[#7A7672] mt-2">
-                          <span>{pct.toFixed(1)}% Raised</span>
-                          <span>Fixed ${(venture.sharePriceUsdc || 0.10).toFixed(2)} / Receipt</span>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
+            <div className="space-y-6 font-mono">
+              {/* Enterprise Settings & Allocation Structure */}
+              {(() => {
+                const cap = venture.targetFundingCapUsdc || 25000;
+                const sharesForSale = venture.circulatingFloat > 0 ? venture.circulatingFloat : 490000;
+                const sharesPct = Math.round((sharesForSale / 1000000) * 100);
+                const founderLockMonths = venture.founderLockMonths || 12;
+                const founderLockPct = venture.founderLockPercentage || 30;
+                const price = venture.sharePriceUsdc || 0.05102;
 
-                {/* 3 Institutional Escrow Metrics */}
-                {(() => {
-                  const cap = venture.targetFundingCapUsdc || 50000;
-                  const escrowAmount = cap * 0.75;
-                  const initialMilestone = cap * 0.25;
-                  return (
-                    <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-left">
-                      <div className="p-4 rounded-xl bg-white border border-black/[0.06] space-y-1">
-                        <span className="text-[#7A7672] text-[10px] uppercase tracking-wider block font-semibold">
-                          75% Escrow Backstop
-                        </span>
-                        <span className="font-bold text-[#111113] text-sm block">
-                          ${escrowAmount.toLocaleString()} USDC
-                        </span>
-                        <span className="text-[10px] text-[#7A7672] block">
-                          Locked in legal_setup_vault PDA
-                        </span>
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block font-semibold">
+                        Shares Offered
+                      </span>
+                      <div className="font-bold text-[#111113] text-base tabular-nums">
+                        {sharesForSale.toLocaleString()} Shares
                       </div>
-
-                      <div className="p-4 rounded-xl bg-white border border-black/[0.06] space-y-1">
-                        <span className="text-[#7A7672] text-[10px] uppercase tracking-wider block font-semibold">
-                          Initial Allocation
-                        </span>
-                        <span className="font-bold text-[#111113] text-sm block">
-                          ${initialMilestone.toLocaleString()} USDC
-                        </span>
-                        <span className="text-[10px] text-[#7A7672] block">
-                          Released upon round completion
-                        </span>
-                      </div>
-
-                      <div className="p-4 rounded-xl bg-white border border-black/[0.06] space-y-1">
-                        <span className="text-[#7A7672] text-[10px] uppercase tracking-wider block font-semibold">
-                          Investor Ragequit
-                        </span>
-                        <span className="font-bold text-[#111113] text-sm block">
-                          100% Capital Floor
-                        </span>
-                        <span className="text-[10px] text-[#7A7672] block">
-                          Pro-rata refund if deliverables fail
-                        </span>
+                      <div className="text-[11px] text-[#7A7672]">
+                        {sharesPct}% of Total Supply
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
 
-              {/* Comprehensive Milestone Roadmap Cards */}
-              <div className="space-y-4">
+                    <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block font-semibold">
+                        Target Raise
+                      </span>
+                      <div className="font-bold text-[#111113] text-base tabular-nums">
+                        ${cap.toLocaleString()} USDC
+                      </div>
+                      <div className="text-[11px] text-[#7A7672]">
+                        ${price.toFixed(4)} / Share
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block font-semibold">
+                        Founder Lock
+                      </span>
+                      <div className="font-bold text-[#111113] text-base tabular-nums">
+                        {founderLockMonths} Months
+                      </div>
+                      <div className="text-[11px] text-[#7A7672]">
+                        {founderLockPct}% Equity Locked
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-[#7A7672] block font-semibold">
+                        Capital Split
+                      </span>
+                      <div className="font-bold text-[#111113] text-base tabular-nums">
+                        75% Escrow
+                      </div>
+                      <div className="text-[11px] text-[#7A7672]">
+                        15% Runway • 10% Pool
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Clean Capital Accumulation Progress */}
+              {(() => {
+                const cap = venture.targetFundingCapUsdc || 25000;
+                const raised = typeof venture.totalCapitalRaisedUsdc === "number" ? venture.totalCapitalRaisedUsdc : 0;
+                const pct = Math.min(100, Math.max(0, typeof venture.fundingProgressPercent === "number" ? venture.fundingProgressPercent : (cap > 0 ? (raised / cap) * 100 : 0)));
+
+                return (
+                  <div className="p-6 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] space-y-3">
+                    <div className="flex justify-between items-baseline text-xs font-mono">
+                      <span className="text-[#7A7672] uppercase tracking-wider text-[10px] font-semibold">Round Progress</span>
+                      <span className="font-bold text-[#111113] tabular-nums">
+                        ${raised.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / ${cap.toLocaleString()} USDC ({pct.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="w-full h-2.5 bg-white border border-black/[0.08] rounded-full overflow-hidden p-0.5">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                        className="h-full bg-[#111113] rounded-full"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Minimal Configured Milestones Display */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-black/[0.06]">
-                  <h3 className="text-base font-bold text-[#111113]">
-                    Milestone Roadmap &amp; Deliverables
-                  </h3>
-                  <span className="text-xs text-[#7A7672]">
-                    {(venture.milestones || []).length} Verified Milestones
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#7A7672]">
+                    Configured Milestones ({(venture.milestones || []).length > 0 ? venture.milestones.length : 1})
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(venture.milestones || []).map((m, idx) => {
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {((venture.milestones && venture.milestones.length > 0)
+                    ? venture.milestones
+                    : [
+                        {
+                          id: 1,
+                          title: "Milestone 1",
+                          percentageBps: 10000,
+                          amountUsdc: (venture.targetFundingCapUsdc || 25000) * 0.75,
+                          targetDays: 30,
+                          status: "pending" as const,
+                        },
+                      ]
+                  ).map((m, idx) => {
                     const isCompleted = m.status === "completed";
                     const isReview = m.status === "in_review";
+                    const pct = (m.percentageBps || 2500) / 100;
+                    const amount = m.amountUsdc || ((venture.targetFundingCapUsdc || 25000) * 0.75 * (pct / 100));
+
                     return (
                       <div
                         key={m.id || idx}
-                        className={`p-6 rounded-2xl border transition-all space-y-4 flex flex-col justify-between ${
+                        className={`p-5 rounded-2xl border transition-all space-y-3 flex flex-col justify-between ${
                           isCompleted
-                            ? "bg-emerald-50/30 border-emerald-200/80"
+                            ? "bg-emerald-50/20 border-emerald-200"
                             : isReview
-                            ? "bg-amber-50/30 border-amber-200/80"
-                            : "bg-white border-black/[0.06]"
+                            ? "bg-amber-50/20 border-amber-200"
+                            : "bg-[#FAF7F2] border-black/[0.06]"
                         }`}
                       >
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="px-2 py-0.5 rounded-md bg-black/5 text-[#111113] font-bold text-[10px] tracking-wider uppercase">
-                              Milestone #{idx + 1}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                isCompleted
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : isReview
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-neutral-100 text-neutral-600"
-                              }`}
-                            >
-                              {isCompleted ? "Verified & Disbursed" : isReview ? "Under Quorum Review" : "Escrow Locked"}
-                            </span>
-                          </div>
-
-                          <h4 className="font-bold text-[#111113] text-sm leading-snug">
-                            {m.title}
-                          </h4>
-
-                          <p className="text-xs text-[#7A7672] leading-relaxed line-clamp-3">
-                            {m.description}
-                          </p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-[#111113]">
+                            {m.title || `Milestone ${idx + 1}`}
+                          </span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              isCompleted
+                                ? "bg-emerald-100 text-emerald-800"
+                                : isReview
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-white border border-black/[0.08] text-[#7A7672]"
+                            }`}
+                          >
+                            {isCompleted ? "Completed" : isReview ? "In Review" : "Pending"}
+                          </span>
                         </div>
 
-                        <div className="pt-3 border-t border-black/[0.06] space-y-1.5 text-[11px]">
-                          <div className="flex justify-between text-[#7A7672]">
-                            <span>Disbursement</span>
-                            <span className="font-bold text-[#111113]">
-                              ${(m.amountUsdc || 0).toLocaleString()} USDC ({((m.percentageBps || 2500) / 100).toFixed(0)}%)
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-[#7A7672]">
-                            <span>Execution Window</span>
-                            <span className="font-medium text-[#111113]">~{m.targetDays || 30} Days</span>
-                          </div>
-                          <div className="flex justify-between text-[#7A7672]">
-                            <span>Release Gate</span>
-                            <span className="font-medium text-[#111113]">Shareholder &gt;50% Quorum</span>
-                          </div>
+                        <div className="flex justify-between items-baseline pt-2 border-t border-black/[0.04] text-xs">
+                          <span className="text-[#7A7672]">
+                            ~{m.targetDays || 30} Days
+                          </span>
+                          <span className="font-bold text-[#111113] tabular-nums">
+                            ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDC ({pct.toFixed(0)}%)
+                          </span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Protocol Investor Protection Assurance */}
-              <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] text-xs space-y-2 text-[#7A7672]">
-                <div className="font-bold text-[#111113] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>On-Chain Escrow Protection Mechanism</span>
-                </div>
-                <p className="leading-relaxed">
-                  During the primary raise, 75% of capital is held in the program PDA and cannot be withdrawn by the founders until operational milestones are cryptographically approved by shareholders. If a milestone is rejected or the round fails to reach quorum within 90 days, investors can execute <span className="font-bold text-[#111113]">ragequit_refund</span> to burn their receipt contracts and claim back their remaining pro-rata USDC balance.
-                </p>
               </div>
             </div>
           ) : (

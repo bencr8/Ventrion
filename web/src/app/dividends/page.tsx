@@ -52,8 +52,20 @@ export default function DividendsPage() {
 
   // Timeframe and chart state
   const [timeframe, setTimeframe] = useState<"1D" | "1W" | "1M" | "ALL">("1W");
-  const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
-  const chartSvgRef = useRef<SVGSVGElement | null>(null);
+  const [currency, setCurrency] = useState<"USDC" | "EUR">("USDC");
+  const currencyMultiplier = currency === "EUR" ? 0.92 : 1.0;
+  const currencySymbol = currency === "EUR" ? "€" : "$";
+
+  const [scrubbedVal, setScrubbedVal] = useState<number | null>(null);
+  const [currentPos, setCurrentPos] = useState<{ x: number; y: number }>({ x: 700, y: 90 });
+  const [isHovered, setIsHovered] = useState<boolean>(false);
+  const [isMoving, setIsMoving] = useState<boolean>(false);
+
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const pathRef = useRef<SVGPathElement | null>(null);
+  const targetXRef = useRef<number>(700);
+  const currentXRef = useRef<number>(700);
+  const animFrameRef = useRef<number | null>(null);
 
   // Transaction states
   const [txLoading, setTxLoading] = useState<string | null>(null);
@@ -176,83 +188,130 @@ export default function DividendsPage() {
     return list;
   }, [qcmpClaimable, pventClaimable]);
 
-  // Dynamic Cumulative Yield Curve based on totalClaimable
-  const currentChartPoints: ChartPoint[] = useMemo(() => {
-    const baseVal = totalClaimable > 0 ? totalClaimable : 0;
-    if (baseVal === 0) {
-      return [
-        { time: "00:00", val: 0, x: 0, y: 170 },
-        { time: "08:00", val: 0, x: 233, y: 170 },
-        { time: "16:00", val: 0, x: 466, y: 170 },
-        { time: "24:00", val: 0, x: 700, y: 170 },
-      ];
+  // Dynamic Cumulative Yield Curve tracking across timeframes
+  const { pathD, areaD, yStartVal, yEndVal } = useMemo(() => {
+    const width = 700;
+    const height = 130;
+    if (totalClaimable <= 0) {
+      const flatY = 90;
+      return {
+        pathD: `M 0 ${flatY} L ${width} ${flatY}`,
+        areaD: `M 0 ${flatY} L ${width} ${flatY} L ${width} ${height} L 0 ${height} Z`,
+        yStartVal: 0,
+        yEndVal: 0,
+      };
     }
 
-    if (timeframe === "1D") {
-      return [
-        { time: "00:00", val: baseVal * 0.82, x: 0, y: 160 },
-        { time: "06:00", val: baseVal * 0.88, x: 175, y: 140 },
-        { time: "12:00", val: baseVal * 0.93, x: 350, y: 115 },
-        { time: "18:00", val: baseVal * 0.97, x: 525, y: 75 },
-        { time: "Now", val: baseVal, x: 700, y: 35 },
-      ];
-    }
-    if (timeframe === "1W") {
-      return [
-        { time: "Mon", val: baseVal * 0.45, x: 0, y: 180 },
-        { time: "Tue", val: baseVal * 0.58, x: 140, y: 155 },
-        { time: "Wed", val: baseVal * 0.70, x: 280, y: 130 },
-        { time: "Thu", val: baseVal * 0.82, x: 420, y: 100 },
-        { time: "Fri", val: baseVal * 0.94, x: 560, y: 65 },
-        { time: "Today", val: baseVal, x: 700, y: 35 },
-      ];
-    }
-    if (timeframe === "1M") {
-      return [
-        { time: "W1", val: baseVal * 0.25, x: 0, y: 185 },
-        { time: "W2", val: baseVal * 0.52, x: 233, y: 145 },
-        { time: "W3", val: baseVal * 0.78, x: 466, y: 95 },
-        { time: "W4", val: baseVal, x: 700, y: 35 },
-      ];
-    }
-    // "ALL"
-    return [
-      { time: "Genesis", val: 0, x: 0, y: 190 },
-      { time: "Launch", val: baseVal * 0.3, x: 233, y: 150 },
-      { time: "Growth", val: baseVal * 0.7, x: 466, y: 95 },
-      { time: "Current", val: baseVal, x: 700, y: 35 },
-    ];
+    let start = 0;
+    if (timeframe === "1D") start = totalClaimable * 0.88;
+    else if (timeframe === "1W") start = totalClaimable * 0.50;
+    else if (timeframe === "1M") start = totalClaimable * 0.22;
+    else start = 0; // "ALL" tracks all-time cumulative from 0 to current
+
+    const minVal = 0;
+    const maxVal = Math.max(0.01, totalClaimable * 1.08);
+    const range = maxVal - minVal;
+
+    const getY = (val: number) => {
+      const norm = (val - minVal) / range;
+      return Math.round(105 - norm * 75);
+    };
+
+    const y0 = getY(start);
+    const y1 = getY(totalClaimable);
+    const midY = (y0 + y1) / 2;
+
+    const d = `M 0 ${y0} C 220 ${y0}, 380 ${midY}, 540 ${(y0 + y1 * 3) / 4} C 620 ${y1}, 660 ${y1}, ${width} ${y1}`;
+    const a = `${d} L ${width} ${height} L 0 ${height} Z`;
+
+    return {
+      pathD: d,
+      areaD: a,
+      yStartVal: start,
+      yEndVal: totalClaimable,
+    };
   }, [timeframe, totalClaimable]);
 
-  const svgPathD = useMemo(() => {
-    return currentChartPoints.reduce((acc, pt, idx) => {
-      return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
-    }, "");
-  }, [currentChartPoints]);
+  // Exact point on path via binary search
+  const findPointAtX = useCallback((targetX: number): { x: number; y: number } => {
+    const path = pathRef.current;
+    if (!path) return { x: targetX, y: 90 };
 
-  const svgAreaD = useMemo(() => {
-    if (currentChartPoints.length === 0) return "";
-    const first = currentChartPoints[0];
-    const last = currentChartPoints[currentChartPoints.length - 1];
-    return `${svgPathD} L ${last.x} 200 L ${first.x} 200 Z`;
-  }, [svgPathD, currentChartPoints]);
+    const totalLen = path.getTotalLength();
+    let low = 0;
+    let high = totalLen;
+    let best = path.getPointAtLength(totalLen);
 
-  const handleChartMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!chartSvgRef.current || currentChartPoints.length === 0) return;
-    const rect = chartSvgRef.current.getBoundingClientRect();
-    const relX = ((e.clientX - rect.left) / rect.width) * 700;
-
-    let closest = currentChartPoints[0];
-    let minDiff = Math.abs(currentChartPoints[0].x - relX);
-    for (let i = 1; i < currentChartPoints.length; i++) {
-      const diff = Math.abs(currentChartPoints[i].x - relX);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = currentChartPoints[i];
+    for (let i = 0; i < 22; i++) {
+      const mid = (low + high) / 2;
+      const pt = path.getPointAtLength(mid);
+      if (Math.abs(pt.x - targetX) < 0.25) {
+        return { x: pt.x, y: pt.y };
       }
+      if (pt.x < targetX) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+      best = pt;
     }
-    setHoveredPoint(closest);
+
+    return { x: best.x, y: best.y };
+  }, []);
+
+  // Delayed magnetic follower loop for buttery scrubbing
+  const updateScrubberLoop = useCallback(() => {
+    const diff = targetXRef.current - currentXRef.current;
+    if (Math.abs(diff) > 0.15) {
+      currentXRef.current += diff * 0.14;
+      const pt = findPointAtX(currentXRef.current);
+      setCurrentPos(pt);
+
+      const ratio = Math.max(0, Math.min(1, currentXRef.current / 700));
+      const val = yStartVal + ratio * (yEndVal - yStartVal);
+      setScrubbedVal(val);
+      setIsMoving(true);
+
+      animFrameRef.current = requestAnimationFrame(updateScrubberLoop);
+    } else {
+      currentXRef.current = targetXRef.current;
+      const pt = findPointAtX(targetXRef.current);
+      setCurrentPos(pt);
+      const ratio = Math.max(0, Math.min(1, targetXRef.current / 700));
+      setScrubbedVal(targetXRef.current === 700 && !isHovered ? null : yStartVal + ratio * (yEndVal - yStartVal));
+      setIsMoving(false);
+      animFrameRef.current = null;
+    }
+  }, [findPointAtX, yStartVal, yEndVal, isHovered]);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const rawX = e.clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(700, (rawX / rect.width) * 700));
+
+    targetXRef.current = clampedX;
+    setIsHovered(true);
+
+    if (!animFrameRef.current) {
+      animFrameRef.current = requestAnimationFrame(updateScrubberLoop);
+    }
   };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    targetXRef.current = 700;
+    if (!animFrameRef.current) {
+      animFrameRef.current = requestAnimationFrame(updateScrubberLoop);
+    }
+  };
+
+  useEffect(() => {
+    targetXRef.current = 700;
+    currentXRef.current = 700;
+    const pt = findPointAtX(700);
+    setCurrentPos(pt);
+  }, [pathD, findPointAtX]);
 
   return (
     <div className="min-h-screen w-full bg-[#FAF7F2] flex flex-col justify-between selection:bg-[#FF5C18]/15 font-jakarta antialiased">
@@ -279,64 +338,98 @@ export default function DividendsPage() {
           </div>
         </div>
 
-        {/* UNIFIED INTERACTIVE YIELD ACCUMULATION CHART (REPLACING OLD 3 AGGREGATE CONTAINERS) */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block">
+        {/* BUTTERY INTERACTIVE DIVIDENDS VALUATION TERMINAL */}
+        <div className="p-6 sm:p-10 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-8 font-mono">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-black/[0.06]">
+            <div>
+              <span className="text-[11px] uppercase tracking-wider text-[#7A7672] block font-medium">
                 Total Accrued Claimable Yield
               </span>
-              <div className="flex items-baseline gap-4">
-                <div className="text-3xl sm:text-4xl font-bold text-[#111113] tabular-nums">
-                  ${connected ? <BezierCounter value={totalClaimable} decimals={2} /> : "0.00"} <span className="text-xs font-normal text-[#7A7672]">USDC</span>
-                </div>
+              <div className="flex flex-wrap items-baseline gap-3 mt-1.5">
+                <span className="text-3xl sm:text-5xl font-extrabold font-mono text-[#111113] tracking-tight tabular-nums">
+                  {currencySymbol}
+                  {((scrubbedVal !== null ? scrubbedVal : totalClaimable) * currencyMultiplier).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+                <span className="text-xs font-mono font-semibold text-[#8E8B88]">
+                  {currency}
+                </span>
                 {connected && totalClaimable > 0 && (
                   <button
                     onClick={handleClaimAll}
                     disabled={Boolean(txLoading)}
-                    className="relative overflow-hidden px-4 py-2 rounded-xl bg-[#121214] text-white text-xs font-mono font-bold tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-xs cursor-pointer"
+                    className="relative overflow-hidden px-4 py-1.5 rounded-xl bg-[#121214] text-white text-xs font-mono font-bold tracking-wider uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-xs cursor-pointer ml-2"
                   >
                     Claim All
                   </button>
                 )}
-              </div>
-              <div className="text-xs text-[#7A7672]">
-                {connected ? "Continuous on-chain escrow accumulation" : "Connect wallet to load dividend escrows"}
+                {isHovered && scrubbedVal !== null && (
+                  <span className="text-xs text-[#7A7672] ml-1">
+                    {currentPos.x < 150 ? (timeframe === "ALL" ? "@ Genesis" : "@ Window Start") : currentPos.x > 550 ? "@ Current Accrual" : "@ Accumulation"}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Timeframe Selector Pill */}
-            <div className="flex p-1 bg-black/[0.03] rounded-xl text-xs gap-1 self-start sm:self-auto">
-              {(["1D", "1W", "1M", "ALL"] as const).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`relative px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                    timeframe === tf ? "text-white font-bold" : "text-[#7A7672] hover:text-[#111113]"
-                  }`}
-                >
-                  {timeframe === tf && (
-                    <motion.div
-                      layoutId="dividendsTfPill"
-                      className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
-                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                    />
-                  )}
-                  <span className="relative z-10">{tf}</span>
-                </button>
-              ))}
+            {/* Timeframe & Currency Switchers */}
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              {/* Timeframe Selector Pill */}
+              <div className="flex p-1 bg-black/[0.03] rounded-xl text-xs gap-1">
+                {(["1D", "1W", "1M", "ALL"] as const).map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setTimeframe(tf)}
+                    className={`relative px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      timeframe === tf ? "text-white font-bold" : "text-[#7A7672] hover:text-[#111113]"
+                    }`}
+                  >
+                    {timeframe === tf && (
+                      <motion.div
+                        layoutId="dividendsTfPill"
+                        className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
+                        transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <span className="relative z-10">{tf}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Currency Pill Switcher (USDC / EUR) */}
+              <div className="flex items-center gap-1 p-1 bg-black/[0.03] rounded-xl">
+                {(["USDC", "EUR"] as const).map((curr) => (
+                  <button
+                    key={curr}
+                    onClick={() => setCurrency(curr)}
+                    className={`relative px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      currency === curr ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
+                    }`}
+                  >
+                    {currency === curr && (
+                      <motion.div
+                        layoutId="dividendsCurrencyPill"
+                        className="absolute inset-0 bg-[#111113] rounded-lg shadow-xs"
+                        transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                    <span className="relative z-10">{curr}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Interactive SVG Canvas */}
-          <div className="relative w-full h-[220px]">
+          {/* Spacious Buttery Interactive SVG Canvas - Compact Institutional Height */}
+          <div className="relative w-full h-[140px] sm:h-[180px]">
             <svg
-              ref={chartSvgRef}
-              viewBox="0 0 700 200"
+              ref={svgRef}
+              viewBox="0 0 700 130"
               preserveAspectRatio="none"
               className="w-full h-full overflow-visible cursor-crosshair select-none"
-              onMouseMove={handleChartMouseMove}
-              onMouseLeave={() => setHoveredPoint(null)}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
             >
               <defs>
                 <linearGradient id="yieldGradient" x1="0" y1="0" x2="0" y2="1">
@@ -345,43 +438,44 @@ export default function DividendsPage() {
                 </linearGradient>
               </defs>
 
-              <path d={svgAreaD} fill="url(#yieldGradient)" />
+              {/* Gradient Area Fill under Curve */}
+              <path d={areaD} fill="url(#yieldGradient)" className="pointer-events-none" />
+
+              {/* Main Crisp Vector Line */}
               <path
-                d={svgPathD}
+                ref={pathRef}
+                d={pathD}
                 fill="none"
                 stroke="#FF5C18"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="pointer-events-none"
               />
 
-              {hoveredPoint && (
-                <>
-                  <line
-                    x1={hoveredPoint.x}
-                    y1="0"
-                    x2={hoveredPoint.x}
-                    y2="200"
-                    stroke="#111113"
-                    strokeWidth="1"
-                    strokeDasharray="3 3"
-                    strokeOpacity="0.4"
-                  />
-                  <circle
-                    cx={hoveredPoint.x}
-                    cy={hoveredPoint.y}
-                    r="5"
-                    fill="#111113"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                  />
-                </>
-              )}
+              {/* Vertical Guideline */}
+              <g transform={`translate(${currentPos.x}, 0)`} className="pointer-events-none">
+                <line
+                  x1="0"
+                  y1="5"
+                  x2="0"
+                  y2="125"
+                  stroke="#FF5C18"
+                  strokeWidth="1.2"
+                  strokeDasharray="3 3"
+                  strokeOpacity={isHovered ? 0.75 : 0.3}
+                />
+              </g>
             </svg>
 
-            <div className="flex justify-between font-mono text-xs text-[#7A7672] pt-4 border-t border-black/[0.04] min-h-[38px] items-center">
-              <span>{hoveredPoint ? `${hoveredPoint.time} • $${hoveredPoint.val.toFixed(2)} USDC` : ""}</span>
-            </div>
+            {/* Glowing Scrubber Point */}
+            <div
+              style={{
+                left: `${(currentPos.x / 700) * 100}%`,
+                top: `${(currentPos.y / 130) * 100}%`,
+              }}
+              className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white border-[2.5px] border-[#FF5C18] shadow-[0_0_12px_rgba(255,92,24,0.5)] pointer-events-none z-20"
+            />
           </div>
         </div>
 

@@ -224,9 +224,9 @@ export default function SharesPage() {
   // Smooth Vector Curve & Gradient Area from Acquisition (BUY) to Current Spot (NOW)
   const { pathD, areaD, yStartVal, yEndVal } = useMemo(() => {
     const width = 700;
-    const height = 220;
+    const height = 130;
     if (totalCostBasis <= 0 && totalPortfolioValue <= 0) {
-      const flatY = 160;
+      const flatY = 90;
       return {
         pathD: `M 0 ${flatY} L ${width} ${flatY}`,
         areaD: `M 0 ${flatY} L ${width} ${flatY} L ${width} ${height} L 0 ${height} Z`,
@@ -241,7 +241,7 @@ export default function SharesPage() {
 
     const getY = (val: number) => {
       const norm = (val - minVal) / range;
-      return Math.round(170 - norm * 115);
+      return Math.round(100 - norm * 75);
     };
 
     const y0 = getY(totalCostBasis);
@@ -262,7 +262,7 @@ export default function SharesPage() {
   // Exact point on path via binary search
   const findPointAtX = useCallback((targetX: number): { x: number; y: number } => {
     const path = pathRef.current;
-    if (!path) return { x: targetX, y: 160 };
+    if (!path) return { x: targetX, y: 90 };
 
     const totalLen = path.getTotalLength();
     let low = 0;
@@ -439,11 +439,11 @@ export default function SharesPage() {
             </div>
           </div>
 
-          {/* Spacious Buttery Interactive SVG Canvas */}
-          <div className="relative w-full h-[280px] sm:h-[340px]">
+          {/* Spacious Buttery Interactive SVG Canvas - Compact Institutional Height */}
+          <div className="relative w-full h-[140px] sm:h-[180px]">
             <svg
               ref={svgRef}
-              viewBox="0 0 700 220"
+              viewBox="0 0 700 130"
               preserveAspectRatio="none"
               className="w-full h-full overflow-visible cursor-crosshair select-none"
               onMouseMove={handleMouseMove}
@@ -475,9 +475,9 @@ export default function SharesPage() {
               <g transform={`translate(${currentPos.x}, 0)`} className="pointer-events-none">
                 <line
                   x1="0"
-                  y1="10"
+                  y1="5"
                   x2="0"
-                  y2="215"
+                  y2="125"
                   stroke="#FF5C18"
                   strokeWidth="1.2"
                   strokeDasharray="3 3"
@@ -490,9 +490,9 @@ export default function SharesPage() {
             <div
               style={{
                 left: `${(currentPos.x / 700) * 100}%`,
-                top: `${(currentPos.y / 220) * 100}%`,
+                top: `${(currentPos.y / 130) * 100}%`,
               }}
-              className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white border-[2.5px] border-[#FF5C18] shadow-[0_0_12px_rgba(255,92,24,0.5)] pointer-events-none z-20"
+              className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white border-[2.5px] border-[#FF5C18] shadow-[0_0_12px_rgba(255,92,24,0.5)] pointer-events-none z-20"
             />
           </div>
         </div>
