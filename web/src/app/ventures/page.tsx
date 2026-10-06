@@ -83,8 +83,8 @@ export default function VenturesPage() {
         v.canonicalStatus === "Funded" ||
         v.statusBadge?.includes("Graduated") ||
         v.statusBadge?.includes("Funded") ||
-        v.id === "qcmp" ||
-        v.id === "pvent"
+        v.mintAddress === "Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E" ||
+        v.mintAddress === "5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn"
       ) {
         canonical = "Funded";
       } else if (v.canonicalStatus === "Migrating" || v.statusBadge?.includes("Migrating")) {
@@ -310,18 +310,18 @@ export default function VenturesPage() {
                     const price = v.sharePriceUsdc || 0;
                     const mcap = v.marketCapUsdc || 0;
                     const targetCap = v.targetFundingCapUsdc || 50000;
-                    const raised = v.totalCapitalRaisedUsdc || 31000;
-                    const progress = v.fundingProgressPercent || (targetCap > 0 ? (raised / targetCap) * 100 : 0);
+                    const raised = typeof v.totalCapitalRaisedUsdc === "number" ? v.totalCapitalRaisedUsdc : (v.canonicalStatus === "Funded" ? targetCap : 0);
+                    const progress = typeof v.fundingProgressPercent === "number" ? v.fundingProgressPercent : (targetCap > 0 ? (raised / targetCap) * 100 : 0);
                     const cleanName = v.name?.replace(/\s*\(\$[A-Za-z0-9_-]+\)\s*$/, "") || v.name;
 
                     return (
                       <tr
-                        key={v.id || v.mintAddress}
+                        key={v.mintAddress || v.id}
                         className="hover:bg-black/[0.015] transition-colors group cursor-pointer"
                       >
                         {/* Asset Column (Rounded Picture replacing black ticker block) */}
                         <td className="py-3.5 px-5">
-                          <Link href={`/ventures/${v.id || v.mintAddress}`} className="block">
+                          <Link href={`/ventures/${v.mintAddress}`} className="block">
                             <div className="flex items-center gap-3">
                               {/* Round-cornered logo replacing black square */}
                               <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#111113]/5 border border-black/[0.08] shrink-0 shadow-2xs flex items-center justify-center">

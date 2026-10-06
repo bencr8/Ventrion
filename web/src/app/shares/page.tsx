@@ -479,7 +479,7 @@ export default function SharesPage() {
 
                           <td className="py-3.5 px-5 text-right">
                             <Link
-                              href={`/ventures/${v.id}`}
+                              href={`/ventures/${v.mintAddress || v.id}`}
                               className="px-3 py-1.5 rounded-lg bg-[#111113] hover:bg-black text-white text-xs transition-colors"
                             >
                               Trade

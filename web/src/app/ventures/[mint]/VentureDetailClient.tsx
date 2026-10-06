@@ -959,26 +959,37 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
               {isPrimary && (
                 <div className="space-y-6">
-                  <div className="flex justify-between font-mono text-sm">
-                    <span className="text-[#111113] font-bold">
-                      ${venture.lockedEscrowUsdc.toLocaleString()} USDC
-                    </span>
-                    <span className="text-[#7A7672]">
-                      $50,000 Hardcap ({venture.progressPercentage}%)
-                    </span>
-                  </div>
-                  <div className="h-4 w-full bg-[#FAF7F2] border border-black/[0.08] rounded-full overflow-hidden p-0.5">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${venture.progressPercentage}%` }}
-                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                      className="h-full bg-[#111113] rounded-full"
-                    />
-                  </div>
-                  <div className="flex justify-between font-mono text-xs text-[#7A7672]">
-                    <span>Fixed $1.00 USDC</span>
-                    <span>Remaining ${(50000 - venture.lockedEscrowUsdc).toLocaleString()} USDC</span>
-                  </div>
+                  {(() => {
+                    const cap = venture.targetFundingCapUsdc || 50000;
+                    const raised = typeof venture.totalCapitalRaisedUsdc === "number" ? venture.totalCapitalRaisedUsdc : (venture.lockedEscrowUsdc || 0);
+                    const pct = Math.min(100, Math.max(0, typeof venture.fundingProgressPercent === "number" ? venture.fundingProgressPercent : (cap > 0 ? (raised / cap) * 100 : 0)));
+                    const remaining = Math.max(0, cap - raised);
+                    const sharePrice = venture.sharePriceUsdc || 0.10;
+                    return (
+                      <>
+                        <div className="flex justify-between font-mono text-sm">
+                          <span className="text-[#111113] font-bold">
+                            ${raised.toLocaleString()} USDC
+                          </span>
+                          <span className="text-[#7A7672]">
+                            ${cap.toLocaleString()} Hardcap ({pct.toFixed(1)}%)
+                          </span>
+                        </div>
+                        <div className="h-4 w-full bg-[#FAF7F2] border border-black/[0.08] rounded-full overflow-hidden p-0.5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                            className="h-full bg-[#111113] rounded-full"
+                          />
+                        </div>
+                        <div className="flex justify-between font-mono text-xs text-[#7A7672]">
+                          <span>Fixed ${sharePrice.toFixed(2)} USDC</span>
+                          <span>Remaining ${remaining.toLocaleString()} USDC</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -1524,24 +1535,32 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               {!isGraduated ? (
                 <div className="p-8 sm:p-12 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] font-mono flex flex-col items-center justify-center text-center space-y-6">
                   <div className="space-y-1">
-                    <div className="text-3xl sm:text-5xl font-bold text-[#111113] tabular-nums tracking-tight">
-                      {isMigrating
-                        ? "170.0k Common Shares"
-                        : `$${(venture.lockedEscrowUsdc / 1000).toFixed(1)}k / $50.0k USDC`}
-                    </div>
-                    <p className="text-xs text-[#7A7672]">
-                      {isMigrating ? "DLMM Liquidity Pool Seeding" : "Primary Capital Accumulation (75% Milestone Escrow Protected)"}
-                    </p>
-                  </div>
-
-                  {/* Clean Technical Progress Bar */}
-                  <div className="w-full max-w-lg h-2.5 bg-white border border-black/[0.06] rounded-full overflow-hidden p-0.5">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${isMigrating ? 100 : venture.progressPercentage}%` }}
-                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                      className="h-full bg-[#111113] rounded-full"
-                    />
+                    {(() => {
+                      const cap = venture.targetFundingCapUsdc || 50000;
+                      const raised = typeof venture.totalCapitalRaisedUsdc === "number" ? venture.totalCapitalRaisedUsdc : (venture.lockedEscrowUsdc || 0);
+                      const pct = Math.min(100, Math.max(0, typeof venture.fundingProgressPercent === "number" ? venture.fundingProgressPercent : (cap > 0 ? (raised / cap) * 100 : 0)));
+                      return (
+                        <>
+                          <div className="text-3xl sm:text-5xl font-bold text-[#111113] tabular-nums tracking-tight">
+                            {isMigrating
+                              ? "170.0k Common Shares"
+                              : `$${(raised / 1000).toFixed(1)}k / $${(cap / 1000).toFixed(1)}k USDC`}
+                          </div>
+                          <p className="text-xs text-[#7A7672]">
+                            {isMigrating ? "DLMM Liquidity Pool Seeding" : "Primary Capital Accumulation (75% Milestone Escrow Protected)"}
+                          </p>
+                          {/* Clean Technical Progress Bar */}
+                          <div className="w-full max-w-lg h-2.5 bg-white border border-black/[0.06] rounded-full overflow-hidden p-0.5 mx-auto mt-4">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${isMigrating ? 100 : pct}%` }}
+                              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                              className="h-full bg-[#111113] rounded-full"
+                            />
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* 3 Minimal Parameter Chips */}

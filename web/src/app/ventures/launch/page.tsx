@@ -145,11 +145,11 @@ export default function LaunchVenturePage() {
         if (json.uri) setMetadataUri(json.uri);
       } else {
         const fallbackSymbol = (symbol.trim() || "token").toLowerCase();
-        setMetadataUri(`/ventrion/metadata/${fallbackSymbol}_metadata.json`);
+        setMetadataUri(`https://ventrion.fun/metadata/${fallbackSymbol}_metadata.json`);
       }
     } catch {
       const fallbackSymbol = (symbol.trim() || "token").toLowerCase();
-      setMetadataUri(`/ventrion/metadata/${fallbackSymbol}_metadata.json`);
+      setMetadataUri(`https://ventrion.fun/metadata/${fallbackSymbol}_metadata.json`);
     } finally {
       setIsUploadingMedia(false);
     }
@@ -272,8 +272,8 @@ export default function LaunchVenturePage() {
           console.warn("Metadata sync warning:", e);
         }
       }
-      if (!effectiveUri) {
-        effectiveUri = `/ventrion/metadata/${symbol.trim().toLowerCase()}_metadata.json`;
+      if (!effectiveUri || effectiveUri.startsWith("/")) {
+        effectiveUri = `https://ventrion.fun/metadata/${symbol.trim().toLowerCase()}_metadata.json`;
       }
 
       const formattedMilestones = tranches.map((t, idx) => ({
@@ -314,7 +314,7 @@ export default function LaunchVenturePage() {
       const targetUrl = `/ventures/${companyMint}`;
       router.push(targetUrl);
       setTimeout(() => {
-        window.location.href = `/ventrion/ventures/${companyMint}/`;
+        window.location.href = `/ventures/${companyMint}/`;
       }, 500);
     } catch (err: any) {
       console.error("Genesis launch failed:", err);
