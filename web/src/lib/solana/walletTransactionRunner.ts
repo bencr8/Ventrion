@@ -28,6 +28,7 @@ export interface LaunchGenesisParams {
   upfrontRunwayPercent: number;
   vestingCliffMonths?: number;
   vestingDurationYears?: number;
+  milestones?: Array<{ percentageBps: number; targetDays?: number }>;
 }
 
 export interface ContributeRoundParams {
@@ -116,7 +117,7 @@ export async function executeLaunchGenesis(
   params: LaunchGenesisParams,
   wallet: any,
   connection: Connection
-): Promise<{ signature: string; companyMint: string }> {
+): Promise<{ signature: string; companyMint: string; milestonesSignature?: string }> {
   if (!wallet || !wallet.publicKey) {
     throw new Error("Wallet not connected. Please connect your Solana wallet.");
   }
@@ -135,39 +136,87 @@ export async function executeLaunchGenesis(
     upfrontRunwayPercent: params.upfrontRunwayPercent,
     vestingCliffMonths: params.vestingCliffMonths || 6,
     vestingDurationYears: params.vestingDurationYears || 2,
+    milestones: params.milestones,
   });
 
   if (!data?.transactionBase64 || !data?.companyMint) {
     throw new Error("Backend did not return valid genesis transactionBase64");
   }
 
-  // 2. Deserialize transaction
-  const txBytes = base64ToUint8Array(data.transactionBase64);
-  const transaction = Transaction.from(txBytes);
+  // 2. Deserialize transaction(s)
+  const tx1Bytes = base64ToUint8Array(data.transactionBase64);
+  const tx1 = Transaction.from(tx1Bytes);
+
+  let tx2: Transaction | null = null;
+  if (data.milestonesTransactionBase64) {
+    const tx2Bytes = base64ToUint8Array(data.milestonesTransactionBase64);
+    tx2 = Transaction.from(tx2Bytes);
+  }
 
   // 3. Prompt wallet to sign
-  const signedTx = await wallet.signTransaction(transaction);
+  let signedTx1: Transaction;
+  let signedTx2: Transaction | null = null;
 
-  // 4. Broadcast raw transaction
-  const rawTx = signedTx.serialize();
-  const signature = await connection.sendRawTransaction(rawTx, {
+  if (tx2 && typeof wallet.signAllTransactions === "function") {
+    try {
+      const signedAll = await wallet.signAllTransactions([tx1, tx2]);
+      signedTx1 = signedAll[0];
+      signedTx2 = signedAll[1];
+    } catch {
+      signedTx1 = await wallet.signTransaction(tx1);
+      signedTx2 = await wallet.signTransaction(tx2);
+    }
+  } else {
+    signedTx1 = await wallet.signTransaction(tx1);
+    if (tx2) {
+      signedTx2 = await wallet.signTransaction(tx2);
+    }
+  }
+
+  // 4. Broadcast and confirm TX 1 (Genesis Launch with Metaplex Metadata)
+  const rawTx1 = signedTx1.serialize();
+  const signature1 = await connection.sendRawTransaction(rawTx1, {
     skipPreflight: false,
     preflightCommitment: "confirmed",
   });
 
-  // 5. Confirm on-chain
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");
   await connection.confirmTransaction(
     {
-      signature,
+      signature: signature1,
       blockhash: latestBlockhash.blockhash,
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
     },
     "confirmed"
   );
 
+  // 5. Broadcast and confirm TX 2 (Milestone Roadmap Configuration)
+  let signature2: string | null = null;
+  if (signedTx2) {
+    try {
+      const rawTx2 = signedTx2.serialize();
+      signature2 = await connection.sendRawTransaction(rawTx2, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+      });
+
+      const lbh2 = await connection.getLatestBlockhash("confirmed");
+      await connection.confirmTransaction(
+        {
+          signature: signature2,
+          blockhash: lbh2.blockhash,
+          lastValidBlockHeight: lbh2.lastValidBlockHeight,
+        },
+        "confirmed"
+      );
+    } catch (mErr: any) {
+      console.warn("Milestone configuration confirmation warning:", mErr);
+    }
+  }
+
   return {
-    signature,
+    signature: signature1,
+    milestonesSignature: signature2 || undefined,
     companyMint: data.companyMint,
   };
 }

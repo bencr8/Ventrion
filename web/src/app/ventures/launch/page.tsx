@@ -34,22 +34,16 @@ export default function LaunchVenturePage() {
   // Navigation steps
   const [activeStep, setActiveStep] = useState<"identity" | "capital" | "milestones">("identity");
 
-  // SECTION 1: Company Identity & Media
-  const [name, setName] = useState("Aura Dynamics Labs");
-  const [symbol, setSymbol] = useState("AURA");
-  const [description, setDescription] = useState(
-    "Next-generation decentralized compute & inference infrastructure with commercial revenue dividend waterfall."
-  );
+  // SECTION 1: Company Identity & Media (No prefilled data)
+  const [name, setName] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [description, setDescription] = useState("");
 
   // Logo & Banner
-  const [logoPreview, setLogoPreview] = useState<string | null>(
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&h=200&fit=crop&q=80"
-  );
-  const [bannerPreview, setBannerPreview] = useState<string | null>(
-    "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=1200&q=80"
-  );
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const [metadataUri, setMetadataUri] = useState<string>("/ventrion/metadata/aura_metadata.json");
+  const [metadataUri, setMetadataUri] = useState<string>("");
 
   // SECTION 2: Capital Formation (1% - 49% for Sale per Manifest)
   const [equitySalePercent, setEquitySalePercent] = useState<number>(20); // 20%
@@ -58,25 +52,13 @@ export default function LaunchVenturePage() {
   const [vestingCliffMonths, setVestingCliffMonths] = useState<number>(6); // 6 months
   const [vestingDurationYears, setVestingDurationYears] = useState<number>(2); // 2 years
 
-  // SECTION 3: Milestone Tranches (1 to 10 Tranches, fully customizable)
+  // SECTION 3: Milestone Tranches (1 to 10 Tranches, fully customizable - no prefilled text)
   const [tranches, setTranches] = useState<TrancheItem[]>([
     {
       id: "1",
-      name: "Milestone #1",
-      scope: "Deployment of smart contracts, audit report publication, and developer SDK sandbox release.",
-      percent: 40,
-    },
-    {
-      id: "2",
-      name: "Milestone #2",
-      scope: "External third-party pen-test, validator consensus integration, and backer voting testing.",
-      percent: 35,
-    },
-    {
-      id: "3",
-      name: "Milestone #3",
-      scope: "Integration of first 50 corporate clients, live revenue dividends routing, and pool graduation.",
-      percent: 25,
+      name: "",
+      scope: "",
+      percent: 100,
     },
   ]);
 
@@ -143,17 +125,18 @@ export default function LaunchVenturePage() {
 
   // Sync to backend metadata API
   const syncMetadata = async (logoData?: string, bannerData?: string) => {
+    if (!name.trim() && !symbol.trim()) return;
     setIsUploadingMedia(true);
     try {
       const res = await fetch("/ventrion/api/ventures/upload-metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symbol,
-          name,
-          description,
-          logoDataUrl: logoData || logoPreview,
-          bannerDataUrl: bannerData || bannerPreview,
+          symbol: symbol.trim() || "VENTURE",
+          name: name.trim() || "Ventrion Enterprise",
+          description: description.trim() || "",
+          logoDataUrl: logoData || logoPreview || undefined,
+          bannerDataUrl: bannerData || bannerPreview || undefined,
         }),
       });
 
@@ -161,10 +144,12 @@ export default function LaunchVenturePage() {
         const json = await res.json();
         if (json.uri) setMetadataUri(json.uri);
       } else {
-        setMetadataUri(`/ventrion/metadata/${symbol.toLowerCase()}_metadata.json`);
+        const fallbackSymbol = (symbol.trim() || "token").toLowerCase();
+        setMetadataUri(`/ventrion/metadata/${fallbackSymbol}_metadata.json`);
       }
     } catch {
-      setMetadataUri(`/ventrion/metadata/${symbol.toLowerCase()}_metadata.json`);
+      const fallbackSymbol = (symbol.trim() || "token").toLowerCase();
+      setMetadataUri(`/ventrion/metadata/${fallbackSymbol}_metadata.json`);
     } finally {
       setIsUploadingMedia(false);
     }
@@ -200,7 +185,7 @@ export default function LaunchVenturePage() {
     const remaining = Math.max(0, 100 - totalTranchePercent);
     const newTranche: TrancheItem = {
       id: String(Date.now()),
-      name: `Milestone #${tranches.length + 1}`,
+      name: "",
       scope: "",
       percent: remaining,
     };
@@ -232,6 +217,27 @@ export default function LaunchVenturePage() {
       return;
     }
 
+    if (!name.trim()) {
+      alert("Please enter a Company Legal Name in Step 1.");
+      setActiveStep("identity");
+      nameInputRef.current?.focus();
+      return;
+    }
+
+    if (!symbol.trim()) {
+      alert("Please enter a Ticker Symbol in Step 1.");
+      setActiveStep("identity");
+      symbolInputRef.current?.focus();
+      return;
+    }
+
+    if (!description.trim()) {
+      alert("Please enter an Enterprise Overview & Thesis in Step 1.");
+      setActiveStep("identity");
+      descInputRef.current?.focus();
+      return;
+    }
+
     if (totalTranchePercent !== 100) {
       alert(`Milestone percentages must sum up to exactly 100% (currently ${totalTranchePercent}%).`);
       return;
@@ -244,18 +250,54 @@ export default function LaunchVenturePage() {
       setLaunchStepIndex(1); // Building transaction & deriving PDAs
       await new Promise((r) => setTimeout(r, 400));
 
+      let effectiveUri = metadataUri;
+      if (!effectiveUri) {
+        try {
+          const res = await fetch("/ventrion/api/ventures/upload-metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              symbol: symbol.trim().toUpperCase(),
+              name: name.trim(),
+              description: description.trim(),
+              logoDataUrl: logoPreview || undefined,
+              bannerDataUrl: bannerPreview || undefined,
+            }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.uri) effectiveUri = json.uri;
+          }
+        } catch (e) {
+          console.warn("Metadata sync warning:", e);
+        }
+      }
+      if (!effectiveUri) {
+        effectiveUri = `/ventrion/metadata/${symbol.trim().toLowerCase()}_metadata.json`;
+      }
+
+      const formattedMilestones = tranches.map((t, idx) => ({
+        percentageBps: Math.round((Number(t.percent) || 0) * 100),
+        targetDays: (idx + 1) * 30,
+      }));
+      const totalBps = formattedMilestones.reduce((acc, m) => acc + m.percentageBps, 0);
+      if (totalBps !== 10000 && formattedMilestones.length > 0) {
+        formattedMilestones[formattedMilestones.length - 1].percentageBps += (10000 - totalBps);
+      }
+
       setLaunchStepIndex(2); // Requesting wallet signature for company mint & fee payer
       const { signature, companyMint } = await executeLaunchGenesis(
         {
           founderPubkey: publicKey.toBase58(),
-          name,
-          symbol,
-          uri: metadataUri,
+          name: name.trim(),
+          symbol: symbol.trim().toUpperCase(),
+          uri: effectiveUri,
           equitySalePercent,
           fundingTargetUsdc,
           upfrontRunwayPercent,
           vestingCliffMonths,
           vestingDurationYears,
+          milestones: formattedMilestones,
         },
         wallet,
         connection
@@ -300,16 +342,16 @@ export default function LaunchVenturePage() {
                 {logoPreview ? (
                   <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="font-bold text-xl text-[#111113]">{symbol.slice(0, 3)}</span>
+                  <span className="font-bold text-xl text-[#111113]">{(symbol || "VEN").slice(0, 3)}</span>
                 )}
               </div>
 
               <div className="space-y-2">
                 <h2 className="text-xl font-bold font-jakarta text-[#111113] tracking-tight">
-                  Launching {name}
+                  Launching {name || "Venture"}
                 </h2>
                 <div className="text-xs text-[#7A7672]">
-                  ${symbol} Genesis Issuance on Solana Devnet
+                  ${symbol || "TOKEN"} Genesis Issuance on Solana Devnet
                 </div>
               </div>
 
@@ -541,7 +583,7 @@ export default function LaunchVenturePage() {
                         type="text"
                         value={symbol}
                         onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                        placeholder="APEX"
+                        placeholder="e.g. ACMX"
                         maxLength={6}
                         className="w-full bg-transparent font-mono font-bold text-sm text-[#111113] uppercase outline-none"
                       />
@@ -560,6 +602,7 @@ export default function LaunchVenturePage() {
                       ref={descInputRef}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Enter enterprise vision, product thesis, revenue model, and commercial roadmap..."
                       rows={3}
                       className="w-full bg-transparent text-xs text-[#111113] outline-none resize-none leading-relaxed"
                     />
@@ -567,7 +610,24 @@ export default function LaunchVenturePage() {
 
                   <div className="flex justify-end pt-2">
                     <button
-                      onClick={() => setActiveStep("capital")}
+                      onClick={() => {
+                        if (!name.trim()) {
+                          alert("Please enter a Company Legal Name.");
+                          nameInputRef.current?.focus();
+                          return;
+                        }
+                        if (!symbol.trim()) {
+                          alert("Please enter a Ticker Symbol.");
+                          symbolInputRef.current?.focus();
+                          return;
+                        }
+                        if (!description.trim()) {
+                          alert("Please enter an Enterprise Overview & Thesis.");
+                          descInputRef.current?.focus();
+                          return;
+                        }
+                        setActiveStep("capital");
+                      }}
                       className="px-5 py-2.5 rounded-xl bg-[#111113] hover:bg-black text-white text-xs font-semibold transition-transform active:scale-95 cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <span>Continue to Capital Structure</span>
@@ -905,7 +965,7 @@ export default function LaunchVenturePage() {
                                 updated[idx].name = e.target.value;
                                 setTranches(updated);
                               }}
-                              placeholder="Milestone Deliverable Title"
+                              placeholder={`Milestone #${idx + 1} Deliverable Title`}
                               className="w-full bg-transparent text-xs font-semibold text-[#111113] font-jakarta outline-none"
                             />
                           </div>
