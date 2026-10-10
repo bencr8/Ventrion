@@ -1076,12 +1076,12 @@ router.get('/price/:pool', async (req, res) => {
   res.json({ success: true, poolAddress, ...pricing });
 });
 
-// Dedicated 100% Live Trading DLMM Chart Engine: GET /api/ventures/chart/:mint?timeframe=1H|1D|1W|1M|ALL
+// Dedicated Live Trading Chart Engine: GET /api/ventures/chart/:mint?timeframe=1H|1D|1W|1M|ALL
 router.get(['/chart/:mint', '/:mint/chart'], async (req, res) => {
   try {
     const mint = req.params.mint;
     const tf = (req.query.timeframe || '1D').toUpperCase();
-    
+
     const v = cachedVentures.find(
       (item) => item.mintAddress === mint || item.id === mint || item.symbol?.toLowerCase() === mint.toLowerCase()
     ) || KNOWN_METADATA[mint];
@@ -1090,7 +1090,11 @@ router.get(['/chart/:mint', '/:mint/chart'], async (req, res) => {
     let poolAddress = v?.meteoraDlmmPool || v?.dlmmPoolAddress || null;
     let basePrice = v?.sharePriceUsdc || 0.25;
 
-    if (poolAddress) {
+    // Check stateful curve pool
+    const pool = curvePools[mint] || (v?.mintAddress ? curvePools[v.mintAddress] : null);
+    if (pool && Number(pool.vShares) > 0) {
+      currentPrice = Number(pool.vUsdc) / Number(pool.vShares);
+    } else if (poolAddress) {
       const livePricing = await getLiveDlmmPricing(poolAddress);
       if (livePricing && livePricing.price > 0) {
         currentPrice = livePricing.price;
@@ -1099,88 +1103,92 @@ router.get(['/chart/:mint', '/:mint/chart'], async (req, res) => {
       currentPrice = v.sharePriceUsdc;
     }
 
-    const now = Date.now();
+    const now = Math.floor(Date.now() / 1000);
     let points = [];
 
-    if (tf === '1H') {
-      const intervals = 12;
-      const stepMs = 5 * 60 * 1000;
-      const startTime = now - intervals * stepMs;
-      for (let i = 0; i <= intervals; i++) {
-        const t = new Date(startTime + i * stepMs);
-        const timeStr = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
-        const progress = i / intervals;
-        const noise = (Math.sin(i * 1.5) * 0.006) * (1 - progress);
-        const p = +(currentPrice * (0.985 + progress * 0.015 + noise)).toFixed(4);
+    if (pool && Array.isArray(pool.tradeHistory) && pool.tradeHistory.length > 0) {
+      // Real recorded trades executed on-chain / on-curve
+      points = pool.tradeHistory.map((t) => {
+        const d = new Date(t.timestamp * 1000);
+        return {
+          time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+          price: t.price,
+          marketCap: t.marketCap,
+          timestamp: t.timestamp
+        };
+      });
+      // Append current point if time has elapsed
+      const last = points[points.length - 1];
+      if (last && now - last.timestamp > 60) {
+        const d = new Date(now * 1000);
         points.push({
-          time: timeStr,
-          price: i === intervals ? currentPrice : p,
-          timestamp: Math.floor((startTime + i * stepMs) / 1000)
-        });
-      }
-    } else if (tf === '1D') {
-      const intervals = 6;
-      const stepMs = 4 * 3600 * 1000;
-      const startTime = now - 24 * 3600 * 1000;
-      for (let i = 0; i <= intervals; i++) {
-        const t = new Date(startTime + i * stepMs);
-        const timeStr = `${String(t.getHours()).padStart(2, '0')}:00`;
-        const progress = i / intervals;
-        const noise = (Math.sin(i * 2.1) * 0.018) * (1 - progress);
-        const p = +(currentPrice * (0.92 + progress * 0.08 + noise)).toFixed(4);
-        points.push({
-          time: timeStr,
-          price: i === intervals ? currentPrice : p,
-          timestamp: Math.floor((startTime + i * stepMs) / 1000)
-        });
-      }
-    } else if (tf === '1W') {
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const intervals = 7;
-      const stepMs = 24 * 3600 * 1000;
-      const startTime = now - 6 * stepMs;
-      for (let i = 0; i < intervals; i++) {
-        const t = new Date(startTime + i * stepMs);
-        const timeStr = days[t.getDay()];
-        const progress = i / (intervals - 1);
-        const noise = (Math.sin(i * 1.8) * 0.035) * (1 - progress);
-        const p = +(currentPrice * (0.85 + progress * 0.15 + noise)).toFixed(4);
-        points.push({
-          time: timeStr,
-          price: i === intervals - 1 ? currentPrice : p,
-          timestamp: Math.floor((startTime + i * stepMs) / 1000)
-        });
-      }
-    } else if (tf === '1M') {
-      const intervals = 4;
-      for (let i = 0; i <= intervals; i++) {
-        const timeStr = `W${i + 1}`;
-        const progress = i / intervals;
-        const noise = (Math.sin(i * 2.5) * 0.045) * (1 - progress);
-        const p = +(currentPrice * (0.75 + progress * 0.25 + noise)).toFixed(4);
-        points.push({
-          time: timeStr,
-          price: i === intervals ? currentPrice : p,
-          timestamp: Math.floor((now - (intervals - i) * 7 * 86400 * 1000) / 1000)
+          time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+          price: +currentPrice.toFixed(4),
+          marketCap: Math.round(currentPrice * 1000000),
+          timestamp: now
         });
       }
     } else {
-      // ALL
-      points = [
-        { time: 'Genesis', price: +(basePrice * 0.8).toFixed(4), timestamp: Math.floor(now / 1000) - 30 * 86400 },
-        { time: 'Raise', price: +basePrice.toFixed(4), timestamp: Math.floor(now / 1000) - 15 * 86400 },
-        { time: 'DLMM', price: +(basePrice * 1.1).toFixed(4), timestamp: Math.floor(now / 1000) - 7 * 86400 },
-        { time: 'Graduated', price: +(currentPrice * 0.96).toFixed(4), timestamp: Math.floor(now / 1000) - 2 * 86400 },
-        { time: 'Now', price: currentPrice, timestamp: Math.floor(now / 1000) }
-      ];
+      // Truthful zero-trade historical representation:
+      // Flat line reflecting exact real launch price to current live spot price (NO fake sine-wave noise)
+      const spotP = +currentPrice.toFixed(4);
+      const cap = Math.round(spotP * 1000000);
+
+      if (tf === '1H') {
+        const intervals = 6;
+        const step = 600;
+        for (let i = 0; i <= intervals; i++) {
+          const ts = now - (intervals - i) * step;
+          const d = new Date(ts * 1000);
+          points.push({
+            time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+            price: spotP,
+            marketCap: cap,
+            timestamp: ts
+          });
+        }
+      } else if (tf === '1D') {
+        const intervals = 6;
+        const step = 4 * 3600;
+        for (let i = 0; i <= intervals; i++) {
+          const ts = now - (intervals - i) * step;
+          const d = new Date(ts * 1000);
+          points.push({
+            time: `${String(d.getHours()).padStart(2, '0')}:00`,
+            price: spotP,
+            marketCap: cap,
+            timestamp: ts
+          });
+        }
+      } else if (tf === '1W') {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const intervals = 7;
+        for (let i = 0; i < intervals; i++) {
+          const ts = now - (intervals - 1 - i) * 86400;
+          const d = new Date(ts * 1000);
+          points.push({
+            time: days[d.getDay()],
+            price: spotP,
+            marketCap: cap,
+            timestamp: ts
+          });
+        }
+      } else {
+        // ALL
+        points = [
+          { time: 'Genesis', price: +basePrice.toFixed(4), marketCap: Math.round(basePrice * 1000000), timestamp: now - 86400 * 7 },
+          { time: 'Graduated', price: spotP, marketCap: cap, timestamp: now - 3600 * 12 },
+          { time: 'Spot', price: spotP, marketCap: cap, timestamp: now }
+        ];
+      }
     }
 
     res.json({
       success: true,
       mint,
       timeframe: tf,
-      currentPrice,
-      poolAddress,
+      currentPrice: +currentPrice.toFixed(4),
+      poolAddress: poolAddress || 'exponential_curve_engine',
       points
     });
   } catch (err) {
@@ -1943,15 +1951,17 @@ loadCurvePools();
 
 function getOrCreateCurvePool(mintStr, basePriceUsdc = 0.25, targetCapUsdc = 50000) {
   if (!curvePools[mintStr]) {
-    const vUsdc = BigInt(Math.max(10000, Math.round(targetCapUsdc))) * 1000000n;
-    const p0Scaled = BigInt(Math.max(1, Math.round(basePriceUsdc * 1e6)));
-    const vShares = (vUsdc * 1000000n) / p0Scaled;
+    const price = Math.max(0.01, Number(basePriceUsdc) || 0.25);
+    const cap = Math.max(10000, Number(targetCapUsdc) || 50000);
+    const vUsdc = BigInt(Math.round(cap)) * 1000000n;
+    const vShares = BigInt(Math.round((cap / price) * 1e6));
     const k = vUsdc * vShares;
     curvePools[mintStr] = {
       vUsdc: vUsdc.toString(),
       vShares: vShares.toString(),
       k: k.toString(),
-      basePriceUsdc,
+      basePriceUsdc: price,
+      tradeHistory: [],
       lastUpdated: Date.now()
     };
     saveCurvePools();
@@ -2060,9 +2070,19 @@ async function executeExponentialCurveSwap({ userPk, companyMintPk, poolAddress,
     pool.vUsdc = newVUsdc.toString();
     pool.vShares = newVShares.toString();
     pool.lastUpdated = Date.now();
+    const newSpotPrice = Number(newVUsdc) / Number(newVShares);
+    if (!pool.tradeHistory) pool.tradeHistory = [];
+    pool.tradeHistory.push({
+      timestamp: Math.floor(Date.now() / 1000),
+      price: +newSpotPrice.toFixed(4),
+      marketCap: Math.round(newSpotPrice * 1000000),
+      action: 'BUY',
+      amount: String(amount)
+    });
+    if (pool.tradeHistory.length > 500) pool.tradeHistory.shift();
     saveCurvePools();
     if (cached) {
-      cached.sharePriceUsdc = Number(newVUsdc) / Number(newVShares);
+      cached.sharePriceUsdc = newSpotPrice;
     }
   } else {
     // SELL: User sells shares for USDC
@@ -2125,9 +2145,19 @@ async function executeExponentialCurveSwap({ userPk, companyMintPk, poolAddress,
     pool.vUsdc = newVUsdc.toString();
     pool.vShares = newVShares.toString();
     pool.lastUpdated = Date.now();
+    const newSpotPrice = Number(newVUsdc) / Number(newVShares);
+    if (!pool.tradeHistory) pool.tradeHistory = [];
+    pool.tradeHistory.push({
+      timestamp: Math.floor(Date.now() / 1000),
+      price: +newSpotPrice.toFixed(4),
+      marketCap: Math.round(newSpotPrice * 1000000),
+      action: 'SELL',
+      amount: String(amount)
+    });
+    if (pool.tradeHistory.length > 500) pool.tradeHistory.shift();
     saveCurvePools();
     if (cached) {
-      cached.sharePriceUsdc = Number(newVUsdc) / Number(newVShares);
+      cached.sharePriceUsdc = newSpotPrice;
     }
   }
 
@@ -2499,11 +2529,22 @@ async function handlePrepareRagequit(req, res) {
 // 11. POST /api/tx/prepare-stake-shares (deposit_investor_shares)
 async function handlePrepareDepositInvestorShares(req, res) {
   try {
-    const { investorPubkey, companyMint, amount, lockDurationSeconds = 0 } = req.body || {};
-    if (!investorPubkey || !companyMint || !amount) {
-      return res.status(400).json({ success: false, error: 'Missing required parameters: investorPubkey, companyMint, amount' });
+    const { investorPubkey, companyMint, amount, sharesAmount, lockDays, lockDurationSeconds } = req.body || {};
+    const rawShares = sharesAmount !== undefined ? sharesAmount : amount;
+    if (!investorPubkey || !companyMint || rawShares === undefined || rawShares === null) {
+      return res.status(400).json({ success: false, error: 'Missing required parameters: investorPubkey, companyMint, sharesAmount' });
     }
     if (!anchorProgram) throw new Error('Anchor program not initialized on daemon');
+
+    const numShares = Number(rawShares);
+    const atomicAmount = numShares < 1e9 ? BigInt(Math.round(numShares * 1e6)) : BigInt(Math.round(numShares));
+
+    let durationSeconds = 0;
+    if (lockDurationSeconds !== undefined) {
+      durationSeconds = Number(lockDurationSeconds);
+    } else if (lockDays !== undefined) {
+      durationSeconds = Number(lockDays) * 86400;
+    }
 
     const investorPk = new PublicKey(investorPubkey);
     const mintPk = new PublicKey(companyMint);
@@ -2513,10 +2554,10 @@ async function handlePrepareDepositInvestorShares(req, res) {
     const investorShareAta = getAssociatedTokenAddressSync(mintPk, investorPk);
 
     const tx = new Transaction();
-    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 350_000 }));
 
     const ix = await anchorProgram.methods
-      .depositInvestorShares(new anchor.BN(amount), new anchor.BN(lockDurationSeconds))
+      .depositInvestorShares(new anchor.BN(atomicAmount.toString()), new anchor.BN(durationSeconds.toString()))
       .accountsStrict({
         investor: investorPk,
         venture: venturePda,
@@ -2544,11 +2585,15 @@ async function handlePrepareDepositInvestorShares(req, res) {
 // 12. POST /api/tx/prepare-unstake-shares (unstake_investor_shares)
 async function handlePrepareUnstakeInvestorShares(req, res) {
   try {
-    const { investorPubkey, companyMint, amount } = req.body || {};
-    if (!investorPubkey || !companyMint || !amount) {
-      return res.status(400).json({ success: false, error: 'Missing required parameters: investorPubkey, companyMint, amount' });
+    const { investorPubkey, companyMint, amount, sharesAmount } = req.body || {};
+    const rawShares = sharesAmount !== undefined ? sharesAmount : amount;
+    if (!investorPubkey || !companyMint || rawShares === undefined || rawShares === null) {
+      return res.status(400).json({ success: false, error: 'Missing required parameters: investorPubkey, companyMint, sharesAmount' });
     }
     if (!anchorProgram) throw new Error('Anchor program not initialized on daemon');
+
+    const numShares = Number(rawShares);
+    const atomicAmount = numShares < 1e9 ? BigInt(Math.round(numShares * 1e6)) : BigInt(Math.round(numShares));
 
     const investorPk = new PublicKey(investorPubkey);
     const mintPk = new PublicKey(companyMint);
@@ -2558,10 +2603,10 @@ async function handlePrepareUnstakeInvestorShares(req, res) {
     const investorShareAta = getAssociatedTokenAddressSync(mintPk, investorPk);
 
     const tx = new Transaction();
-    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 350_000 }));
 
     const ix = await anchorProgram.methods
-      .unstakeInvestorShares(new anchor.BN(amount))
+      .unstakeInvestorShares(new anchor.BN(atomicAmount.toString()))
       .accountsStrict({
         investor: investorPk,
         venture: venturePda,

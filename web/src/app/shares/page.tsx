@@ -583,7 +583,7 @@ export default function SharesPage() {
                             <div>{formatCompactShares(h.shares)}</div>
                             <div className="text-[10px] text-[#7A7672] font-normal">
                               {h.receipts > 0 && !h.isRaising ? (
-                                <span className="text-amber-600 font-semibold">Unredeemed Receipts</span>
+                                <span className="text-[#111113] font-medium">Convertible Receipts</span>
                               ) : h.isRaising ? (
                                 "Receipts (R0)"
                               ) : (
@@ -623,9 +623,9 @@ export default function SharesPage() {
                             {h.receipts > 0 && !h.isRaising ? (
                               <Link
                                 href={`/ventures/${v.mintAddress || v.id}`}
-                                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors inline-flex items-center gap-1 shadow-xs"
+                                className="px-3 py-1.5 rounded-lg bg-[#111113] hover:bg-black text-white font-medium text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
                               >
-                                <span>Redeem</span>
+                                <span>Redeem 1:1</span>
                               </Link>
                             ) : (
                               <Link

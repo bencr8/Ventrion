@@ -24,7 +24,9 @@
 
 ---
 
-## 4. Live Pioneer Venture: Apex Quantum ($APEX)
+## 4. Live Pioneer Ventures
+
+### A. Apex Quantum ($APEX)
 * **Company Common Shares Mint:** [`J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn`](https://explorer.solana.com/address/J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn?cluster=devnet)
 * **Venture State PDA:** [`9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv`](https://explorer.solana.com/address/9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv?cluster=devnet)
 * **Total Common Share Supply:** `1,000,000` common shares (Fixed invariant).
@@ -32,6 +34,18 @@
 * **Founder Vesting Allocation:** `766,000` shares (linear monthly release with cliff).
 * **Meteora Seed Allocation:** `170,000` shares (held in custody for atomic graduation).
 * **Milestone Tranche Escrow:** 3 milestones configured (40%, 35%, 25%) with 7-day optimistic release, 3 cure cycles, and pro-rata ragequit refund protection.
+
+### B. Endor Markets ($ENDOR)
+* **Company Common Shares Mint:** [`5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK`](https://explorer.solana.com/address/5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK?cluster=devnet)
+* **Settlement Currency:** Canonical Devnet USDC (`5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt`)
+* **Total Common Share Supply:** `1,000,000` common shares (Fixed invariant).
+* **Spot Price:** `$0.2500 USDC`
+* **Market Capitalization:** `$250,000.00 USDC` ($P \times 1,000,000$ fixed supply)
+* **Metadata & Assets:**
+  * Logo: `https://ventrion.fun/metadata/endor_pfp.png`
+  * Banner: `https://ventrion.fun/metadata/endor_banner.png`
+  * Metadata URI: `https://ventrion.fun/metadata/endor_metadata.json`
+* **Liquidity Pool Status:** Continuous Exponential Curve active with persistent state storage (`curve_pools.json`).
 
 ---
 
@@ -47,28 +61,41 @@
 ---
 
 ## 6. Live Frontend & API Endpoints
-* **Web Application:** [https://ventrion.space/ventrion/](https://ventrion.space/ventrion/) (or `http://2.28.52.233:3001/ventrion/`)
-* **Dividends & Berkshire Hathaway Holding Desk:** `/ventrion/dividends/`
-* **Ventures Directory:** `/ventrion/ventures/`
-* **Venture Detail (Apex Quantum):** `/ventrion/ventures/J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn/`
-* **REST API Daemon:**
-  * `GET /api/ventures/live`
-  * `GET /api/ventures/vent/staking-info`
-  * `POST /api/ventures/tx/prepare-launch-genesis`
-  * `POST /api/ventures/tx/prepare-contribute-round`
-  * `POST /api/ventures/tx/prepare-vote-milestone`
-  * `POST /api/ventures/tx/prepare-ragequit`
-  * `POST /api/ventures/tx/prepare-stake-vent`
-  * `POST /api/ventures/tx/prepare-claim-vent-dividends`
-  * `POST /api/ventures/tx/prepare-swap-curve` (Continuous Exponential Bonding Curve Swap)
-  * `POST /api/ventures/tx/prepare-swap-dlmm` (DLMM with automated Exponential Curve Fallback)
+* **Web Application:** [https://ventrion.fun](https://ventrion.fun) (and `http://2.28.52.233:3001`)
+* **Shares & Investor Desk:** `/shares`
+* **Ventures Directory:** `/ventures`
+* **Venture Detail (Apex Quantum):** `/ventures/J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn`
+* **Venture Detail (Endor Markets):** `/ventures/5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK`
+* **REST API Daemon (`http://2.28.52.233:3000`):**
+  * `GET /api/ventures/live` - Full live registry of verified and community ventures.
+  * `GET /api/ventures/:mint` - Single venture state, reserves, pricing, and metadata.
+  * `GET /api/ventures/chart/:mint` - Real trade history OHLCV / price line streaming (zero mock sine-waves).
+  * `POST /api/tx/prepare-launch-genesis` - One-click venture genesis and mint authority revocation.
+  * `POST /api/tx/prepare-contribute-round` - Primary round funding.
+  * `POST /api/tx/prepare-redeem-shares` - 1:1 post-graduation receipt token conversion into canonical common shares.
+  * `POST /api/tx/prepare-stake-shares` - Staking shares into `InvestorVault` (supports duration tiers and yield multipliers).
+  * `POST /api/tx/prepare-unstake-shares` - Unstaking unlocked common shares from `InvestorVault`.
+  * `POST /api/tx/prepare-vote-milestone` - Primary backer milestone governance.
+  * `POST /api/tx/prepare-ragequit` - Pro-rata milestone escrow refunds.
+  * `POST /api/tx/prepare-swap-curve` - Continuous Exponential Bonding Curve swap engine.
+  * `POST /api/tx/prepare-swap-dlmm` - DLMM swap with automated Exponential Curve fallback.
 
 ---
 
 ## 7. Continuous Exponential Curve Liquidity Engine
-* **Invariant:** $K = V_{\text{usdc}} \times V_{\text{shares}}$ (Constant Product with Virtual Reserves)
-* **Virtual Liquidity Depth:** $V_{\text{usdc}} = 50,000 \times 10^6$ USDC, $V_{\text{shares}} = V_{\text{usdc}} / P_0$
-* **Infinite Liquidity Guarantee:** Eliminates discrete bin depletion (`SWAP_QUOTE_INSUFFICIENT_LIQUIDITY`). Handles retail to whale volume ($1 to $100,000+ USDC).
-* **Automated Fallback:** The web client automatically routes through the Exponential Curve whenever discrete DLMM bins lack depth.
+* **Invariant:** $K = V_{\text{usdc}} \times V_{\text{shares}}$ (Constant Product with Virtual Reserves).
+* **Virtual Liquidity Depth:** $V_{\text{usdc}} = 50,000 \times 10^6$ atomic USDC, $V_{\text{shares}} = V_{\text{usdc}} / P_0$.
+* **Infinite Liquidity Guarantee:** Eliminates discrete bin depletion (`SWAP_QUOTE_INSUFFICIENT_LIQUIDITY`). Handles retail and whale volume alike without order rejection.
+* **Persistent State Machine:** Pool reserves, accumulated volume, and trade histories are atomically persisted to `curve_pools.json`.
+* **Real Trade Chart Engine:** `/api/ventures/chart/:mint` delivers chronological trade points. For un-traded pairs, it provides a clean, accurate horizontal spot line without synthetic noise.
 * **Devnet Deployer LP Signer:** `2K9r52f1ZxuB1BQ1hhZWFgk1cGPcf7ucdvDHkGgf82TV`
+
+---
+
+## 8. Institutional Aesthetic & UX Standards
+* **Zero Emoji Invariant:** Eliminates all non-institutional emojis (`⚡`, `💡`, etc.) from all customer-facing banners and tabs.
+* **Concise Institutional Copy:** Replaces marketing jargon with single, understated sentences for actions like 1:1 receipt redemption and secondary conversions.
+* **Modern Typography:** Uses high-clarity `font-sans` with `tabular-nums` for spot pricing, market caps, and wallet balances.
+* **Truthful Metrics:** Strict spot pricing and market capitalizations derived directly from real pool invariants and the hard-capped 1,000,000 share supply.
+
 

@@ -7,7 +7,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { Navbar } from "../../../components/common/Navbar";
 import { BezierCounter } from "../../../components/common/BezierCounter";
-import { ArrowLeft, Copy, Check, ExternalLink, FileText, Globe, Share2 } from "lucide-react";
+import { ArrowLeft, Copy, Check, ExternalLink, FileText, Globe, Share2, X } from "lucide-react";
 import { VERIFIED_VENTURES, Venture, MilestoneItem } from "../../../lib/venturesData";
 import {
   buyFlatCurveShares,
@@ -1246,7 +1246,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                   }}
                   className="ml-auto text-white/50 hover:text-white p-1 rounded-lg transition-colors cursor-pointer shrink-0"
                 >
-                  ✕
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </motion.div>
@@ -1518,22 +1518,35 @@ export function VentureDetailClient({ mint }: { mint: string }) {
             {/* Price Header & Interactive Timeframe Selector */}
             <div className="flex items-start justify-between pb-6 border-b border-black/[0.06]">
               <div>
-                <div className="flex items-baseline gap-4 flex-wrap">
-                  <div className="text-3xl sm:text-4xl font-bold font-mono text-[#111113] tracking-tight tabular-nums">
-                    ${activePrice.toFixed(2)}{" "}
+                <div className="flex items-baseline gap-4 flex-wrap font-sans">
+                  <div className="text-3xl sm:text-4xl font-bold text-[#111113] tracking-tight tabular-nums">
+                    ${activePrice >= 1 ? activePrice.toFixed(2) : activePrice.toFixed(4)}{" "}
                     <span className="text-base sm:text-lg font-normal text-[#7A7672]">USDC</span>
                   </div>
-                  <div className="text-lg sm:text-xl font-mono text-[#111113] font-bold tabular-nums">
+                  <div className="text-lg sm:text-xl text-[#111113] font-semibold tabular-nums">
                     <span className="text-xs font-normal uppercase tracking-wider text-[#7A7672] mr-1.5">MC:</span>
                     {formatCompactUsdc(activeMarketCap)}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1.5 font-mono text-xs text-[#7A7672]">
-                  {isGraduated && <span className="text-[#FF5C18] font-bold">+14.8%</span>}
+                <div className="flex items-center gap-2 mt-1.5 font-sans text-xs text-[#7A7672]">
+                  {(() => {
+                    if (!isGraduated || currentChartPoints.length < 2) return null;
+                    const first = currentChartPoints[0].price;
+                    const last = currentChartPoints[currentChartPoints.length - 1].price;
+                    if (!first || first <= 0) return null;
+                    const pct = ((last - first) / first) * 100;
+                    const isPositive = pct > 0;
+                    const isZero = Math.abs(pct) < 0.001;
+                    return (
+                      <span className={`font-semibold tabular-nums ${isZero ? "text-[#7A7672]" : isPositive ? "text-emerald-600" : "text-rose-600"}`}>
+                        {isPositive ? "+" : ""}{pct.toFixed(2)}%
+                      </span>
+                    );
+                  })()}
                   {hoveredPoint ? (
-                    <span className="text-[#111113] font-bold">@ {hoveredPoint.time}</span>
+                    <span className="text-[#111113] font-medium">@ {hoveredPoint.time}</span>
                   ) : (
-                    <span>(24h Live Spot)</span>
+                    <span>(Spot Price)</span>
                   )}
                 </div>
               </div>
@@ -1623,11 +1636,13 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     )}
                   </svg>
 
-                  <div className="flex justify-between font-mono text-xs text-[#7A7672] pt-4 border-t border-black/[0.04]">
+                  <div className="flex justify-between font-sans text-xs text-[#7A7672] pt-4 border-t border-black/[0.04]">
                     <span>
                       24h Range {formatCompactUsdc(Math.min(...currentChartPoints.map(p => p.price)))} – {formatCompactUsdc(Math.max(...currentChartPoints.map(p => p.price)))}
                     </span>
-                    <span className="font-semibold text-[#111113]">Meteora DLMM</span>
+                    <span className="font-medium text-[#7A7672]">
+                      {venture.meteoraDlmmPool ? "Continuous Liquidity Pool" : "Bonding Curve Reserve"}
+                    </span>
                   </div>
                 </div>
               )}
@@ -1683,26 +1698,20 @@ export function VentureDetailClient({ mint }: { mint: string }) {
           {/* RIGHT: TACTILE ORDER TERMINAL (CLEAN & MINIMALIST) */}
           <div className="lg:col-span-4 bg-white border border-black/[0.08] rounded-3xl p-8 sm:p-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] min-h-[480px] flex flex-col justify-between">
             <div className="space-y-6">
-              {/* Prominent Redemption Callout Banner */}
+              {/* Minimalist Share Redemption Callout */}
               {isGraduated && userReceipts > 0 && (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
-                  <div>
-                    <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                      <span>⚡</span>
-                      <span>Graduated! You Hold {userReceipts.toLocaleString()} Receipts</span>
-                    </div>
-                    <p className="text-[11px] text-[#7A7672] mt-0.5">
-                      Redeem 1:1 for tradable {venture.symbol} Common Shares.
-                    </p>
+                <div className="p-3.5 rounded-xl bg-black/[0.02] border border-black/[0.08] flex items-center justify-between gap-3 font-sans">
+                  <div className="text-[13px] text-[#111113] font-medium leading-normal">
+                    {userReceipts.toLocaleString()} convertible receipts ready for 1:1 common share redemption.
                   </div>
                   <button
                     onClick={() => {
                       setTradeAction("REDEEM");
                       setTradeInputStr(String(userReceipts));
                     }}
-                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors shrink-0 shadow-xs cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-[#111113] hover:bg-black text-white text-xs font-medium transition-colors shrink-0 cursor-pointer"
                   >
-                    Redeem All (1:1)
+                    Redeem 1:1
                   </button>
                 </div>
               )}
@@ -1886,19 +1895,18 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
                           {/* Inline helper if on SELL tab but holding unredeemed receipts */}
                           {isSelling && isGraduated && userShares <= 0 && userReceipts > 0 && (
-                            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono text-amber-800 dark:text-amber-300">
-                              <span>💡 You hold <strong>{userReceipts.toLocaleString()}</strong> unredeemed receipts. </span>
+                            <div className="p-3 rounded-xl bg-black/[0.02] border border-black/[0.08] text-xs font-sans text-[#7A7672] flex items-center justify-between gap-2">
+                              <span>Convert {userReceipts.toLocaleString()} receipts to common shares before secondary trading.</span>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setTradeAction("REDEEM");
                                   setTradeInputStr(String(userReceipts));
                                 }}
-                                className="text-amber-600 dark:text-amber-400 font-bold underline hover:opacity-80 cursor-pointer ml-1"
+                                className="text-[#111113] font-semibold hover:underline cursor-pointer shrink-0"
                               >
-                                Click here to Redeem
+                                Redeem 1:1
                               </button>
-                              <span> for tradable shares before selling.</span>
                             </div>
                           )}
 
