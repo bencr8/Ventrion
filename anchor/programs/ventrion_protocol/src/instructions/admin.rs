@@ -50,6 +50,45 @@ fn validate_preset(preset: &AccountInfo) -> Result<()> {
     Ok(())
 }
 
+#[inline(never)]
+fn create_token_pda_account<'info>(
+    payer: &AccountInfo<'info>,
+    account_to_create: &AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    authority: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    seeds: &[&[u8]],
+) -> Result<()> {
+    let rent = Rent::get()?;
+    let signer_seeds = &[seeds];
+    anchor_lang::system_program::create_account(
+        CpiContext::new_with_signer(
+            system_program.clone(),
+            anchor_lang::system_program::CreateAccount {
+                from: payer.clone(),
+                to: account_to_create.clone(),
+            },
+            signer_seeds,
+        ),
+        rent.minimum_balance(anchor_spl::token::TokenAccount::LEN),
+        anchor_spl::token::TokenAccount::LEN as u64,
+        token_program.key,
+    )?;
+
+    anchor_spl::token::initialize_account3(
+        CpiContext::new(
+            token_program.clone(),
+            anchor_spl::token::InitializeAccount3 {
+                account: account_to_create.clone(),
+                mint: mint.clone(),
+                authority: authority.clone(),
+            },
+        ),
+    )?;
+    Ok(())
+}
+
 // -----------------------------------------------------------------------------
 // initialize_global_config
 // -----------------------------------------------------------------------------
@@ -83,15 +122,21 @@ pub struct InitializeGlobalConfig<'info> {
     )]
     pub vent_stake_vault: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: Master fee vault PDA token account initialized in handler
+    #[account(
+        mut,
+        seeds = [SEED_MASTER_FEE_VAULT],
+        bump
+    )]
+    pub master_fee_vault: UncheckedAccount<'info>,
+
     /// CHECK: validated as a Meteora DLMM `PresetParameter2` (owner + discriminator).
     pub dlmm_preset_parameter: UncheckedAccount<'info>,
 
-    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ VentrionError::Unauthorized)]
     pub program: Program<'info, VentrionProtocol>,
 
-    /// Only the program upgrade authority may bootstrap the protocol.
-    #[account(constraint = program_data.upgrade_authority_address == Some(admin.key()) @ VentrionError::Unauthorized)]
-    pub program_data: Box<Account<'info, ProgramData>>,
+    /// CHECK: program data account checked against program address and upgrade authority in handler
+    pub program_data: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -101,20 +146,54 @@ pub fn handle_initialize_global_config(
     ctx: Context<InitializeGlobalConfig>,
     params: GlobalConfigParams,
 ) -> Result<()> {
+    require_keys_eq!(
+        *ctx.accounts.program_data.owner,
+        anchor_lang::solana_program::bpf_loader_upgradeable::id(),
+        VentrionError::Unauthorized
+    );
+    require_keys_eq!(
+        ctx.accounts.program.programdata_address()?.unwrap_or_default(),
+        ctx.accounts.program_data.key(),
+        VentrionError::Unauthorized
+    );
+    let data = ctx.accounts.program_data.try_borrow_data()?;
+    require!(data.len() >= 45, VentrionError::Unauthorized);
+    require!(data[0..4] == [3, 0, 0, 0], VentrionError::Unauthorized);
+    require!(
+        data[12] == 1 && &data[13..45] == ctx.accounts.admin.key().as_ref(),
+        VentrionError::Unauthorized
+    );
+
     params.validate()?;
     #[cfg(feature = "mainnet")]
     require_keys_eq!(ctx.accounts.usdc_mint.key(), CANONICAL_USDC_MINT, VentrionError::InvalidUsdcMint);
     validate_preset(&ctx.accounts.dlmm_preset_parameter)?;
+
+    let master_vault_bump = ctx.bumps.master_fee_vault;
+    let master_vault_seeds: &[&[u8]] = &[SEED_MASTER_FEE_VAULT, &[master_vault_bump]];
+    create_token_pda_account(
+        &ctx.accounts.admin.to_account_info(),
+        &ctx.accounts.master_fee_vault.to_account_info(),
+        &ctx.accounts.usdc_mint.to_account_info(),
+        &ctx.accounts.global_config.to_account_info(),
+        &ctx.accounts.system_program.to_account_info(),
+        &ctx.accounts.token_program.to_account_info(),
+        master_vault_seeds,
+    )?;
 
     let config = &mut ctx.accounts.global_config;
     config.admin = ctx.accounts.admin.key();
     config.usdc_mint = ctx.accounts.usdc_mint.key();
     config.vent_mint = ctx.accounts.vent_mint.key();
     config.vent_stake_vault = ctx.accounts.vent_stake_vault.key();
+    config.master_fee_vault = ctx.accounts.master_fee_vault.key();
     config.dlmm_preset_parameter = ctx.accounts.dlmm_preset_parameter.key();
     config.total_vent_staked = 0;
+    config.acc_vent_dividend_per_share = 0;
+    config.total_vent_dividends_distributed = 0;
     config.bump = ctx.bumps.global_config;
     config.vent_stake_vault_bump = ctx.bumps.vent_stake_vault;
+    config.master_fee_vault_bump = ctx.bumps.master_fee_vault;
     params.apply(config);
 
     emit!(GlobalConfigInitialized {

@@ -2636,6 +2636,15 @@
                 "name": "RoundTerms"
               }
             }
+          },
+          {
+            "name": "trading_fee_bps",
+            "docs": [
+              "Optional trading fee in basis points (100 to 500 bps, default 200 bps)."
+            ],
+            "type": {
+              "option": "u16"
+            }
           }
         ]
       }
@@ -2668,6 +2677,15 @@
               "Upfront runway paid to the founder treasury at graduation (max 1,500 bps)."
             ],
             "type": "u16"
+          },
+          {
+            "name": "trading_fee_bps",
+            "docs": [
+              "Optional trading fee in basis points (100 to 500 bps, default 200 bps)."
+            ],
+            "type": {
+              "option": "u16"
+            }
           }
         ]
       }
@@ -3210,6 +3228,10 @@
           {
             "name": "usdc_vault_bump",
             "type": "u8"
+          },
+          {
+            "name": "trading_fee_bps",
+            "type": "u16"
           }
         ]
       }
@@ -3709,6 +3731,10 @@
           {
             "name": "dividend_vault_bump",
             "type": "u8"
+          },
+          {
+            "name": "trading_fee_bps",
+            "type": "u16"
           }
         ]
       }

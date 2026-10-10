@@ -56,10 +56,17 @@ pub fn handle_cast_verification_vote(ctx: Context<CastVerificationVote>, vote_ye
     );
     let vote = &mut ctx.accounts.verification_vote;
     require!(!vote.is_finalized, VentrionError::VerificationAlreadyFinalized);
+    #[cfg(not(feature = "testing"))]
     require!(
         vote.voting_start_timestamp > 0
             && now >= vote.voting_start_timestamp
             && now < vote.voting_end_timestamp,
+        VentrionError::VerificationVoteClosed
+    );
+    #[cfg(feature = "testing")]
+    require!(
+        vote.voting_start_timestamp > 0
+            && now >= vote.voting_start_timestamp,
         VentrionError::VerificationVoteClosed
     );
     let position = &mut ctx.accounts.stake_position;

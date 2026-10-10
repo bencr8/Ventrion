@@ -3,7 +3,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::constants::*;
 use crate::errors::VentrionError;
-use crate::events::{DividendsDistributed, DlmmFeesHarvested};
+use crate::events::{DividendsDistributed, DlmmFeesHarvested, VentDividendsHarvested};
 use crate::instructions::investor_staking::{distribute_dividends, DIVIDEND_SOURCE_DLMM_FEES};
 use crate::state::{DlmmCustody, FundingRound, GlobalConfig, RoundStatus, VentureState};
 use crate::utils::meteora::cpi::{self as dlmm_cpi, ClaimFee2};
@@ -17,7 +17,7 @@ use crate::utils::{math, meteora, token};
 pub struct HarvestDlmmFees<'info> {
     pub harvester: Signer<'info>,
 
-    #[account(seeds = [SEED_GLOBAL_CONFIG], bump = global_config.bump)]
+    #[account(mut, seeds = [SEED_GLOBAL_CONFIG], bump = global_config.bump)]
     pub global_config: Box<Account<'info, GlobalConfig>>,
 
     #[account(
@@ -63,10 +63,12 @@ pub struct HarvestDlmmFees<'info> {
 
     #[account(
         mut,
+        seeds = [SEED_MASTER_FEE_VAULT],
+        bump = global_config.master_fee_vault_bump,
         token::mint = usdc_mint,
-        token::authority = global_config.fee_treasury
+        token::authority = global_config
     )]
-    pub fee_treasury_usdc: Box<Account<'info, TokenAccount>>,
+    pub master_fee_vault: Box<Account<'info, TokenAccount>>,
 
     pub usdc_mint: Box<Account<'info, Mint>>,
     pub venture_token_mint: Box<Account<'info, Mint>>,
@@ -198,25 +200,51 @@ pub fn handle_harvest_dlmm_fees(ctx: Context<HarvestDlmmFees>) -> Result<()> {
     let mut royalty = 0;
     let mut dividends = 0;
     if distributable > 0 && ctx.accounts.venture.total_dividend_weight_units > 0 {
-        royalty = math::apply_bps(distributable, ctx.accounts.global_config.protocol_fee_bps as u64)?;
-        dividends = distributable - royalty;
-        token::transfer(
-            &token_program,
-            &ctx.accounts.custody_usdc.to_account_info(),
-            &ctx.accounts.fee_treasury_usdc.to_account_info(),
-            &custody_info,
-            &[custody_seeds],
-            royalty,
-        )?;
-        token::transfer(
-            &token_program,
-            &ctx.accounts.custody_usdc.to_account_info(),
-            &ctx.accounts.dividend_vault.to_account_info(),
-            &custody_info,
-            &[custody_seeds],
-            dividends,
-        )?;
+        // Dynamic Creator Fee: 100 to 500 bps (default 200 bps = 2.0%)
+        let raw_fee = ctx.accounts.funding_round.trading_fee_bps;
+        let f_bps = if (100..=500).contains(&raw_fee) {
+            raw_fee as u64
+        } else {
+            200u64
+        };
+        // Linear protocol royalty formula: R_bps = 25 + (F_bps - 100) / 8
+        // At 100 bps -> 25 bps; at 500 bps -> 75 bps
+        let r_bps = 25 + (f_bps.saturating_sub(100)) / 8;
+        royalty = math::mul_div_floor(distributable, r_bps, f_bps)?;
+        dividends = distributable.saturating_sub(royalty);
+        if royalty > 0 {
+            token::transfer(
+                &token_program,
+                &ctx.accounts.custody_usdc.to_account_info(),
+                &ctx.accounts.master_fee_vault.to_account_info(),
+                &custody_info,
+                &[custody_seeds],
+                royalty,
+            )?;
+
+            if ctx.accounts.global_config.total_vent_staked > 0 {
+                let inc = math::accumulator_increment(royalty, ctx.accounts.global_config.total_vent_staked as u128)?;
+                let config = &mut ctx.accounts.global_config;
+                config.acc_vent_dividend_per_share = config.acc_vent_dividend_per_share.checked_add(inc).ok_or(VentrionError::MathOverflow)?;
+                config.total_vent_dividends_distributed = math::add(config.total_vent_dividends_distributed, royalty)?;
+
+                emit!(VentDividendsHarvested {
+                    amount_usdc: royalty,
+                    new_acc_dividend_per_share: config.acc_vent_dividend_per_share,
+                    total_distributed_usdc: config.total_vent_dividends_distributed,
+                    timestamp: Clock::get()?.unix_timestamp,
+                });
+            }
+        }
         if dividends > 0 {
+            token::transfer(
+                &token_program,
+                &ctx.accounts.custody_usdc.to_account_info(),
+                &ctx.accounts.dividend_vault.to_account_info(),
+                &custody_info,
+                &[custody_seeds],
+                dividends,
+            )?;
             distribute_dividends(&mut ctx.accounts.venture, dividends)?;
         }
     }

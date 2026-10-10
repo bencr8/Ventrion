@@ -129,4 +129,8 @@ pub enum VentrionError {
     NothingToRefund,
     #[msg("6058: Founder vesting has nothing claimable.")]
     NothingVested,
+    #[msg("6059: Insufficient $VENT staked to bootstrap venture creation.")]
+    InsufficientVentStaked,
+    #[msg("6060: Zero claimable $VENT holding dividends available.")]
+    NoVentDividendsOwed,
 }

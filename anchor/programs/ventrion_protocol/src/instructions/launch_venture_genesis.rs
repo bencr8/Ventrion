@@ -21,6 +21,8 @@ pub struct VentureGenesisParams {
     pub vesting_duration_seconds: i64,
     /// Terms of funding round 0 (flat curve).
     pub round_terms: RoundTerms,
+    /// Optional trading fee in basis points (100 to 500 bps, default 200 bps).
+    pub trading_fee_bps: Option<u16>,
 }
 
 #[derive(Accounts)]
@@ -237,6 +239,10 @@ pub fn handle_launch_venture_genesis(
     ctx: Context<LaunchVentureGenesis>,
     params: VentureGenesisParams,
 ) -> Result<()> {
+    require!(
+        ctx.accounts.global_config.total_vent_staked >= MIN_VENT_STAKED_THRESHOLD,
+        VentrionError::InsufficientVentStaked
+    );
     handle_launch_venture_genesis_core(
         &ctx.accounts.founder.to_account_info(),
         &ctx.accounts.global_config.to_account_info(),
@@ -276,6 +282,10 @@ pub fn handle_launch_venture_genesis_with_metadata(
     uri: String,
     params: VentureGenesisParams,
 ) -> Result<()> {
+    require!(
+        ctx.accounts.global_config.total_vent_staked >= MIN_VENT_STAKED_THRESHOLD,
+        VentrionError::InsufficientVentStaked
+    );
     let metadata_args = MetadataCPIArgs {
         metadata: &ctx.accounts.metadata.to_account_info(),
         token_metadata_program: &ctx.accounts.token_metadata_program.to_account_info(),
@@ -365,7 +375,11 @@ fn handle_launch_venture_genesis_core<'info>(
             && params.vesting_cliff_seconds <= params.vesting_duration_seconds,
         VentrionError::LockDurationTooShort
     );
-    let plan = params.round_terms.plan()?;
+    let mut round_terms = params.round_terms;
+    if round_terms.trading_fee_bps.is_none() {
+        round_terms.trading_fee_bps = params.trading_fee_bps;
+    }
+    let plan = round_terms.plan()?;
     let committed_shares = plan
         .shares_required()?
         .checked_add(params.founder_shares)
@@ -608,6 +622,7 @@ fn handle_launch_venture_genesis_core<'info>(
     venture.master_lock_vault_bump = bump_master_lock_vault;
     venture.legal_setup_vault_bump = bump_legal_setup_vault;
     venture.dividend_vault_bump = 0;
+    venture.trading_fee_bps = round_terms.trading_fee_bps.unwrap_or(200);
 
     // ---------------------------------------------------------- founder vesting
     let vesting = FounderVesting {
@@ -637,7 +652,7 @@ fn handle_launch_venture_genesis_core<'info>(
         usdc_vault_bump: bump_round_usdc_vault,
         vote_bump: bump_verification_vote,
     };
-    let (round, vote) = crate::instructions::shared::create_round(&init, &params.round_terms, &plan);
+    let (round, vote) = crate::instructions::shared::create_round(&init, &round_terms, &plan);
     token_utils::write_pda_account(funding_round_info, &round)?;
     token_utils::write_pda_account(verification_vote_info, &vote)?;
 

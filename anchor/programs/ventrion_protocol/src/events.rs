@@ -43,6 +43,24 @@ pub struct VentUnstaked {
     pub total_vent_staked: u64,
 }
 
+/// Emitted when a $VENT mother token staker claims accumulated protocol dividends.
+#[event]
+pub struct VentDividendsClaimed {
+    pub staker: Pubkey,
+    pub amount_usdc: u64,
+    pub total_claimed_usdc: u64,
+    pub timestamp: i64,
+}
+
+/// Emitted when protocol royalty fees are harvested into the Master Fee Vault for $VENT stakers.
+#[event]
+pub struct VentDividendsHarvested {
+    pub amount_usdc: u64,
+    pub new_acc_dividend_per_share: u128,
+    pub total_distributed_usdc: u64,
+    pub timestamp: i64,
+}
+
 /// Emitted when a new company is initialized at genesis with exactly 1,000,000 shares.
 #[event]
 pub struct VentureGenesisLaunched {

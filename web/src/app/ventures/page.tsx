@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUpRight,
   Search,
@@ -30,32 +30,27 @@ export default function VenturesPage() {
   const [sortBy, setSortBy] = useState<SortOption>("highest_mcap");
 
   // Live Ventures from Server-Side 10s Cache Daemon
-  const [liveVentures, setLiveVentures] = useState<Venture[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = sessionStorage.getItem("ventrion_live_ventures");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {}
-    }
-    return [];
-  });
+  const [liveVentures, setLiveVentures] = useState<Venture[]>([]);
   const [isLoadingLive, setIsLoadingLive] = useState(false);
 
   // Poll 10-second Server Cache Daemon
   useEffect(() => {
     let isMounted = true;
 
+    // Load initial cached ventures once on client mount (avoids SSR hydration mismatch #425)
+    try {
+      const cached = sessionStorage.getItem("ventrion_live_ventures");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
+          setLiveVentures(parsed);
+        }
+      }
+    } catch {}
+
     async function fetchLiveVentures() {
       try {
-        const endpoints = [
-          "/ventrion/api/ventures/live",
-          "/api/ventures/live",
-          "/ventrion/api/ventures",
-          "/api/ventures",
-        ];
+        const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
         let result = null;
 
         for (const ep of endpoints) {
@@ -190,26 +185,91 @@ export default function VenturesPage() {
     },
   ];
 
+  // Canonical Phase illustrations for rotary wheel
+  const PHASE_DETAILS: Record<LifecyclePhase, { src: string; alt: string; index: number }> = {
+    Raising: { src: "/illustrations/suitcase_norm.png?v=3", alt: "Raising phase suitcase illustration", index: 0 },
+    Migrating: { src: "/illustrations/paperplane_norm.png?v=3", alt: "Migrating phase paperplane illustration", index: 1 },
+    Funded: { src: "/illustrations/anchor_norm.png?v=3", alt: "Funded phase anchor illustration", index: 2 },
+  };
+
+  const [direction, setDirection] = useState<number>(1);
+
+  const ROTATE_ANGLE = 70;
+
+  const handlePhaseChange = (nextPhase: LifecyclePhase, explicitDir?: number) => {
+    if (nextPhase === selectedPhase) return;
+    const currentIdx = PHASE_DETAILS[selectedPhase].index;
+    const nextIdx = PHASE_DETAILS[nextPhase].index;
+    let dir = nextIdx > currentIdx ? 1 : -1;
+    if (explicitDir !== undefined) {
+      dir = explicitDir;
+    } else if (currentIdx === 2 && nextIdx === 0) {
+      dir = 1;
+    } else if (currentIdx === 0 && nextIdx === 2) {
+      dir = -1;
+    }
+    setDirection(dir);
+    setSelectedPhase(nextPhase);
+  };
+
+  const wheelVariants = {
+    enter: (dir: number) => ({
+      rotate: dir * ROTATE_ANGLE,
+    }),
+    center: {
+      rotate: 0,
+    },
+    exit: (dir: number) => ({
+      rotate: -dir * ROTATE_ANGLE,
+    }),
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#FAF7F2] flex flex-col justify-between selection:bg-[#FF5C18]/15 font-jakarta antialiased">
       <Navbar activeTab="ventures" />
 
       <main className="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10 z-10 space-y-6">
-        {/* REFINED SWISS HEADER (Clean & Institutional - No Artificial AI Buzzwords) */}
-        <div className="rounded-2xl bg-white border border-black/[0.06] p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-xs font-mono text-[#7A7672] uppercase tracking-wider">
-              <span>Public Directory</span>
-              <span>/</span>
-              <span className="text-[#111113] font-semibold">Devnet Protocol Truth</span>
-            </div>
+        {/* REFINED SWISS HEADER (Clean & Institutional) */}
+        <div className="relative overflow-hidden rounded-2xl bg-white border border-black/[0.06] p-6 sm:p-8 shadow-xs flex items-center justify-between min-h-[200px] sm:min-h-[220px] md:min-h-[235px]">
+          <div className="space-y-1.5 relative z-10 max-w-xs sm:max-w-md md:max-w-xl pr-4">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111113]">
               Venture Registry
             </h1>
-            <p className="text-sm text-[#6E6964] max-w-xl">
+            <p className="text-xs sm:text-sm text-[#6E6964] leading-relaxed">
               Inspect live tokenized enterprises across primary capital formation, liquidity
               migration, and graduated secondary DLMM markets.
             </p>
+          </div>
+
+          {/* ROTARY WHEEL ORNAMENT (Professional decorative element synced with canonical phase tabs) */}
+          <div
+            className="absolute right-6 sm:right-16 md:right-24 lg:right-32 bottom-[-24px] sm:bottom-[-28px] md:bottom-[-34px] w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 pointer-events-none select-none"
+            aria-hidden="true"
+          >
+            <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+              <motion.div
+                key={selectedPhase}
+                custom={direction}
+                className="absolute inset-0 w-full h-full flex items-end justify-center"
+                style={{ originX: "50%", originY: "650px", transformOrigin: "50% 650px" }}
+                variants={wheelVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  type: "tween",
+                  ease: [0.16, 1, 0.3, 1], // Sleek, modern cubic bezier
+                  duration: 0.65,
+                }}
+              >
+                <img
+                  src={PHASE_DETAILS[selectedPhase].src}
+                  alt={PHASE_DETAILS[selectedPhase].alt}
+                  className="w-full h-full object-contain filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.06)]"
+                  draggable={false}
+                />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 
@@ -222,7 +282,7 @@ export default function VenturesPage() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => setSelectedPhase(p.id)}
+                  onClick={() => handlePhaseChange(p.id)}
                   className={`relative px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                     isActive
                       ? "text-[#111113] font-bold"

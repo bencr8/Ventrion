@@ -16,6 +16,8 @@ pub struct GlobalConfig {
     pub vent_mint: Pubkey,
     /// Program-owned vault holding all staked $VENT. `[b"vent_stake_vault"]`
     pub vent_stake_vault: Pubkey,
+    /// Program-owned vault holding all protocol fees and royalties for $VENT stakers. `[b"master_fee_vault"]`
+    pub master_fee_vault: Pubkey,
     /// Meteora DLMM `PresetParameter2` used to create every venture pool.
     pub dlmm_preset_parameter: Pubkey,
     /// Sum of all staked $VENT (quorum denominator).
@@ -24,13 +26,18 @@ pub struct GlobalConfig {
     pub min_approval_bps: u16,
     /// Minimum participation (for + against) relative to `total_vent_staked`, in bps.
     pub verification_quorum_bps: u16,
-    /// Royalty on harvested DLMM USDC fees routed to `fee_treasury` (e.g. 50 = 0.5%).
+    /// Royalty on harvested DLMM USDC fees routed to `master_fee_vault` (e.g. 50 = 0.5%).
     pub protocol_fee_bps: u16,
+    /// O(1) dividend accumulator for $VENT holding stakers (scaled by ACC_SCALE).
+    pub acc_vent_dividend_per_share: u128,
+    /// Cumulative USDC dividends distributed to $VENT stakers.
+    pub total_vent_dividends_distributed: u64,
     pub bump: u8,
     pub vent_stake_vault_bump: u8,
+    pub master_fee_vault_bump: u8,
 }
 
-/// A staker's position in the $VENT governance pool. `[b"vent_stake", staker]`
+/// A staker's position in the $VENT governance pool and holding dividend ledger. `[b"vent_stake", staker]`
 ///
 /// Voting locks the position until the end of the ballot, so the same tokens can
 /// never be moved to another wallet and counted twice.
@@ -41,5 +48,11 @@ pub struct VentStakePosition {
     pub amount: u64,
     /// Unix timestamp until which `unstake_vent` is blocked (max over all ballots voted on).
     pub locked_until: i64,
+    /// O(1) yield accumulator checkpoint.
+    pub last_acc_yield: u128,
+    /// Settled but unclaimed USDC dividends.
+    pub pending_usdc: u64,
+    /// Cumulative USDC claimed by this staker.
+    pub total_claimed_usdc: u64,
     pub bump: u8,
 }

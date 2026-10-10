@@ -64,11 +64,8 @@ export default function SharesPage() {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const pathRef = useRef<SVGPathElement | null>(null);
 
-  // Live DLMM Prices cache
-  const [livePrices, setLivePrices] = useState<Record<string, number>>({
-    qcmp: 1.25,
-    pvent: 0.1,
-  });
+  // Live DLMM Prices cache (zero hardcoded mock fallbacks)
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
 
   // Fetch live sub-second prices from API daemon
   useEffect(() => {
@@ -162,14 +159,8 @@ export default function SharesPage() {
           v.canonicalStatus === "Raising" ||
           (!v.canonicalStatus && receipts > 0 && shares === 0);
 
-        // Exact entry cost basis on the flat curve invariant
-        const entryPrice = isRaising
-          ? (v.sharePriceUsdc || 0.10)
-          : (v.id === "Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E" ? 1.00 : 0.10);
-
-        const currentPrice = isRaising
-          ? entryPrice // Primary round invariant
-          : (livePrices[v.id] || v.sharePriceUsdc || entryPrice);
+        const entryPrice = v.sharePriceUsdc || 0.10;
+        const currentPrice = livePrices[v.id] || livePrices[v.mintAddress] || v.sharePriceUsdc || entryPrice;
 
         const costBasis = totalHolding * entryPrice;
         const totalValue = totalHolding * currentPrice;
@@ -246,9 +237,15 @@ export default function SharesPage() {
 
     const y0 = getY(totalCostBasis);
     const y1 = getY(totalPortfolioValue);
-    const midY = (y0 + y1) / 2;
 
-    const d = `M 0 ${y0} C 220 ${y0}, 380 ${midY}, 540 ${(y0 + y1 * 3) / 4} C 620 ${y1}, 660 ${y1}, ${width} ${y1}`;
+    // Multi-point dynamic equity line from cost basis to current spot valuation
+    const points = [
+      { x: 0, val: totalCostBasis },
+      { x: Math.round(width * 0.33), val: totalCostBasis + (totalPortfolioValue - totalCostBasis) * 0.33 },
+      { x: Math.round(width * 0.67), val: totalCostBasis + (totalPortfolioValue - totalCostBasis) * 0.67 },
+      { x: width, val: totalPortfolioValue },
+    ];
+    const d = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${getY(p.val)}`).join(" ");
     const a = `${d} L ${width} ${height} L 0 ${height} Z`;
 
     return {

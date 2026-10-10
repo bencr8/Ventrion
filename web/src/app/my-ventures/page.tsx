@@ -33,11 +33,8 @@ export default function MyVenturesPage() {
   const [founderVentures, setFounderVentures] = useState<FounderVentureItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Live DLMM Prices cache
-  const [livePrices, setLivePrices] = useState<Record<string, number>>({
-    qcmp: 1.25,
-    pvent: 0.10,
-  });
+  // Live DLMM Prices cache (zero hardcoded mock fallbacks)
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
 
   // Fetch live sub-second prices and founder ventures from Solana Devnet
   const fetchFounderVentures = useCallback(async () => {
@@ -116,27 +113,50 @@ export default function MyVenturesPage() {
         }
       }
 
-      const mapped: FounderVentureItem[] = matched.map((v) => {
-        const lockedShares = v.founderVestingShares || 800000;
-        const price = v.sharePriceUsdc || 1.0;
-        const raised = v.totalCapitalRaisedUsdc || 0;
-        const target = v.targetFundingCapUsdc || 50000;
-        const pct = target > 0 ? (raised / target) * 100 : 0;
-        return {
-          id: v.id || v.mintAddress,
-          name: v.name,
-          symbol: v.symbol,
-          ticker: v.ticker || `$${v.symbol}`,
-          mintAddress: v.mintAddress,
-          sharePriceUsdc: price,
-          founderLockedShares: lockedShares,
-          totalCapitalRaisedUsdc: raised,
-          fundingTargetUsdc: target,
-          fundingProgressPercent: pct,
-          status: v.canonicalStatus === "Funded" ? "Graduated" : "Genesis Active",
-          isUserCreated: true,
-        };
-      });
+      const mapped: FounderVentureItem[] = await Promise.all(
+        matched.map(async (v) => {
+          let lockedShares = v.founderVestingShares || 800000;
+          try {
+            if (v.mintAddress) {
+              const [vPda] = PublicKey.findProgramAddressSync(
+                [Buffer.from("venture"), new PublicKey(v.mintAddress).toBuffer()],
+                new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8")
+              );
+              const [vestingPda] = PublicKey.findProgramAddressSync(
+                [Buffer.from("founder_vesting"), vPda.toBuffer(), publicKey.toBuffer()],
+                new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8")
+              );
+              const vInfo = await connection.getAccountInfo(vestingPda);
+              if (vInfo && vInfo.data.length >= 112) {
+                const allocated = Number(vInfo.data.readBigUInt64LE(104)) / 1e6;
+                const claimed = Number(vInfo.data.readBigUInt64LE(112)) / 1e6;
+                if (allocated > 0) {
+                  lockedShares = Math.max(0, allocated - claimed);
+                }
+              }
+            }
+          } catch {}
+
+          const price = livePrices[v.id] || livePrices[v.mintAddress] || v.sharePriceUsdc || 0.10;
+          const raised = v.totalCapitalRaisedUsdc || 0;
+          const target = v.targetFundingCapUsdc || 50000;
+          const pct = target > 0 ? (raised / target) * 100 : 0;
+          return {
+            id: v.id || v.mintAddress,
+            name: v.name,
+            symbol: v.symbol,
+            ticker: v.ticker || `$${v.symbol}`,
+            mintAddress: v.mintAddress,
+            sharePriceUsdc: price,
+            founderLockedShares: lockedShares,
+            totalCapitalRaisedUsdc: raised,
+            fundingTargetUsdc: target,
+            fundingProgressPercent: pct,
+            status: v.canonicalStatus === "Funded" ? "Graduated" : "Genesis Active",
+            isUserCreated: true,
+          };
+        })
+      );
 
       setFounderVentures(mapped);
     } catch (err) {

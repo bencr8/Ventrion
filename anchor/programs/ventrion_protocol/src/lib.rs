@@ -33,7 +33,7 @@ pub mod utils;
 use instructions::*;
 use state::MilestoneInput;
 
-declare_id!("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
+declare_id!("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
 
 #[program]
 pub mod ventrion_protocol {
@@ -79,6 +79,12 @@ pub mod ventrion_protocol {
     /// lock commitments have expired.
     pub fn unstake_vent(ctx: Context<UnstakeVent>, amount: u64) -> Result<()> {
         instructions::vent_staking::handle_unstake_vent(ctx, amount)
+    }
+
+    /// Claims accumulated USDC dividends distributed from protocol fees and royalties
+    /// to $VENT holding stakers in O(1) constant time.
+    pub fn claim_vent_dividends(ctx: Context<ClaimVentDividends>) -> Result<()> {
+        instructions::vent_staking::handle_claim_vent_dividends(ctx)
     }
 
     // =========================================================================

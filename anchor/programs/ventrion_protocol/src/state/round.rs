@@ -61,6 +61,7 @@ pub struct FundingRound {
     pub bump: u8,
     pub receipt_mint_bump: u8,
     pub usdc_vault_bump: u8,
+    pub trading_fee_bps: u16,
 }
 
 /// Primary backer ledger for one round. `[b"round_record", funding_round, investor]`

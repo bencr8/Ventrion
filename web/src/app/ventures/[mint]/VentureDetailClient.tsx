@@ -27,14 +27,19 @@ import {
   executeRedeemShares,
   executeVoteMilestone,
   executeDlmmSwap,
+  executeStakeShares,
+  executeUnstakeShares,
+  executeClaimDividends,
 } from "../../../lib/solana/walletTransactionRunner";
+import { formatCompactUsdc, formatCompactShares } from "../../../lib/formatters";
 
-type Timeframe = "1H" | "1D" | "1W" | "1M" | "ALL";
+type Timeframe = "1D" | "1W" | "1M" | "ALL";
 type BottomTab = "STAKING" | "DIVIDENDS" | "MILESTONES";
 
 interface ChartPoint {
   time: string;
   price: number;
+  marketCap?: number;
   x: number;
   y: number;
 }
@@ -185,12 +190,6 @@ export function sanitizeSolanaError(err: any): string {
   }
   if (msg.toLowerCase().includes("slippage") || msg.toLowerCase().includes("slippagetoleranceexceeded")) {
     return "Price moved outside slippage tolerance. Please try again.";
-  }
-  if (
-    msg.toLowerCase().includes("insufficient liquidity") ||
-    msg.toLowerCase().includes("swap_quote_insufficient_liquidity")
-  ) {
-    return "Insufficient pool liquidity for this trade size. Please enter a smaller amount.";
   }
 
   if (msg.length > 100 && (msg.includes("Program ") || msg.includes("InstructionError") || msg.includes("failed: "))) {
@@ -440,9 +439,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const isReceiptPhase = isPrimary || isMigrating;
 
   // Chart States
-  const [timeframe, setTimeframe] = useState<Timeframe>("1H");
+  const [timeframe, setTimeframe] = useState<Timeframe>("1D");
   const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
-  const [rawChartPoints, setRawChartPoints] = useState<Array<{ time: string; price: number; timestamp?: number }>>([]);
   const chartSvgRef = useRef<SVGSVGElement | null>(null);
 
   // Buy Terminal States with Smart String Input ('13.5k', '50k', '954.441,98', etc.)
@@ -454,52 +452,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const [isInputFocused, setIsInputFocused] = useState<boolean>(false);
   const tradeInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Fetch 100% Live On-Chain DLMM Trading Chart Data
+  // Default to SELL when a venture is in Migrating state (as primary raise is 100% full)
   useEffect(() => {
-    let isCancelled = false;
-    const fetchChartData = async () => {
-      const targetMint = effectiveMint || venture?.mintAddress;
-      if (!targetMint) return;
-      try {
-        const eps = [
-          `/api/ventures/chart/${targetMint}?timeframe=${timeframe}`,
-          `/ventrion/api/ventures/chart/${targetMint}?timeframe=${timeframe}`,
-        ];
-        for (const ep of eps) {
-          try {
-            const res = await fetch(ep);
-            if (res.ok) {
-              const json = await res.json();
-              if (json.success && Array.isArray(json.points) && json.points.length > 0) {
-                if (!isCancelled) {
-                  setRawChartPoints(json.points);
-                }
-                return;
-              }
-            }
-          } catch {}
-        }
-      } catch {}
-    };
-
-    fetchChartData();
-    const interval = setInterval(fetchChartData, 10000);
-
-    const onTradeCompleted = () => {
-      fetchChartData();
-    };
-    if (typeof window !== "undefined") {
-      window.addEventListener("ventrion:trade_completed", onTradeCompleted);
+    if (isMigrating && tradeAction === "BUY") {
+      setTradeAction("SELL");
     }
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("ventrion:trade_completed", onTradeCompleted);
-      }
-    };
-  }, [effectiveMint, venture?.mintAddress, timeframe]);
+  }, [isMigrating]);
 
   // Bottom Module Tab State (Unified 3-Switchers)
   const [bottomTab, setBottomTab] = useState<BottomTab>("STAKING");
@@ -511,7 +469,10 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const stakeInputRef = useRef<HTMLInputElement | null>(null);
   const [unclaimedDividends, setUnclaimedDividends] = useState<number>(0);
   const [userStakedShares, setUserStakedShares] = useState<number>(0);
+  const [userLockEndTimestamp, setUserLockEndTimestamp] = useState<number>(0);
   const [totalClaimedDividends, setTotalClaimedDividends] = useState<number>(0);
+  const [chartPoints, setChartPoints] = useState<ChartPoint[]>([]);
+  const [isLoadingChart, setIsLoadingChart] = useState<boolean>(false);
 
   // Milestone Governance States
   const [selectedMilestone, setSelectedMilestone] = useState<MilestoneItem>(() => {
@@ -556,12 +517,6 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const [userReceipts, setUserReceipts] = useState<number>(0);
   const [userShares, setUserShares] = useState<number>(0);
   const [userUsdcBalance, setUserUsdcBalance] = useState<number>(0);
-
-  useEffect(() => {
-    if (tradeAction === "REDEEM" && userReceipts <= 0) {
-      setTradeAction("BUY");
-    }
-  }, [tradeAction, userReceipts]);
 
   const refreshUserBalances = React.useCallback(async () => {
     if (!wallet.connected || !wallet.publicKey) {
@@ -616,21 +571,56 @@ export function VentureDetailClient({ mint }: { mint: string }) {
         try {
           const [vPda] = getVenturePDA(new PublicKey(venture.mintAddress));
           const [invVaultPda] = getInvestorVaultPDA(vPda, wallet.publicKey);
-          const vAcc = await connection.getAccountInfo(invVaultPda);
-          if (vAcc && vAcc.data.length >= 154) {
+
+          const [vStateAcc, vAcc] = await Promise.all([
+            connection.getAccountInfo(vPda).catch(() => null),
+            connection.getAccountInfo(invVaultPda).catch(() => null),
+          ]);
+
+          let ventureAccYield = BigInt(0);
+          if (vStateAcc && vStateAcc.data.length >= 464) {
+            try {
+              const loYield = vStateAcc.data.readBigUInt64LE(448);
+              const hiYield = vStateAcc.data.readBigUInt64LE(456);
+              ventureAccYield = (hiYield << BigInt(64)) | loYield;
+            } catch {}
+          }
+
+          if (vAcc && vAcc.data.length >= 148) {
             const stakedAmount = vAcc.data.readBigUInt64LE(72);
             setUserStakedShares(Number(stakedAmount) / 1e6);
-            const pendingUsdc = vAcc.data.readBigUInt64LE(138);
-            setUnclaimedDividends(Number(pendingUsdc) / 1e6);
-            const claimedUsdc = vAcc.data.readBigUInt64LE(146);
-            setTotalClaimedDividends(Number(claimedUsdc) / 1e6);
+
+            const lockEnd = Number(vAcc.data.readBigInt64LE(88));
+            setUserLockEndTimestamp(lockEnd);
+
+            const vaultWeightLo = vAcc.data.readBigUInt64LE(106);
+            const vaultWeightHi = vAcc.data.readBigUInt64LE(114);
+            const vaultWeight = (vaultWeightHi << BigInt(64)) | vaultWeightLo;
+
+            const vaultYieldLo = vAcc.data.readBigUInt64LE(122);
+            const vaultYieldHi = vAcc.data.readBigUInt64LE(130);
+            const vaultLastYield = (vaultYieldHi << BigInt(64)) | vaultYieldLo;
+
+            const vaultPendingUsdc = vAcc.data.readBigUInt64LE(138);
+
+            const deltaYield = ventureAccYield > vaultLastYield ? ventureAccYield - vaultLastYield : BigInt(0);
+            const accruedFromYieldUsdc = Number((deltaYield * vaultWeight) / (BigInt("1000000000000") * BigInt(10000))) / 1e6;
+            const accruedUsdc = (Number(vaultPendingUsdc) / 1e6) + accruedFromYieldUsdc;
+            setUnclaimedDividends(Math.max(0, accruedUsdc));
+
+            if (vAcc.data.length >= 154) {
+              const claimedUsdc = vAcc.data.readBigUInt64LE(146);
+              setTotalClaimedDividends(Number(claimedUsdc) / 1e6);
+            }
           } else {
             setUserStakedShares(0);
+            setUserLockEndTimestamp(0);
             setUnclaimedDividends(0);
             setTotalClaimedDividends(0);
           }
         } catch {
           setUserStakedShares(0);
+          setUserLockEndTimestamp(0);
           setUnclaimedDividends(0);
           setTotalClaimedDividends(0);
         }
@@ -659,48 +649,103 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     return base * multiplier;
   }, [venture?.currentDividendYield, multiplier]);
 
-  // Dynamic 100% Live DLMM Chart Dataset Projection
+  // Fetch Real Live On-Chain Trade Chart Points
+  useEffect(() => {
+    let isMounted = true;
+    const fetchChartPoints = async () => {
+      if (!venture?.mintAddress) return;
+      setIsLoadingChart(true);
+      try {
+        const endpoints = [
+          `/ventrion/api/ventures/${venture.mintAddress}/chart?timeframe=${timeframe}`,
+          `/api/ventures/${venture.mintAddress}/chart?timeframe=${timeframe}`,
+          `/ventrion/api/ventures/chart/${venture.mintAddress}?timeframe=${timeframe}`,
+          `/api/ventures/chart/${venture.mintAddress}?timeframe=${timeframe}`,
+        ];
+        let fetched: ChartPoint[] | null = null;
+        for (const ep of endpoints) {
+          try {
+            const res = await fetch(ep);
+            if (res.ok) {
+              const json = await res.json();
+              if (json?.success && Array.isArray(json?.points) && json.points.length > 0) {
+                fetched = json.points;
+                break;
+              }
+            }
+          } catch {}
+        }
+
+        if (isMounted) {
+          if (fetched && fetched.length > 0) {
+            const prices = fetched.map((p) => p.price);
+            const minP = Math.min(...prices);
+            const maxP = Math.max(...prices);
+            const pRange = maxP - minP;
+            const normalized = fetched.map((p, idx) => {
+              const x = p.x !== undefined ? p.x : (fetched!.length > 1 ? Math.round((idx / (fetched!.length - 1)) * 700) : 350);
+              let y = p.y !== undefined ? p.y : 130;
+              if (p.y === undefined && pRange > 0.0001) {
+                y = Math.round(170 - ((p.price - minP) / pRange) * 140);
+              }
+              const marketCap = p.marketCap ?? Math.round(p.price * (venture.totalShares || 1000000));
+              return { time: p.time, price: p.price, marketCap, x, y };
+            });
+            setChartPoints(normalized);
+          } else {
+            // Zero-trade mathematical baseline from real on-chain round price
+            const basePrice = venture.sharePriceUsdc || 0.10;
+            const baseCap = Math.round(basePrice * (venture.totalShares || 1000000));
+            const labels = timeframe === "1D" 
+              ? ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "24:00"]
+              : timeframe === "1W"
+              ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+              : timeframe === "1M"
+              ? ["W1", "W2", "W3", "W4"]
+              : ["Genesis", "Raise", "Maturity", "Now"];
+            const fallbackPoints = labels.map((lbl, idx) => ({
+              time: lbl,
+              price: basePrice,
+              marketCap: baseCap,
+              x: Math.round((idx / (labels.length - 1)) * 700),
+              y: 130,
+            }));
+            setChartPoints(fallbackPoints);
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          const basePrice = venture.sharePriceUsdc || 0.10;
+          const baseCap = Math.round(basePrice * (venture.totalShares || 1000000));
+          setChartPoints([
+            { time: "Start", price: basePrice, marketCap: baseCap, x: 0, y: 130 },
+            { time: "Now", price: basePrice, marketCap: baseCap, x: 700, y: 130 },
+          ]);
+        }
+      } finally {
+        if (isMounted) setIsLoadingChart(false);
+      }
+    };
+
+    fetchChartPoints();
+    return () => {
+      isMounted = false;
+    };
+  }, [venture?.mintAddress, venture?.sharePriceUsdc, venture?.totalShares, timeframe]);
+
   const currentChartPoints: ChartPoint[] = useMemo(() => {
-    const spot = venture?.sharePriceUsdc || 0.25;
-    const sourcePoints = rawChartPoints.length > 0 ? [...rawChartPoints] : [
-      { time: "Start", price: +(spot * 0.985).toFixed(4) },
-      { time: "Mid", price: +(spot * 0.992).toFixed(4) },
-      { time: "Now", price: spot },
+    if (chartPoints.length > 0) return chartPoints;
+    const basePrice = venture?.sharePriceUsdc || 0.10;
+    const baseCap = Math.round(basePrice * (venture?.totalShares || 1000000));
+    return [
+      { time: "Start", price: basePrice, marketCap: baseCap, x: 0, y: 130 },
+      { time: "Now", price: basePrice, marketCap: baseCap, x: 700, y: 130 },
     ];
+  }, [chartPoints, venture?.sharePriceUsdc, venture?.totalShares]);
 
-    if (sourcePoints.length === 1) {
-      sourcePoints.unshift({ time: "Start", price: +(sourcePoints[0].price * 0.985).toFixed(4) });
-    }
-
-    const prices = sourcePoints.map((p) => p.price);
-    let minPrice = Math.min(...prices);
-    let maxPrice = Math.max(...prices);
-
-    if (minPrice === maxPrice) {
-      minPrice *= 0.96;
-      maxPrice *= 1.04;
-    } else {
-      const pad = (maxPrice - minPrice) * 0.12;
-      minPrice -= pad;
-      maxPrice += pad;
-    }
-
-    const range = maxPrice - minPrice || 1;
-    const n = sourcePoints.length;
-
-    return sourcePoints.map((pt, i) => {
-      const x = n > 1 ? Math.round((i / (n - 1)) * 700) : 350;
-      // Map normalized price into SVG Y-coordinates (height 200, 25px top/bottom padding)
-      const norm = (pt.price - minPrice) / range;
-      const y = Math.round(175 - norm * 145);
-      return {
-        time: pt.time,
-        price: pt.price,
-        x,
-        y: Math.max(15, Math.min(185, y)),
-      };
-    });
-  }, [rawChartPoints, venture?.sharePriceUsdc]);
+  // Synchronous Dynamic Price and Market Cap
+  const activePrice = hoveredPoint ? hoveredPoint.price : (venture?.sharePriceUsdc || 0.10);
+  const activeMarketCap = hoveredPoint?.marketCap ?? Math.round(activePrice * (venture?.totalShares || 1000000));
 
   // Construct SVG Path
   const svgPathD = useMemo(() => {
@@ -777,8 +822,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
-    if (isMigrating) {
-      setTxError("Trading is currently paused while the venture transitions to Meteora DLMM.");
+    if (isMigrating && tradeAction === "BUY") {
+      setTxError("Primary raise is 100% completed. Buying is paused while liquidity migrates to Meteora DLMM. You can refund receipts via 'Sell'.");
       return;
     }
 
@@ -872,14 +917,11 @@ export function VentureDetailClient({ mint }: { mint: string }) {
           const newRaised = (prev.totalCapitalRaisedUsdc || 0) + finalBuyAmount;
           const target = prev.targetFundingCapUsdc || 50000;
           const newPct = Math.min(100, +((newRaised / target) * 100).toFixed(1));
-          const newStatus: "Raising" | "Migrating" | "Funded" = newPct >= 100 ? "Migrating" : (prev.canonicalStatus || "Raising");
           return {
             ...prev,
             totalCapitalRaisedUsdc: newRaised,
             fundingProgressPercent: newPct,
             progressPercentage: newPct,
-            canonicalStatus: newStatus,
-            statusBadge: newStatus,
           };
         });
 
@@ -968,21 +1010,26 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
-    if (!wallet.publicKey || !wallet.sendTransaction) {
+    if (!wallet.publicKey || !wallet.signTransaction) {
       setTxError("Connect your Solana wallet to claim accrued dividends.");
       return;
     }
     try {
       setTxLoading("Streaming accrued dividends...");
-      const mintPubkey = new PublicKey(venture.mintAddress);
-      const tx = await claimInvestorDividends(connection, wallet.publicKey, mintPubkey);
-      const signature = await wallet.sendTransaction(tx, connection);
+      const { signature } = await executeClaimDividends(
+        {
+          investorPubkey: wallet.publicKey.toBase58(),
+          companyMint: venture.mintAddress,
+        },
+        wallet,
+        connection
+      );
       setTxSignature(signature);
       setTxSuccess(`Claimed $${unclaimedDividends.toFixed(2)} USDC directly to wallet.`);
       setUnclaimedDividends(0);
       await refreshUserBalances();
     } catch (err: any) {
-      setTxError(err.message || "Claim reverted on Solana devnet.");
+      setTxError(sanitizeSolanaError(err) || "Claim reverted on Solana devnet.");
     } finally {
       setTxLoading(null);
     }
@@ -998,20 +1045,75 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
-    if (!wallet.publicKey || !wallet.sendTransaction) {
+    if (isReceiptPhase) {
+      setTxError("Staking opens after DLMM Graduation once $VENT-RN receipts are redeemed for Common Shares.");
+      return;
+    }
+
+    if (!wallet.publicKey || !wallet.signTransaction) {
       setTxError("Connect your Solana wallet to lock shares in vault.");
       return;
     }
     try {
       setTxLoading(`Locking ${stakeAmount.toLocaleString()} shares for ${lockDays} days...`);
-      const mintPubkey = new PublicKey(venture.mintAddress);
-      const tx = await depositInvestorShares(connection, wallet.publicKey, mintPubkey, stakeAmount, lockDays);
-      const signature = await wallet.sendTransaction(tx, connection);
+      const { signature } = await executeStakeShares(
+        {
+          investorPubkey: wallet.publicKey.toBase58(),
+          companyMint: venture.mintAddress,
+          sharesAmount: stakeAmount,
+          lockDays,
+        },
+        wallet,
+        connection
+      );
       setTxSignature(signature);
       setTxSuccess(`Deposited ${stakeAmount.toLocaleString()} $${venture.symbol} (${multiplier.toFixed(2)}x yield multiplier).`);
       await refreshUserBalances();
     } catch (err: any) {
-      setTxError(err.message || "Deposit reverted on Solana devnet.");
+      setTxError(sanitizeSolanaError(err) || "Deposit reverted on Solana devnet.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  const handleUnstakeShares = async () => {
+    setTxError(null);
+    setTxSuccess(null);
+    setTxSignature(null);
+
+    if (!isOnChainVerified || !venture || ventureNotFound) {
+      setTxError("Unstaking disabled: Venture contract does not exist on Solana Devnet.");
+      return;
+    }
+
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      setTxError("Connect your Solana wallet to unstake shares.");
+      return;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (userLockEndTimestamp > 0 && now < userLockEndTimestamp) {
+      const remainingDays = Math.ceil((userLockEndTimestamp - now) / 86400);
+      setTxError(`Shares locked for ${remainingDays} more day(s) until maturity.`);
+      return;
+    }
+
+    try {
+      setTxLoading(`Unstaking ${userStakedShares.toLocaleString()} shares...`);
+      const { signature } = await executeUnstakeShares(
+        {
+          investorPubkey: wallet.publicKey.toBase58(),
+          companyMint: venture.mintAddress,
+          sharesAmount: userStakedShares,
+        },
+        wallet,
+        connection
+      );
+      setTxSignature(signature);
+      setTxSuccess(`Unstaked ${userStakedShares.toLocaleString()} $${venture.symbol} back to wallet.`);
+      await refreshUserBalances();
+    } catch (err: any) {
+      setTxError(sanitizeSolanaError(err) || "Unstake reverted on Solana devnet.");
     } finally {
       setTxLoading(null);
     }
@@ -1342,14 +1444,14 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               <div>
                 <span className="text-neutral-400 text-[10px] uppercase tracking-wider block">Market Cap</span>
                 <span className="text-white text-base sm:text-xl font-bold block mt-0.5 tabular-nums">
-                  ${(venture.marketCapUsdc / 1000).toFixed(0)}k
+                  {formatCompactUsdc(activeMarketCap)}
                 </span>
               </div>
               <div className="h-8 w-px bg-white/15" />
               <div>
                 <span className="text-neutral-400 text-[10px] uppercase tracking-wider block">24h Vol</span>
                 <span className="text-white text-base sm:text-xl font-bold block mt-0.5 tabular-nums">
-                  $48.2k
+                  {formatCompactUsdc((venture as any).volume24hUsdc || 0)}
                 </span>
               </div>
               <div className="h-8 w-px bg-white/15" />
@@ -1365,18 +1467,24 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
         {/* =========================================================================
             2. TOP TRADING TERMINAL (DEXSCREENER-STYLE SPLIT)
-           ========================================================================= */}
+            ========================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* LEFT: INTERACTIVE LIVE PRICE CHART */}
           <div className="lg:col-span-8 bg-white border border-black/[0.08] rounded-3xl p-8 sm:p-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] min-h-[480px] flex flex-col justify-between">
             {/* Price Header & Interactive Timeframe Selector */}
             <div className="flex items-start justify-between pb-6 border-b border-black/[0.06]">
               <div>
-                <div className="text-3xl sm:text-4xl font-bold font-mono text-[#111113] tracking-tight tabular-nums">
-                  ${hoveredPoint ? hoveredPoint.price.toFixed(2) : venture.sharePriceUsdc.toFixed(2)}
+                <div className="flex items-baseline gap-4 flex-wrap">
+                  <div className="text-3xl sm:text-4xl font-bold font-mono text-[#111113] tracking-tight tabular-nums">
+                    ${activePrice.toFixed(2)}{" "}
+                    <span className="text-base sm:text-lg font-normal text-[#7A7672]">USDC</span>
+                  </div>
+                  <div className="text-lg sm:text-xl font-mono text-[#111113] font-bold tabular-nums">
+                    <span className="text-xs font-normal uppercase tracking-wider text-[#7A7672] mr-1.5">MC:</span>
+                    {formatCompactUsdc(activeMarketCap)}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1 font-mono text-xs text-[#7A7672]">
-                  <span>USDC</span>
+                <div className="flex items-center gap-2 mt-1.5 font-mono text-xs text-[#7A7672]">
                   {isGraduated && <span className="text-[#FF5C18] font-bold">+14.8%</span>}
                   {hoveredPoint ? (
                     <span className="text-[#111113] font-bold">@ {hoveredPoint.time}</span>
@@ -1389,7 +1497,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               {/* Timeframe Switcher */}
               {isGraduated && (
                 <div className="flex items-center gap-1 p-1 bg-black/[0.03] rounded-xl font-mono text-xs">
-                  {(["1H", "1D", "1W", "1M", "ALL"] as Timeframe[]).map((tf) => (
+                  {(["1D", "1W", "1M", "ALL"] as Timeframe[]).map((tf) => (
                     <button
                       key={tf}
                       onClick={() => {
@@ -1472,7 +1580,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                   </svg>
 
                   <div className="flex justify-between font-mono text-xs text-[#7A7672] pt-4 border-t border-black/[0.04]">
-                    <span>24h Range $1.05 – $1.28</span>
+                    <span>
+                      24h Range {formatCompactUsdc(Math.min(...currentChartPoints.map(p => p.price)))} – {formatCompactUsdc(Math.max(...currentChartPoints.map(p => p.price)))}
+                    </span>
                     <span className="font-semibold text-[#111113]">Meteora DLMM</span>
                   </div>
                 </div>
@@ -1534,13 +1644,13 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 {(["BUY", "SELL"] as const).map((mode) => (
                   <button
                     key={mode}
-                    disabled={isMigrating}
+                    disabled={isMigrating && mode === "BUY"}
                     onClick={() => setTradeAction(mode)}
-                    className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
+                    className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                       tradeAction === mode ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
                     }`}
                   >
-                    {tradeAction === mode && !isMigrating && (
+                    {tradeAction === mode && (
                       <motion.div
                         layoutId="tradeModePill"
                         className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
@@ -1552,7 +1662,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     </span>
                   </button>
                 ))}
-                {isGraduated && userReceipts > 0 && (
+                {isGraduated && (
                   <button
                     onClick={() => setTradeAction("REDEEM")}
                     className={`relative flex-1 py-2.5 rounded-xl font-bold transition-colors cursor-pointer ${
@@ -1571,15 +1681,15 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 )}
               </div>
 
-              {isMigrating ? (
-                <div className="py-10 px-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center space-y-3 font-mono">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 text-xs font-semibold">
+              {isMigrating && tradeAction === "BUY" ? (
+                <div className="py-8 px-6 rounded-2xl bg-amber-50 border border-amber-200/80 text-center space-y-3 font-mono">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     <span>Primary Raise 100% Filled</span>
                   </div>
-                  <div className="text-base font-bold text-[#111113]">Transitioning to Meteora DLMM</div>
+                  <div className="text-sm font-bold text-[#111113]">Migration in Progress</div>
                   <p className="text-xs text-[#7A7672] max-w-sm mx-auto leading-relaxed">
-                    Target capital hard cap reached. Buy and sell operations are temporarily paused while liquidity is locked and the Meteora DLMM concentrated liquidity pool is provisioned on Solana Devnet.
+                    Target capital hard cap reached. Seeding Meteora DLMM pool. Select "Sell" above to refund primary receipts back to USDC.
                   </p>
                 </div>
               ) : (
@@ -2102,22 +2212,73 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                   </div>
                 </div>
 
+                {/* Phase Protection Warning if Raising */}
+                {isReceiptPhase && (
+                  <div className="w-full max-w-xl mx-auto p-4 rounded-xl bg-[#FAF7F2] border border-black/[0.08] text-center space-y-1">
+                    <div className="text-xs font-bold text-[#111113] uppercase tracking-wider font-mono">
+                      Staking Inactive During Raise
+                    </div>
+                    <p className="text-xs text-[#7A7672]">
+                      Staking opens after DLMM Graduation once $VENT-RN receipts are redeemed for Common Shares.
+                    </p>
+                  </div>
+                )}
+
                 {/* Solid Obsidian CTA Button with Ambient Bloom */}
                 <div className="w-full max-w-xl mx-auto">
                   <button
                     onClick={handleStakeShares}
-                    disabled={!!txLoading || stakeAmount <= 0}
+                    disabled={!!txLoading || stakeAmount <= 0 || isReceiptPhase}
                     className="relative overflow-hidden w-full py-4 rounded-2xl bg-[#121214] text-white text-xs font-mono font-bold tracking-wider uppercase transition-all duration-300 hover:scale-[1.015] active:scale-[0.985] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_6px_20px_-4px_rgba(0,0,0,0.14)] flex items-center justify-center gap-2 cursor-pointer outline-none group disabled:opacity-50"
                   >
                     <div className="absolute -inset-1 rounded-2xl bg-[#FF5C18]/30 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#FF6B35] via-[#FF5C18] to-[#FA5416] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] origin-left -translate-x-full group-hover:translate-x-0 pointer-events-none" />
                     <span className="relative z-10 font-bold">
-                      {txLoading
+                      {isReceiptPhase
+                        ? "Staking Opens After Graduation"
+                        : txLoading
                         ? "Processing Lock..."
                         : `Lock ${stakeAmount.toLocaleString()} ${venture.symbol} (${multiplier.toFixed(2)}x Boost)`}
                     </span>
                   </button>
                 </div>
+
+                {/* Active Staked Position & Unstake Action */}
+                {userStakedShares > 0 && (
+                  <div className="w-full max-w-xl mx-auto p-5 rounded-2xl bg-white border border-black/[0.08] space-y-3 font-mono">
+                    <div className="flex items-center justify-between text-xs pb-2 border-b border-black/[0.06]">
+                      <span className="text-[#7A7672]">Your Locked Position</span>
+                      <span className="font-bold text-[#111113] tabular-nums">
+                        {formatCompactShares(userStakedShares)} {venture.symbol}
+                      </span>
+                    </div>
+                    {(() => {
+                      const now = Math.floor(Date.now() / 1000);
+                      const isLocked = userLockEndTimestamp > 0 && now < userLockEndTimestamp;
+                      const remainingDays = isLocked ? Math.ceil((userLockEndTimestamp - now) / 86400) : 0;
+                      return (
+                        <div className="space-y-2">
+                          <button
+                            onClick={handleUnstakeShares}
+                            disabled={!!txLoading || isLocked}
+                            className="w-full py-3.5 rounded-xl border border-black/[0.12] bg-[#FAF7F2] hover:bg-black/[0.03] text-[#111113] font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {txLoading
+                              ? "Processing Unstake..."
+                              : isLocked
+                              ? `Locked Until Maturity (${remainingDays}d remaining)`
+                              : `Unstake ${formatCompactShares(userStakedShares)} ${venture.symbol}`}
+                          </button>
+                          {isLocked && (
+                            <p className="text-[10px] text-[#7A7672] text-center">
+                              Maturity date: {new Date(userLockEndTimestamp * 1000).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Right: Technical Institutional Vault Depth Book */}
@@ -2186,7 +2347,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 </div>
 
                 <div className="pt-2.5 border-t border-black/[0.06] flex items-center justify-between text-[#7A7672] text-[11px]">
-                  <span>${((venture?.totalStakedInVaults || userStakedShares || 0) * (venture.sharePriceUsdc || 0.1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC TVL</span>
+                  <span>{formatCompactUsdc((venture?.totalStakedInVaults || userStakedShares || 0) * (venture.sharePriceUsdc || 0.1))} TVL</span>
                   <span className="font-bold text-[#111113]">
                     {venture?.totalShares && venture.totalShares > 0
                       ? (((venture?.totalStakedInVaults || userStakedShares || 0) / venture.totalShares) * 100).toFixed(1)
@@ -2348,7 +2509,18 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                             </div>
                             <div className="text-[10px] text-[#7A7672] flex items-center justify-center gap-1">
                               <span>Solana Tx:</span>
-                              <span className="text-[#111113] font-semibold">{votedTxHash}</span>
+                              {txSignature ? (
+                                <a
+                                  href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[#FF5C18] hover:underline font-semibold"
+                                >
+                                  {votedTxHash}
+                                </a>
+                              ) : (
+                                <span className="text-[#111113] font-semibold">{votedTxHash}</span>
+                              )}
                             </div>
                           </div>
                         ) : (

@@ -28,6 +28,7 @@ export interface LaunchGenesisParams {
   upfrontRunwayPercent: number;
   vestingCliffMonths?: number;
   vestingDurationYears?: number;
+  tradingFeeBps?: number;
   milestones?: Array<{ percentageBps: number; targetDays?: number }>;
 }
 
@@ -89,30 +90,16 @@ async function postToTxApi(endpoint: string, body: Record<string, any>): Promise
         body: JSON.stringify(body),
       });
 
-      const json = await res.json().catch(() => null);
-
       if (res.ok) {
-        if (json?.success) {
+        const json = await res.json();
+        if (json.success) {
           return json;
-        } else if (json?.error) {
-          throw new Error(json.error);
-        }
-        return json;
-      } else {
-        if (json?.error) {
+        } else if (json.error) {
           throw new Error(json.error);
         }
       }
     } catch (e: any) {
       lastError = e;
-      if (
-        e.message &&
-        !e.message.startsWith("Failed to fetch") &&
-        !e.message.startsWith("NetworkError") &&
-        !e.message.includes("Unexpected token")
-      ) {
-        throw e;
-      }
     }
   }
 
@@ -150,6 +137,7 @@ export async function executeLaunchGenesis(
     upfrontRunwayPercent: params.upfrontRunwayPercent,
     vestingCliffMonths: params.vestingCliffMonths || 6,
     vestingDurationYears: params.vestingDurationYears || 2,
+    tradingFeeBps: params.tradingFeeBps ?? 200,
     milestones: params.milestones,
   });
 
@@ -276,8 +264,8 @@ export async function executeContributeRound(
   // 4. Broadcast raw transaction
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: true,
-    maxRetries: 5,
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
   });
 
   // 5. Confirm on-chain
@@ -335,8 +323,8 @@ export async function executeSellPrimaryRound(
   // 4. Broadcast raw transaction
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: true,
-    maxRetries: 5,
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
   });
 
   // 5. Confirm on-chain
@@ -384,8 +372,8 @@ export async function executeRedeemShares(
   const signedTx = await wallet.signTransaction(transaction);
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: true,
-    maxRetries: 5,
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
   });
 
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");
@@ -512,8 +500,8 @@ export async function executeDlmmSwap(
   const signedTx = await wallet.signTransaction(transaction);
   const rawTx = signedTx.serialize();
   const signature = await connection.sendRawTransaction(rawTx, {
-    skipPreflight: true,
-    maxRetries: 5,
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
   });
 
   const latestBlockhash = await connection.getLatestBlockhash("confirmed");
@@ -527,5 +515,432 @@ export async function executeDlmmSwap(
   );
 
   return { signature, expectedOut: data.expectedOut };
+}
+
+/**
+ * EXPONENTIAL BONDING CURVE SECONDARY SWAP (BUY / SELL)
+ * Continuous, infinite liquidity engine providing guaranteed fills for any trade volume.
+ */
+export async function executeCurveSwap(
+  params: DlmmSwapParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string; expectedOut?: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-swap-curve", {
+    userPubkey: params.userPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+    action: params.action,
+    amount: params.amount,
+    slippageBps: params.slippageBps ?? 100,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid curve swap transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature, expectedOut: data.expectedOut };
+}
+
+export interface StakeSharesParams {
+  investorPubkey?: string;
+  companyMint: string;
+  sharesAmount: number; // in whole shares
+  lockDays?: number;
+}
+
+/**
+ * DEPOSIT / STAKE INVESTOR COMMON SHARES
+ * Prepares deposit_investor_shares transaction, signs with user wallet, and broadcasts.
+ */
+export async function executeStakeShares(
+  params: StakeSharesParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-stake-shares", {
+    investorPubkey: params.investorPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+    sharesAmount: params.sharesAmount,
+    lockDays: params.lockDays || 0,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid stake-shares transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface UnstakeSharesParams {
+  investorPubkey?: string;
+  companyMint: string;
+  sharesAmount: number; // in whole shares
+}
+
+/**
+ * UNSTAKE INVESTOR COMMON SHARES
+ * Prepares unstake_investor_shares transaction, signs with user wallet, and broadcasts.
+ */
+export async function executeUnstakeShares(
+  params: UnstakeSharesParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-unstake-shares", {
+    investorPubkey: params.investorPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+    sharesAmount: params.sharesAmount,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid unstake-shares transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface ClaimDividendsParams {
+  investorPubkey?: string;
+  companyMint: string;
+}
+
+/**
+ * CLAIM ACCRUED INVESTOR DIVIDENDS (USDC)
+ * Prepares claim_investor_dividends transaction, ensures user USDC ATA exists, signs and broadcasts.
+ */
+export async function executeClaimDividends(
+  params: ClaimDividendsParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-claim-dividends", {
+    investorPubkey: params.investorPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid claim-dividends transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface RagequitMilestoneEscrowParams {
+  investorPubkey?: string;
+  companyMint: string;
+  roundIndex?: number;
+  sharesAmount?: number | string;
+}
+
+/**
+ * EXECUTE PRO-RATA MILESTONE RAGEQUIT
+ * Prepares ragequit_milestone_escrow transaction, signs with user wallet, and broadcasts.
+ */
+export async function executeRagequitMilestoneEscrow(
+  params: RagequitMilestoneEscrowParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-ragequit", {
+    investorPubkey: params.investorPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+    roundIndex: params.roundIndex ?? 0,
+    sharesAmount: params.sharesAmount,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid ragequit transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface StakeVentParams {
+  stakerPubkey?: string;
+  amount: number; // in micro-$VENT (6 decimals)
+}
+
+/**
+ * STAKE $VENT MOTHER TOKEN
+ */
+export async function executeStakeVent(
+  params: StakeVentParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-stake-vent", {
+    stakerPubkey: params.stakerPubkey || wallet.publicKey.toBase58(),
+    amount: params.amount,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid stake-vent transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface UnstakeVentParams {
+  stakerPubkey?: string;
+  amount: number; // in micro-$VENT (6 decimals)
+}
+
+/**
+ * UNSTAKE $VENT MOTHER TOKEN
+ */
+export async function executeUnstakeVent(
+  params: UnstakeVentParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-unstake-vent", {
+    stakerPubkey: params.stakerPubkey || wallet.publicKey.toBase58(),
+    amount: params.amount,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid unstake-vent transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface ClaimVentDividendsParams {
+  stakerPubkey?: string;
+}
+
+/**
+ * CLAIM $VENT HOLDING COMPANY DIVIDENDS (USDC from 0.5% DLMM royalties)
+ */
+export async function executeClaimVentDividends(
+  params: ClaimVentDividendsParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-claim-vent-dividends", {
+    stakerPubkey: params.stakerPubkey || wallet.publicKey.toBase58(),
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid claim-vent-dividends transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
 }
 

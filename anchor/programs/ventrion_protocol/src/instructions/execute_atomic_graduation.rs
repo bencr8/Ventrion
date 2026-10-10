@@ -238,9 +238,11 @@ pub fn handle_execute_atomic_graduation(ctx: Context<ExecuteAtomicGraduation>) -
         )
     };
     let distribution: Vec<BinWeight> = (lower_bin_id..=upper_bin_id)
-        .map(|bin_id| BinWeight {
-            bin_id,
-            weight: DLMM_BIN_WEIGHT,
+        .map(|bin_id| {
+            let distance = (bin_id - active_id).abs() as u32;
+            // Degressive weight: concentrated around active_id, tapering off over 140+ bins
+            let weight = (1000u32.saturating_sub(distance * 6)).max(150) as u16;
+            BinWeight { bin_id, weight }
         })
         .collect();
     let bin_arrays = [

@@ -51,6 +51,13 @@ export default function LaunchVenturePage() {
   const [upfrontRunwayPercent, setUpfrontRunwayPercent] = useState<number>(15); // 15% upfront
   const [vestingCliffMonths, setVestingCliffMonths] = useState<number>(6); // 6 months
   const [vestingDurationYears, setVestingDurationYears] = useState<number>(2); // 2 years
+  const [tradingFeePercent, setTradingFeePercent] = useState<number>(2.0); // 1.0% - 5.0%, default 2.0%
+
+  const tradingFeeBps = Math.round(tradingFeePercent * 100);
+  const protocolRoyaltyBps = Math.round(25 + (tradingFeeBps - 100) / 8);
+  const stakersFeeBps = tradingFeeBps - protocolRoyaltyBps;
+  const protocolRoyaltyPercent = (protocolRoyaltyBps / 100).toFixed(3);
+  const stakersFeePercent = (stakersFeeBps / 100).toFixed(3);
 
   // SECTION 3: Milestone Tranches (1 to 10 Tranches, fully customizable - no prefilled text)
   const [tranches, setTranches] = useState<TrancheItem[]>([
@@ -297,6 +304,7 @@ export default function LaunchVenturePage() {
           vestingCliffMonths,
           vestingDurationYears,
           milestones: formattedMilestones,
+          tradingFeeBps,
         },
         wallet,
         connection
@@ -834,6 +842,59 @@ export default function LaunchVenturePage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* TRADING FEE & PROTOCOL ROYALTY SELECTOR */}
+                    <div className="p-4 rounded-2xl bg-[#F7F5F0]/40 border border-black/[0.04] space-y-3 font-mono">
+                      <div className="flex items-center justify-between font-jakarta">
+                        <span className="text-xs font-semibold text-[#111113]">
+                          DLMM Secondary Trading Fee
+                        </span>
+                        <span className="text-xs font-mono font-bold text-[#FF5C18]">
+                          {tradingFeePercent.toFixed(1)}% ({tradingFeeBps} bps)
+                        </span>
+                      </div>
+
+                      <div className="p-1 bg-black/[0.03] rounded-2xl border border-black/[0.04] grid grid-cols-5 gap-1">
+                        {[1.0, 2.0, 3.0, 4.0, 5.0].map((fee) => {
+                          const isActive = tradingFeePercent === fee;
+                          return (
+                            <button
+                              key={fee}
+                              type="button"
+                              onClick={() => setTradingFeePercent(fee)}
+                              className={`relative py-2 text-center text-xs font-semibold transition-colors cursor-pointer ${
+                                isActive ? "text-white" : "text-[#7A7672] hover:text-[#111113]"
+                              }`}
+                            >
+                              {isActive && (
+                                <motion.div
+                                  layoutId="tradingFeePill"
+                                  className="absolute inset-0 bg-[#111113] rounded-xl shadow-xs"
+                                  transition={{ type: "spring", stiffness: 480, damping: 35 }}
+                                />
+                              )}
+                              <span className="relative z-10">{fee.toFixed(1)}%</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Live Fee Split Breakdown */}
+                      <div className="pt-2 border-t border-black/[0.04] grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-2.5 rounded-xl bg-white border border-black/[0.06] space-y-0.5">
+                          <span className="text-[#7A7672] block">Protocol Royalty</span>
+                          <span className="font-bold text-[#111113] block">
+                            {protocolRoyaltyPercent}% ({protocolRoyaltyBps} bps)
+                          </span>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white border border-black/[0.06] space-y-0.5">
+                          <span className="text-[#7A7672] block">Staker Yield Cut</span>
+                          <span className="font-bold text-emerald-700 block">
+                            {stakersFeePercent}% ({stakersFeeBps} bps)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
                   <div className="flex justify-between items-center pt-4 font-jakarta">
                     <button

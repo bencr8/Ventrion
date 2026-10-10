@@ -17,6 +17,8 @@ pub struct RoundTerms {
     pub target_cap_usdc: u64,
     /// Upfront runway paid to the founder treasury at graduation (max 1,500 bps).
     pub upfront_working_capital_bps: u16,
+    /// Optional trading fee basis points (100 to 500 bps, default 200 bps).
+    pub trading_fee_bps: Option<u16>,
 }
 
 /// Validated, derived round figures.
@@ -40,6 +42,9 @@ impl RoundTerms {
             self.upfront_working_capital_bps <= MAX_UPFRONT_CAPITAL_BPS,
             VentrionError::InvalidUpfrontCapitalBps
         );
+        if let Some(fee) = self.trading_fee_bps {
+            require!((100..=500).contains(&fee), VentrionError::InvalidParameter);
+        }
         let shares_for_sale = math::shares_for_usdc(self.target_cap_usdc, self.price_per_share_usdc)?;
         require!(shares_for_sale > 0, VentrionError::InvalidRoundEconomics);
         let allocation = math::round_allocation(
@@ -106,6 +111,7 @@ pub fn initialize_round(
     round.bump = init.bump;
     round.receipt_mint_bump = init.receipt_mint_bump;
     round.usdc_vault_bump = init.usdc_vault_bump;
+    round.trading_fee_bps = terms.trading_fee_bps.unwrap_or(200);
 
     vote.venture = init.venture;
     vote.funding_round = init.funding_round;
@@ -155,6 +161,7 @@ pub fn create_round(
         bump: init.bump,
         receipt_mint_bump: init.receipt_mint_bump,
         usdc_vault_bump: init.usdc_vault_bump,
+        trading_fee_bps: terms.trading_fee_bps.unwrap_or(200),
     };
     let vote = VentureVerificationVote {
         venture: init.venture,

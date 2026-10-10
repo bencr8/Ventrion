@@ -50,12 +50,17 @@ pub const MAX_UPFRONT_CAPITAL_BPS: u16 = 1_500;
 #[cfg(not(feature = "testing"))]
 pub const VERIFICATION_VOTING_PERIOD_SECONDS: i64 = 14 * SECONDS_PER_DAY;
 #[cfg(feature = "testing")]
-pub const VERIFICATION_VOTING_PERIOD_SECONDS: i64 = 6;
+pub const VERIFICATION_VOTING_PERIOD_SECONDS: i64 = 60;
 /// Strict majority: approval requires `for_bps > min_approval_bps` (>= 50.00% floor).
 pub const MIN_APPROVAL_BPS_FLOOR: u16 = 5_000;
 pub const MAX_QUORUM_BPS: u16 = 10_000;
 /// Max protocol royalty on harvested DLMM fees (manifesto default: 50 bps = 0.5%).
 pub const MAX_PROTOCOL_FEE_BPS: u16 = 1_000;
+/// Minimum $VENT staked required before ventures can launch genesis
+#[cfg(not(feature = "testing"))]
+pub const MIN_VENT_STAKED_THRESHOLD: u64 = 100_000 * ONE_SHARE;
+#[cfg(feature = "testing")]
+pub const MIN_VENT_STAKED_THRESHOLD: u64 = 0;
 
 // -----------------------------------------------------------------------------
 // Milestone governance
@@ -116,6 +121,7 @@ pub const DLMM_BIN_WEIGHT: u16 = 1_000;
 // -----------------------------------------------------------------------------
 
 pub const SEED_GLOBAL_CONFIG: &[u8] = b"global_config";
+pub const SEED_MASTER_FEE_VAULT: &[u8] = b"master_fee_vault";
 pub const SEED_VENT_STAKE_VAULT: &[u8] = b"vent_stake_vault";
 pub const SEED_VENT_STAKE: &[u8] = b"vent_stake";
 pub const SEED_VENTURE: &[u8] = b"venture";

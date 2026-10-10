@@ -58,6 +58,7 @@ pub struct VentureState {
     pub master_lock_vault_bump: u8,
     pub legal_setup_vault_bump: u8,
     pub dividend_vault_bump: u8,
+    pub trading_fee_bps: u16,
 }
 
 /// Founder vesting schedule. `[b"founder_vesting", venture, founder]`
