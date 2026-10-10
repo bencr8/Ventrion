@@ -810,6 +810,25 @@ async function syncVenturesFromDevnet() {
     // 2. Fetch real on-chain FundingRound accounts
     const roundAccounts = await anchorProgram.account.fundingRound.all();
 
+    // 3. Fetch real on-chain MilestoneEscrow accounts
+    let milestoneEscrowAccounts = [];
+    try {
+      milestoneEscrowAccounts = await anchorProgram.account.milestoneEscrow.all();
+    } catch (e) {
+      console.warn('[VenturesDaemon] Error fetching milestone escrow accounts:', e.message);
+    }
+
+    const escrowsByRound = new Map();
+    const escrowsByVenture = new Map();
+    milestoneEscrowAccounts.forEach((m) => {
+      if (m.account.fundingRound) {
+        escrowsByRound.set(m.account.fundingRound.toBase58(), m.account);
+      }
+      if (m.account.venture) {
+        escrowsByVenture.set(m.account.venture.toBase58(), m.account);
+      }
+    });
+
     // Trigger Autonomous On-Chain Migration Keeper
     try {
       await runAutonomousMigrationKeeper(ventureAccounts, roundAccounts);
@@ -889,6 +908,41 @@ async function syncVenturesFromDevnet() {
           }
         }
 
+        // On-chain Milestone Escrow parsing
+        const escrowAcc = escrowsByVenture.get(venturePdaStr) || (round ? escrowsByRound.get(round.accountPubkey) : null);
+        let onChainMilestones = [];
+        if (escrowAcc && escrowAcc.milestonesCount) {
+          const count = Number(escrowAcc.milestonesCount || 0);
+          for (let i = 0; i < count; i++) {
+            const m = escrowAcc.milestones[i];
+            if (!m) continue;
+            const statusKey = Object.keys(m.status || {})[0]?.toLowerCase() || 'pending';
+            const amountUsdc = m.amountUsdc ? Number(m.amountUsdc) / 1e6 : 0;
+            const pct = m.percentageBps ? Number(m.percentageBps) / 100 : 0;
+            const km = (known.milestones && known.milestones[i]) || {};
+            onChainMilestones.push({
+              id: m.id !== undefined ? Number(m.id) : i,
+              title: km.title || `Milestone #${i + 1} (${pct.toFixed(0)}%)`,
+              description: km.description || `Milestone tranche #${i + 1}`,
+              percentageBps: Number(m.percentageBps || 0),
+              amountUsdc,
+              targetDays: km.targetDays || 30,
+              targetCompletionDate: Number(m.targetCompletionDate || 0),
+              proposedAt: Number(m.proposedAt || 0),
+              vetoDeadline: Number(m.vetoDeadline || 0),
+              votesFor: m.votesFor ? Number(m.votesFor) / 1e6 : 0,
+              votesAgainst: m.votesAgainst ? Number(m.votesAgainst) / 1e6 : 0,
+              status: statusKey === 'released' ? 'completed' : statusKey === 'proposed' ? 'in_review' : statusKey,
+              rawStatus: statusKey,
+              amendmentCount: Number(m.amendmentCount || 0)
+            });
+          }
+        }
+
+        const resolvedLogo = onChainMeta?.logoUrl || known.logoUrl || '/ventrion-logo.png';
+        const rawBanner = onChainMeta?.bannerUrl || known.bannerUrl || null;
+        const resolvedBanner = (rawBanner && rawBanner !== resolvedLogo) ? rawBanner : null;
+
         const record = {
           id: known.id || mintStr,
           name,
@@ -922,9 +976,10 @@ async function syncVenturesFromDevnet() {
           dlmmLockedShares: 170000,
           founderVestingShares: Number(vsAcc.founderVestingTokens || 0n) / 1e6,
           meteoraDlmmPool: dlmmPool,
-          logoUrl: onChainMeta?.logoUrl || known.logoUrl || '/ventrion-logo.png',
-          bannerUrl: onChainMeta?.bannerUrl || known.bannerUrl || null,
-          milestones: known.milestones || [],
+          logoUrl: resolvedLogo,
+          bannerUrl: resolvedBanner,
+          milestones: onChainMilestones.length > 0 ? onChainMilestones : (known.milestones || []),
+          currentMilestoneIndex: escrowAcc ? Number(escrowAcc.currentMilestoneIndex || 0) : (known.currentMilestoneIndex || 0),
           products: known.products || [],
           onChainAccount: va.publicKey.toBase58(),
           lastSync: Date.now(),
@@ -1888,13 +1943,42 @@ async function handlePrepareVoteMilestone(req, res) {
 
     const investorPk = new PublicKey(investorPubkey);
     const mintPk = new PublicKey(companyMint);
-    const mId = Number(milestoneId);
+    const mId = milestoneId !== undefined ? Number(milestoneId) : 0;
     const isApprove = Boolean(approve);
 
     const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from('venture'), mintPk.toBuffer()], VENTRION_PROGRAM_ID);
     const [fundingRoundPda] = PublicKey.findProgramAddressSync([Buffer.from('funding_round'), venturePda.toBuffer(), Buffer.from([roundIndex])], VENTRION_PROGRAM_ID);
     const [milestoneEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from('milestone_escrow'), fundingRoundPda.toBuffer()], VENTRION_PROGRAM_ID);
     const [roundRecordPda] = PublicKey.findProgramAddressSync([Buffer.from('round_record'), fundingRoundPda.toBuffer(), investorPk.toBuffer()], VENTRION_PROGRAM_ID);
+
+    // Verify roundRecord exists on chain
+    const recordInfo = await connection.getAccountInfo(roundRecordPda).catch(() => null);
+    if (!recordInfo) {
+      return res.status(400).json({
+        success: false,
+        error: 'Connected wallet is not a verified primary backer of this round (no RoundInvestorRecord). Per Ventrion Manifest, secondary DLMM buyers hold fee rights but zero milestone escrow votes.'
+      });
+    }
+
+    // Verify milestone status is Proposed
+    const escrowAcc = await anchorProgram.account.milestoneEscrow.fetch(milestoneEscrowPda).catch(() => null);
+    if (escrowAcc) {
+      const targetMilestone = escrowAcc.milestones[mId];
+      if (targetMilestone) {
+        const statusKey = Object.keys(targetMilestone.status || {})[0]?.toLowerCase();
+        if (statusKey === 'pending') {
+          return res.status(400).json({
+            success: false,
+            error: 'Milestone is currently in Pending deliverable status. The founder must propose milestone completion before voting begins.'
+          });
+        } else if (statusKey === 'released') {
+          return res.status(400).json({
+            success: false,
+            error: 'Milestone has already been released to the company treasury.'
+          });
+        }
+      }
+    }
 
     const tx = new Transaction();
     tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
@@ -1918,6 +2002,132 @@ async function handlePrepareVoteMilestone(req, res) {
     return res.json({ success: true, transactionBase64 });
   } catch (err) {
     console.error('[VenturesDaemon] prepare-vote-milestone error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+// 5B. POST /api/tx/prepare-propose-milestone
+async function handlePrepareProposeMilestone(req, res) {
+  try {
+    const { founderPubkey, companyMint, milestoneId, roundIndex = 0 } = req.body || {};
+    if (!founderPubkey || !companyMint || milestoneId === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: founderPubkey, companyMint, milestoneId'
+      });
+    }
+
+    if (!anchorProgram) {
+      throw new Error('Anchor program not initialized on daemon');
+    }
+
+    const founderPk = new PublicKey(founderPubkey);
+    const mintPk = new PublicKey(companyMint);
+    const mId = milestoneId !== undefined ? Number(milestoneId) : 0;
+
+    const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from('venture'), mintPk.toBuffer()], VENTRION_PROGRAM_ID);
+    const [fundingRoundPda] = PublicKey.findProgramAddressSync([Buffer.from('funding_round'), venturePda.toBuffer(), Buffer.from([roundIndex])], VENTRION_PROGRAM_ID);
+    const [milestoneEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from('milestone_escrow'), fundingRoundPda.toBuffer()], VENTRION_PROGRAM_ID);
+
+    const tx = new Transaction();
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+
+    const ix = await anchorProgram.methods
+      .proposeMilestone(mId)
+      .accountsStrict({
+        founder: founderPk,
+        venture: venturePda,
+        fundingRound: fundingRoundPda,
+        milestoneEscrow: milestoneEscrowPda,
+      })
+      .instruction();
+
+    tx.add(ix);
+    tx.feePayer = founderPk;
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = blockhash;
+
+    const transactionBase64 = tx.serialize({ requireAllSignatures: false }).toString('base64');
+    return res.json({ success: true, transactionBase64 });
+  } catch (err) {
+    console.error('[VenturesDaemon] prepare-propose-milestone error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+// 5C. POST /api/tx/prepare-execute-milestone-release
+async function handlePrepareExecuteMilestoneRelease(req, res) {
+  try {
+    const { userPubkey, payerPubkey, companyMint, milestoneId, roundIndex = 0 } = req.body || {};
+    const callerPubkey = payerPubkey || userPubkey;
+    if (!callerPubkey || !companyMint || milestoneId === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: payerPubkey, companyMint, milestoneId'
+      });
+    }
+
+    if (!anchorProgram) {
+      throw new Error('Anchor program not initialized on daemon');
+    }
+
+    const callerPk = new PublicKey(callerPubkey);
+    const mintPk = new PublicKey(companyMint);
+    const mId = milestoneId !== undefined ? Number(milestoneId) : 0;
+
+    const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from('venture'), mintPk.toBuffer()], VENTRION_PROGRAM_ID);
+    const ventureState = await anchorProgram.account.ventureState.fetch(venturePda);
+
+    const [fundingRoundPda] = PublicKey.findProgramAddressSync([Buffer.from('funding_round'), venturePda.toBuffer(), Buffer.from([roundIndex])], VENTRION_PROGRAM_ID);
+    const [milestoneEscrowPda] = PublicKey.findProgramAddressSync([Buffer.from('milestone_escrow'), fundingRoundPda.toBuffer()], VENTRION_PROGRAM_ID);
+    const [milestoneUsdcVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('milestone_usdc_vault'), milestoneEscrowPda.toBuffer()], VENTRION_PROGRAM_ID);
+
+    const founderTreasuryUsdc = getAssociatedTokenAddressSync(ventureState.usdcMint, ventureState.treasuryWallet);
+
+    const tx = new Transaction();
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
+
+    // Ensure founder treasury USDC account exists
+    const ataInfo = await connection.getAccountInfo(founderTreasuryUsdc).catch(() => null);
+    if (!ataInfo) {
+      const createAtaIx = splToken?.createAssociatedTokenAccountInstruction 
+        ? splToken.createAssociatedTokenAccountInstruction(callerPk, founderTreasuryUsdc, ventureState.treasuryWallet, ventureState.usdcMint)
+        : new anchor.web3.TransactionInstruction({
+            keys: [
+              { pubkey: callerPk, isSigner: true, isWritable: true },
+              { pubkey: founderTreasuryUsdc, isSigner: false, isWritable: true },
+              { pubkey: ventureState.treasuryWallet, isSigner: false, isWritable: false },
+              { pubkey: ventureState.usdcMint, isSigner: false, isWritable: false },
+              { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+            ],
+            programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+            data: Buffer.alloc(0),
+          });
+      tx.add(createAtaIx);
+    }
+
+    const ix = await anchorProgram.methods
+      .executeMilestoneRelease(mId)
+      .accountsStrict({
+        venture: venturePda,
+        fundingRound: fundingRoundPda,
+        milestoneEscrow: milestoneEscrowPda,
+        milestoneUsdcVault: milestoneUsdcVaultPda,
+        founderTreasuryUsdc,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    tx.add(ix);
+    tx.feePayer = callerPk;
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    tx.recentBlockhash = blockhash;
+
+    const transactionBase64 = tx.serialize({ requireAllSignatures: false }).toString('base64');
+    return res.json({ success: true, transactionBase64 });
+  } catch (err) {
+    console.error('[VenturesDaemon] prepare-execute-milestone-release error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 }
@@ -2747,6 +2957,14 @@ router.post('/api/tx/prepare-vote-milestone', handlePrepareVoteMilestone);
 router.post('/tx/prepare-vote-milestone', handlePrepareVoteMilestone);
 router.post('/prepare-vote-milestone', handlePrepareVoteMilestone);
 
+router.post('/api/tx/prepare-propose-milestone', handlePrepareProposeMilestone);
+router.post('/tx/prepare-propose-milestone', handlePrepareProposeMilestone);
+router.post('/prepare-propose-milestone', handlePrepareProposeMilestone);
+
+router.post('/api/tx/prepare-execute-milestone-release', handlePrepareExecuteMilestoneRelease);
+router.post('/tx/prepare-execute-milestone-release', handlePrepareExecuteMilestoneRelease);
+router.post('/prepare-execute-milestone-release', handlePrepareExecuteMilestoneRelease);
+
 router.post('/api/tx/prepare-swap-dlmm', handlePrepareSwapDlmm);
 router.post('/tx/prepare-swap-dlmm', handlePrepareSwapDlmm);
 router.post('/prepare-swap-dlmm', handlePrepareSwapDlmm);
@@ -2793,6 +3011,8 @@ txRouter.post('/prepare-contribute-round', handlePrepareContributeRound);
 txRouter.post('/prepare-sell-primary-round', handlePrepareSellPrimaryRound);
 txRouter.post('/prepare-redeem-shares', handlePrepareRedeemShares);
 txRouter.post('/prepare-vote-milestone', handlePrepareVoteMilestone);
+txRouter.post('/prepare-propose-milestone', handlePrepareProposeMilestone);
+txRouter.post('/prepare-execute-milestone-release', handlePrepareExecuteMilestoneRelease);
 txRouter.post('/prepare-swap-dlmm', handlePrepareSwapDlmm);
 txRouter.post('/prepare-swap-curve', handlePrepareSwapCurve);
 txRouter.post('/prepare-stake-vent', handlePrepareStakeVent);
@@ -2832,6 +3052,8 @@ module.exports = {
   handlePrepareSellPrimaryRound,
   handlePrepareRedeemShares,
   handlePrepareVoteMilestone,
+  handlePrepareProposeMilestone,
+  handlePrepareExecuteMilestoneRelease,
   handlePrepareSwapDlmm,
   handlePrepareSwapCurve,
   executeExponentialCurveSwap,

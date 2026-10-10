@@ -15,6 +15,7 @@ import {
   getVenturePDA,
   getFundingRoundPDA,
   getReceiptMintPDA,
+  getInvestorVaultPDA,
 } from "../../lib/solana/ventrionProgram";
 import { formatCompactUsdc, formatCompactShares } from "../../lib/formatters";
 
@@ -31,6 +32,7 @@ interface HoldingItem {
   ownershipPercent: number;
   isRaising: boolean;
   receipts: number;
+  stakedShares?: number;
 }
 
 interface ChartPoint {
@@ -135,10 +137,40 @@ export default function SharesPage() {
         mintToAmount[mint] = (mintToAmount[mint] || 0) + amount;
       }
 
+      // 3. Batch query on-chain InvestorVault PDAs for all ventures
+      const pdaVentureMap: { pda: PublicKey; mint: string }[] = [];
+      for (const v of allVentures) {
+        if (v.mintAddress) {
+          try {
+            const [vPda] = getVenturePDA(new PublicKey(v.mintAddress));
+            const [invVaultPda] = getInvestorVaultPDA(vPda, publicKey);
+            pdaVentureMap.push({ pda: invVaultPda, mint: v.mintAddress });
+          } catch {}
+        }
+      }
+
+      const stakedMap: Record<string, number> = {};
+      if (pdaVentureMap.length > 0) {
+        try {
+          const accs = await connection.getMultipleAccountsInfo(
+            pdaVentureMap.map((item) => item.pda)
+          );
+          accs.forEach((acc, idx) => {
+            if (acc && acc.data && acc.data.length >= 148) {
+              try {
+                const rawStaked = acc.data.readBigUInt64LE(72);
+                stakedMap[pdaVentureMap[idx].mint] = Number(rawStaked) / 1e6;
+              } catch {}
+            }
+          });
+        } catch {}
+      }
+
       const userHoldings: HoldingItem[] = [];
 
       for (const v of allVentures) {
         let shares = mintToAmount[v.mintAddress] || 0;
+        let stakedShares = stakedMap[v.mintAddress] || 0;
 
         // Also check primary round receipts
         let receipts = 0;
@@ -153,7 +185,7 @@ export default function SharesPage() {
           } catch {}
         }
 
-        const totalHolding = shares + receipts;
+        const totalHolding = shares + receipts + stakedShares;
         if (totalHolding <= 0) continue;
 
         const isRaising =
@@ -183,6 +215,7 @@ export default function SharesPage() {
           ownershipPercent: ownership,
           isRaising,
           receipts: Math.round(receipts),
+          stakedShares: Math.round(stakedShares),
         });
       }
 
@@ -582,7 +615,11 @@ export default function SharesPage() {
                           <td className="py-3.5 px-4 text-right font-bold text-[#111113]">
                             <div>{formatCompactShares(h.shares)}</div>
                             <div className="text-[10px] text-[#7A7672] font-normal">
-                              {h.receipts > 0 && !h.isRaising ? (
+                              {h.stakedShares && h.stakedShares > 0 ? (
+                                <span className="text-emerald-700 font-medium">
+                                  {formatCompactShares(h.stakedShares)} Staked
+                                </span>
+                              ) : h.receipts > 0 && !h.isRaising ? (
                                 <span className="text-[#111113] font-medium">Convertible Receipts</span>
                               ) : h.isRaising ? (
                                 "Receipts (R0)"

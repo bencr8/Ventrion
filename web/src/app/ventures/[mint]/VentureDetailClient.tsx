@@ -26,6 +26,8 @@ import {
   executeSellPrimaryRound,
   executeRedeemShares,
   executeVoteMilestone,
+  executeProposeMilestone,
+  executeReleaseMilestone,
   executeDlmmSwap,
   executeStakeShares,
   executeUnstakeShares,
@@ -495,6 +497,21 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   });
   const [userVote, setUserVote] = useState<"APPROVE" | "VETO" | null>(null);
   const [votedTxHash, setVotedTxHash] = useState<string | null>(null);
+
+  // Synchronize selected milestone when venture loads or updates
+  useEffect(() => {
+    if (venture?.milestones && venture.milestones.length > 0) {
+      setSelectedMilestone((prev) => {
+        const found = venture.milestones.find((m) => m.id === prev?.id);
+        if (found) return found;
+        const active =
+          venture.milestones.find((m) => m.status === "in_review") ||
+          venture.milestones.find((m) => m.status === "pending") ||
+          venture.milestones[0];
+        return active;
+      });
+    }
+  }, [venture]);
 
   // Sticky System Toast States
   const [txLoading, setTxLoading] = useState<string | null>(null);
@@ -1131,12 +1148,13 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
     try {
+      const milestoneId = selectedMilestone?.id !== undefined ? Number(selectedMilestone.id) : 0;
       setTxLoading(`Signing & submitting ${isVeto ? "dissenting (veto)" : "affirmative"} vote on Solana devnet...`);
       const { signature } = await executeVoteMilestone(
         {
           investorPubkey: wallet.publicKey.toBase58(),
           companyMint: venture.mintAddress,
-          milestoneId: Number(selectedMilestone.id) || 1,
+          milestoneId,
           approve: !isVeto,
           roundIndex: venture.activeRound || 0,
         },
@@ -1150,6 +1168,78 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       setTxSuccess(`Milestone vote confirmed on Solana Devnet (${shortSig})!`);
     } catch (err: any) {
       setTxError(err.message || "Failed to submit milestone vote to Solana devnet.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  const handleProposeMilestone = async () => {
+    setTxError(null);
+    setTxSuccess(null);
+    setTxSignature(null);
+
+    if (!isOnChainVerified || !venture || ventureNotFound) {
+      setTxError("Venture contract not found on Solana Devnet.");
+      return;
+    }
+    if (!wallet.publicKey) {
+      setTxError("Connect your Solana wallet to propose milestone.");
+      return;
+    }
+    try {
+      const milestoneId = selectedMilestone?.id !== undefined ? Number(selectedMilestone.id) : 0;
+      setTxLoading(`Signing & proposing milestone #${milestoneId} on Solana devnet...`);
+      const { signature } = await executeProposeMilestone(
+        {
+          founderPubkey: wallet.publicKey.toBase58(),
+          companyMint: venture.mintAddress,
+          milestoneId,
+        },
+        wallet,
+        connection
+      );
+      const shortSig = `${signature.slice(0, 4)}...${signature.slice(-4)}`;
+      setTxSignature(signature);
+      setTxSuccess(`Milestone #${milestoneId} proposed successfully (${shortSig})! Review period is now open.`);
+      await refreshUserBalances();
+    } catch (err: any) {
+      setTxError(err.message || "Failed to propose milestone.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  const handleExecuteMilestoneRelease = async () => {
+    setTxError(null);
+    setTxSuccess(null);
+    setTxSignature(null);
+
+    if (!isOnChainVerified || !venture || ventureNotFound) {
+      setTxError("Venture contract not found on Solana Devnet.");
+      return;
+    }
+    if (!wallet.publicKey) {
+      setTxError("Connect your Solana wallet to execute milestone release.");
+      return;
+    }
+    try {
+      const milestoneId = selectedMilestone?.id !== undefined ? Number(selectedMilestone.id) : 0;
+      setTxLoading(`Signing & executing release of milestone #${milestoneId}...`);
+      const { signature } = await executeReleaseMilestone(
+        {
+          executorPubkey: wallet.publicKey.toBase58(),
+          companyMint: venture.mintAddress,
+          milestoneId,
+        },
+        wallet,
+        connection
+      );
+      const shortSig = `${signature.slice(0, 4)}...${signature.slice(-4)}`;
+      setTxSignature(signature);
+      setTxSuccess(`Milestone #${milestoneId} released (${shortSig})! Capital disbursed to OpCo treasury.`);
+      await refreshUserBalances();
+    } catch (err: any) {
+      setTxError(err.message || "Failed to execute milestone release.");
     } finally {
       setTxLoading(null);
     }
@@ -1373,7 +1463,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
           {/* Background Visual Texture (Uses Dedicated Banner or Elegant Mesh, NEVER PFP/Logo) */}
           <div className="h-48 sm:h-60 lg:h-68 w-full relative overflow-hidden bg-[#111113]">
-            {venture.bannerUrl ? (
+            {venture.bannerUrl && venture.bannerUrl !== venture.logoUrl ? (
               <img
                 src={venture.bannerUrl}
                 alt={`${venture.name} Banner`}
@@ -2565,81 +2655,161 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                   <div className="lg:col-span-8 flex flex-col items-center justify-center space-y-6 font-mono text-center">
                     {/* Active Tranche Card */}
                     <div className="w-full p-8 sm:p-10 rounded-2xl bg-[#FAF7F2] border border-black/[0.06] flex flex-col items-center justify-center space-y-6">
-                      <div className="space-y-1">
-                        <div className="text-4xl sm:text-6xl font-bold text-[#111113] tabular-nums tracking-tight">
-                          ${(selectedMilestone.amountUsdc / 1000).toFixed(1)}k <span className="text-[#FF5C18]">USDC</span>
-                        </div>
-                        <p className="text-xs text-[#7A7672]">
-                          Milestone #{selectedMilestone.id} • {selectedMilestone.title}
-                        </p>
-                      </div>
-
-                      {/* Quorum Progress Bar */}
                       {(() => {
+                        const isMilestoneCompleted = selectedMilestone?.status === "completed";
+                        const isMilestoneReview = selectedMilestone?.status === "in_review";
+                        const isMilestonePending = !isMilestoneCompleted && !isMilestoneReview;
+                        const isFounder = !!(
+                          wallet.publicKey &&
+                          venture?.founderAddress &&
+                          wallet.publicKey.toBase58() === venture.founderAddress
+                        );
                         const votesFor = (selectedMilestone?.votesFor || 0) + (userVote === "APPROVE" ? 1 : 0);
                         const votesAgainst = (selectedMilestone?.votesAgainst || 0) + (userVote === "VETO" ? 1 : 0);
                         const totalVotes = votesFor + votesAgainst;
                         const quorumPct = totalVotes > 0 ? (votesFor / totalVotes) * 100 : 0;
-                        return (
-                          <div className="w-full max-w-md space-y-2">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-[#7A7672]">Quorum Status</span>
-                              <span className="font-bold text-[#111113] tabular-nums">
-                                {quorumPct.toFixed(1)}% / 50.0% Required
-                              </span>
-                            </div>
-                            <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-black/[0.06] p-0.5">
-                              <div
-                                style={{ width: `${Math.min(100, quorumPct)}%` }}
-                                className="h-full bg-[#111113] rounded-full transition-all duration-300"
-                              />
-                            </div>
-                          </div>
-                        );
-                      })()}
 
-                      {/* Vote Action Area */}
-                      <div className="w-full max-w-md">
-                        {userVote !== null ? (
-                          <div className="p-4 rounded-xl bg-white border border-black/[0.08] space-y-1 text-center">
-                            <div className="text-xs font-bold text-[#111113] tracking-wider uppercase">
-                              Vote Recorded • {userVote === "APPROVE" ? "Affirmative (Release)" : "Dissenting (Veto)"}
-                            </div>
-                            <div className="text-[10px] text-[#7A7672] flex items-center justify-center gap-1">
-                              <span>Solana Tx:</span>
-                              {txSignature ? (
-                                <a
-                                  href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-[#FF5C18] hover:underline font-semibold"
-                                >
-                                  {votedTxHash}
-                                </a>
+                        return (
+                          <>
+                            {/* Tranche Status Badge */}
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border border-black/[0.08] bg-white">
+                              {isMilestoneCompleted ? (
+                                <span className="text-emerald-700">Released • Disbursed to OpCo Treasury</span>
+                              ) : isMilestoneReview ? (
+                                <span className="text-[#FF5C18]">In Review • Backer Voting Active</span>
                               ) : (
-                                <span className="text-[#111113] font-semibold">{votedTxHash}</span>
+                                <span className="text-[#7A7672]">Pending Deliverable Submission</span>
                               )}
                             </div>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              disabled={!!txLoading}
-                              onClick={() => handleCastMilestoneVote(false)}
-                              className="py-3.5 px-4 rounded-xl border border-black/[0.12] bg-white hover:bg-black/[0.03] active:bg-black/[0.06] text-[#111113] font-bold text-xs transition-all cursor-pointer disabled:opacity-50 text-center"
-                            >
-                              Approve Release
-                            </button>
-                            <button
-                              disabled={!!txLoading}
-                              onClick={() => handleCastMilestoneVote(true)}
-                              className="py-3.5 px-4 rounded-xl border border-black/[0.12] bg-white hover:bg-black/[0.03] active:bg-black/[0.06] text-[#111113] font-bold text-xs transition-all cursor-pointer disabled:opacity-50 text-center"
-                            >
-                              Dissent / Veto
-                            </button>
-                          </div>
-                        )}
-                      </div>
+
+                            <div className="space-y-1">
+                              <div className="text-4xl sm:text-6xl font-bold text-[#111113] tabular-nums tracking-tight">
+                                ${(selectedMilestone.amountUsdc / 1000).toFixed(1)}k <span className="text-[#FF5C18]">USDC</span>
+                              </div>
+                              <p className="text-xs text-[#7A7672]">
+                                Milestone #{selectedMilestone.id} • {selectedMilestone.title}
+                              </p>
+                              {selectedMilestone.description && (
+                                <p className="text-[11px] text-[#8E8B88] max-w-md mx-auto pt-1 font-sans">
+                                  {selectedMilestone.description}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Quorum Progress Bar (Visible during review) */}
+                            {isMilestoneReview && (
+                              <div className="w-full max-w-md space-y-2">
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-[#7A7672]">Quorum Status (Approval vs Veto)</span>
+                                  <span className="font-bold text-[#111113] tabular-nums">
+                                    {quorumPct.toFixed(1)}% / 50.0% Required
+                                  </span>
+                                </div>
+                                <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-black/[0.06] p-0.5">
+                                  <div
+                                    style={{ width: `${Math.min(100, quorumPct)}%` }}
+                                    className="h-full bg-[#111113] rounded-full transition-all duration-300"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Milestone Actions Depending on On-Chain Status */}
+                            <div className="w-full max-w-md space-y-3">
+                              {isMilestoneCompleted && (
+                                <div className="p-4 rounded-xl bg-white border border-black/[0.08] text-center space-y-1">
+                                  <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                                    Milestone Tranche Released
+                                  </div>
+                                  <p className="text-[11px] text-[#7A7672]">
+                                    Capital has been disbursed to the enterprise treasury account on Solana Devnet.
+                                  </p>
+                                </div>
+                              )}
+
+                              {isMilestonePending && (
+                                <>
+                                  {isFounder ? (
+                                    <div className="space-y-2">
+                                      <button
+                                        disabled={!!txLoading}
+                                        onClick={handleProposeMilestone}
+                                        className="w-full py-3.5 px-5 rounded-xl bg-[#111113] hover:bg-black text-white font-bold text-xs transition-all cursor-pointer disabled:opacity-50 text-center shadow-xs"
+                                      >
+                                        Submit Deliverable & Open Review Window
+                                      </button>
+                                      <p className="text-[10px] text-[#7A7672]">
+                                        As founder, submitting initiates the backer voting and review period on Solana Devnet.
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div className="p-4 rounded-xl bg-white border border-black/[0.08] text-center space-y-1">
+                                      <div className="text-xs font-semibold text-[#111113]">
+                                        Deliverable Pending Submission
+                                      </div>
+                                      <p className="text-[10px] text-[#7A7672]">
+                                        The founder must submit the milestone deliverable on-chain before backers can vote on tranche release.
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
+                              {isMilestoneReview && (
+                                <>
+                                  {userVote !== null ? (
+                                    <div className="p-4 rounded-xl bg-white border border-black/[0.08] space-y-1 text-center">
+                                      <div className="text-xs font-bold text-[#111113] tracking-wider uppercase">
+                                        Vote Recorded • {userVote === "APPROVE" ? "Affirmative (Release)" : "Dissenting (Veto)"}
+                                      </div>
+                                      <div className="text-[10px] text-[#7A7672] flex items-center justify-center gap-1">
+                                        <span>Solana Tx:</span>
+                                        {txSignature ? (
+                                          <a
+                                            href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[#FF5C18] hover:underline font-semibold"
+                                          >
+                                            {votedTxHash}
+                                          </a>
+                                        ) : (
+                                          <span className="text-[#111113] font-semibold">{votedTxHash}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <button
+                                        disabled={!!txLoading}
+                                        onClick={() => handleCastMilestoneVote(false)}
+                                        className="py-3.5 px-4 rounded-xl border border-black/[0.12] bg-white hover:bg-black/[0.03] active:bg-black/[0.06] text-[#111113] font-bold text-xs transition-all cursor-pointer disabled:opacity-50 text-center"
+                                      >
+                                        Approve Release
+                                      </button>
+                                      <button
+                                        disabled={!!txLoading}
+                                        onClick={() => handleCastMilestoneVote(true)}
+                                        className="py-3.5 px-4 rounded-xl border border-black/[0.12] bg-white hover:bg-black/[0.03] active:bg-black/[0.06] text-[#111113] font-bold text-xs transition-all cursor-pointer disabled:opacity-50 text-center"
+                                      >
+                                        Dissent / Veto
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  <button
+                                    disabled={!!txLoading}
+                                    onClick={handleExecuteMilestoneRelease}
+                                    className="w-full py-3 px-4 rounded-xl bg-[#111113] hover:bg-black active:scale-[0.99] text-white font-bold text-xs transition-all cursor-pointer disabled:opacity-50 text-center"
+                                  >
+                                    Execute Milestone Release to Treasury
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
 
                       {/* Minimal Ragequit Option */}
                       <button
@@ -2694,7 +2864,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                                 ${(m.amountUsdc / 1000).toFixed(1)}k
                               </span>
                               <span className="text-[10px] text-[#7A7672] block">
-                                {m.status === "completed" ? "Released" : m.status === "in_review" ? "Voting" : "Locked"}
+                                {m.status === "completed" ? "Released" : m.status === "in_review" ? "Voting" : "Pending"}
                               </span>
                             </div>
                           </button>

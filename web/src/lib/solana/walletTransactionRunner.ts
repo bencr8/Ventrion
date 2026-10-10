@@ -398,7 +398,7 @@ export interface VoteMilestoneParams {
 }
 
 /**
- * AUFGABE 2.5: VOTE ON MILESTONE
+ * VOTE ON MILESTONE (PRIMARY BACKERS)
  * 1. Requests prepared vote-milestone transaction from backend
  * 2. Deserializes Base64 transaction
  * 3. Signs with user's Solana wallet
@@ -420,13 +420,128 @@ export async function executeVoteMilestone(
   const data = await postToTxApi("prepare-vote-milestone", {
     investorPubkey: params.investorPubkey || wallet.publicKey.toBase58(),
     companyMint: params.companyMint,
-    milestoneId: params.milestoneId,
+    milestoneId: params.milestoneId !== undefined ? Number(params.milestoneId) : 0,
     approve: params.approve,
     roundIndex: params.roundIndex ?? 0,
   });
 
   if (!data?.transactionBase64) {
-    throw new Error("Backend did not return valid vote-milestone transactionBase64");
+    throw new Error(data?.error || "Backend did not return valid vote-milestone transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface ProposeMilestoneParams {
+  founderPubkey?: string;
+  companyMint: string;
+  milestoneId: number;
+  roundIndex?: number;
+}
+
+/**
+ * PROPOSE MILESTONE DELIVERABLE (FOUNDER)
+ * Proposes milestone deliverable on-chain and opens the optimistic review / veto window.
+ */
+export async function executeProposeMilestone(
+  params: ProposeMilestoneParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-propose-milestone", {
+    founderPubkey: params.founderPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+    milestoneId: params.milestoneId !== undefined ? Number(params.milestoneId) : 0,
+    roundIndex: params.roundIndex ?? 0,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid propose-milestone transactionBase64");
+  }
+
+  const txBytes = base64ToUint8Array(data.transactionBase64);
+  const transaction = Transaction.from(txBytes);
+
+  const signedTx = await wallet.signTransaction(transaction);
+  const rawTx = signedTx.serialize();
+  const signature = await connection.sendRawTransaction(rawTx, {
+    skipPreflight: false,
+    preflightCommitment: "confirmed",
+  });
+
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  await connection.confirmTransaction(
+    {
+      signature,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
+
+  return { signature };
+}
+
+export interface ReleaseMilestoneParams {
+  payerPubkey?: string;
+  executorPubkey?: string;
+  companyMint: string;
+  milestoneId: number;
+  roundIndex?: number;
+}
+
+/**
+ * EXECUTE MILESTONE RELEASE (PERMISSIONLESS)
+ * Releases approved or optimistically matured milestone capital directly to the OpCo treasury.
+ */
+export async function executeReleaseMilestone(
+  params: ReleaseMilestoneParams,
+  wallet: any,
+  connection: Connection
+): Promise<{ signature: string }> {
+  if (!wallet || !wallet.publicKey) {
+    throw new Error("Wallet not connected. Please connect your Solana wallet.");
+  }
+  if (!wallet.signTransaction) {
+    throw new Error("Connected wallet does not support signTransaction.");
+  }
+
+  const data = await postToTxApi("prepare-execute-milestone-release", {
+    payerPubkey: params.payerPubkey || params.executorPubkey || wallet.publicKey.toBase58(),
+    companyMint: params.companyMint,
+    milestoneId: params.milestoneId !== undefined ? Number(params.milestoneId) : 0,
+    roundIndex: params.roundIndex ?? 0,
+  });
+
+  if (!data?.transactionBase64) {
+    throw new Error(data?.error || "Backend did not return valid milestone release transactionBase64");
   }
 
   const txBytes = base64ToUint8Array(data.transactionBase64);
