@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useDualWallet } from "../components/wallet/DualModeWalletContext";
 import { Navbar } from "../components/common/Navbar";
 import { HeroSection } from "../components/hero/HeroSection";
 import { WithVentrionSection } from "../components/capabilities/WithVentrionSection";
@@ -12,8 +15,19 @@ import { SolanaPayModal } from "../components/checkout/SolanaPayModal";
 import { INITIAL_VENTRION_STATE, VentrionState } from "../lib/ventrionClient";
 
 export default function Home() {
+  const router = useRouter();
+  const { connected, publicKey } = useWallet();
+  const { setIsModalOpen } = useDualWallet();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const state = INITIAL_VENTRION_STATE;
+
+  const handleLaunchClick = () => {
+    if (connected || publicKey) {
+      router.push("/ventures/launch");
+    } else {
+      setIsModalOpen(true);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#FAF7F2] relative overflow-x-clip flex flex-col justify-between selection:bg-[#F68D66]/20 font-jakarta">
@@ -32,10 +46,7 @@ export default function Home() {
           {/* HERO SECTION */}
           <section className="w-full min-h-[600px] lg:min-h-[calc(100vh-80px)] lg:max-h-[820px] flex items-center justify-center py-4 sm:py-6 relative">
             <HeroSection
-              onLaunchClick={() => {
-                const el = document.getElementById("capabilities-section");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }}
+              onLaunchClick={handleLaunchClick}
               onExploreClick={() => {
                 const el = document.getElementById("capabilities-section");
                 el?.scrollIntoView({ behavior: "smooth" });

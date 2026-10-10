@@ -30,6 +30,7 @@ import {
   executeStakeShares,
   executeUnstakeShares,
   executeClaimDividends,
+  executeRagequitMilestoneEscrow,
 } from "../../../lib/solana/walletTransactionRunner";
 import { formatCompactUsdc, formatCompactShares } from "../../../lib/formatters";
 
@@ -965,18 +966,14 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       return;
     }
 
-    // Secondary DLMM trade execution
-    if (!venture.meteoraDlmmPool) {
-      setTxError("No active Meteora DLMM liquidity pool found for this venture.");
-      return;
-    }
+    // Secondary trading execution (Exponential Infinite Liquidity Curve & DLMM)
     try {
-      setTxLoading(`Executing ${tradeAction} of ${tradeAmount.toLocaleString()} ${tradeAction === "BUY" ? "USDC" : venture.symbol} on Meteora DLMM Devnet...`);
+      setTxLoading(`Executing ${tradeAction} of ${tradeAmount.toLocaleString()} ${tradeAction === "BUY" ? "USDC" : venture.symbol} on Solana Devnet...`);
       const { signature, expectedOut } = await executeDlmmSwap(
         {
           userPubkey: wallet.publicKey.toBase58(),
           companyMint: venture.mintAddress,
-          poolAddress: venture.meteoraDlmmPool,
+          poolAddress: venture.meteoraDlmmPool || undefined,
           action: tradeAction,
           amount: tradeAmount,
         },
@@ -986,7 +983,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       setTxSignature(signature);
       const outTokensFormatted = expectedOut ? (Number(expectedOut) / 1e6).toFixed(2) : "";
       setTxSuccess(
-        `Successfully swapped ${tradeAmount.toLocaleString()} ${tradeAction === "BUY" ? "USDC" : venture.symbol} on Meteora DLMM Devnet! ${outTokensFormatted ? `Received ~${outTokensFormatted} ${tradeAction === "BUY" ? venture.symbol : "USDC"}` : ""}`
+        `Successfully swapped ${tradeAmount.toLocaleString()} ${tradeAction === "BUY" ? "USDC" : venture.symbol}! ${outTokensFormatted ? `Received ~${outTokensFormatted} ${tradeAction === "BUY" ? venture.symbol : "USDC"}` : ""}`
       );
       await refreshUserBalances();
       if (typeof window !== "undefined") {
@@ -1153,6 +1150,42 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       setTxSuccess(`Milestone vote confirmed on Solana Devnet (${shortSig})!`);
     } catch (err: any) {
       setTxError(err.message || "Failed to submit milestone vote to Solana devnet.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  const handleRagequit = async () => {
+    setTxError(null);
+    setTxSuccess(null);
+    setTxSignature(null);
+
+    if (!wallet.publicKey) {
+      setTxError("Connect your Solana wallet to execute pro-rata ragequit.");
+      return;
+    }
+
+    if (!venture) {
+      setTxError("Venture data not loaded.");
+      return;
+    }
+
+    try {
+      setTxLoading("Executing on-chain pro-rata ragequit refund...");
+      const { signature } = await executeRagequitMilestoneEscrow(
+        {
+          investorPubkey: wallet.publicKey.toBase58(),
+          companyMint: venture.mintAddress,
+          roundIndex: venture.activeRound || 0,
+        },
+        wallet,
+        connection
+      );
+      setTxSignature(signature);
+      setTxSuccess("Pro-rata ragequit refund settled on-chain. Escrow USDC refunded to wallet.");
+      await refreshUserBalances();
+    } catch (err: any) {
+      setTxError(err.message || "Ragequit reverted on Solana devnet.");
     } finally {
       setTxLoading(null);
     }
@@ -1338,14 +1371,25 @@ export function VentureDetailClient({ mint }: { mint: string }) {
             <span>Directory</span>
           </Link>
 
-          {/* Background Visual Texture */}
-          <div className="h-48 sm:h-60 lg:h-68 w-full relative overflow-hidden">
-            <img
-              src={venture.logoUrl || "/tokens.jpg"}
-              alt={venture.name}
-              className="w-full h-full object-cover opacity-40 blur-xs scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/70 to-transparent" />
+          {/* Background Visual Texture (Uses Dedicated Banner or Elegant Mesh, NEVER PFP/Logo) */}
+          <div className="h-48 sm:h-60 lg:h-68 w-full relative overflow-hidden bg-[#111113]">
+            {venture.bannerUrl ? (
+              <img
+                src={venture.bannerUrl}
+                alt={`${venture.name} Banner`}
+                className="w-full h-full object-cover opacity-70 scale-100"
+              />
+            ) : (
+              <div className="w-full h-full relative">
+                <img
+                  src="/tokens.jpg"
+                  alt="Ventrion Banner Texture"
+                  className="w-full h-full object-cover opacity-25 mix-blend-luminosity scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#111113] via-[#161619]/80 to-[#111113]" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/60 to-transparent" />
           </div>
 
           {/* Banner Meta Overlay */}
@@ -1639,6 +1683,30 @@ export function VentureDetailClient({ mint }: { mint: string }) {
           {/* RIGHT: TACTILE ORDER TERMINAL (CLEAN & MINIMALIST) */}
           <div className="lg:col-span-4 bg-white border border-black/[0.08] rounded-3xl p-8 sm:p-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] min-h-[480px] flex flex-col justify-between">
             <div className="space-y-6">
+              {/* Prominent Redemption Callout Banner */}
+              {isGraduated && userReceipts > 0 && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
+                  <div>
+                    <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <span>⚡</span>
+                      <span>Graduated! You Hold {userReceipts.toLocaleString()} Receipts</span>
+                    </div>
+                    <p className="text-[11px] text-[#7A7672] mt-0.5">
+                      Redeem 1:1 for tradable {venture.symbol} Common Shares.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTradeAction("REDEEM");
+                      setTradeInputStr(String(userReceipts));
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors shrink-0 shadow-xs cursor-pointer"
+                  >
+                    Redeem All (1:1)
+                  </button>
+                </div>
+              )}
+
               {/* Order Mode Switcher */}
               <div className="flex gap-2 p-1 bg-black/[0.03] rounded-2xl font-mono text-xs">
                 {(["BUY", "SELL"] as const).map((mode) => (
@@ -1722,7 +1790,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       hasInvalidAmount ||
                       hasBalanceError;
 
-                    const maxVal = isBuying ? userUsdcBalance : (isReceiptPhase ? userReceipts : userShares);
+                    const maxVal = isBuying ? userUsdcBalance : isRedeeming ? userReceipts : (isReceiptPhase ? userReceipts : userShares);
 
                     return (
                       <>
@@ -1739,10 +1807,10 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                           >
                             <div className="flex justify-between text-xs text-[#7A7672] mb-1">
                               <span>
-                                {isBuying ? "USDC" : isReceiptPhase ? `${venture.symbol} Receipts` : venture.symbol}
+                                {isBuying ? "USDC" : isRedeeming ? `${venture.symbol} Receipts ($${venture.symbol}-R0)` : isReceiptPhase ? `${venture.symbol} Receipts` : venture.symbol}
                               </span>
                               <span className="font-medium">
-                                Bal {isBuying ? `$${userUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (isReceiptPhase ? userReceipts : userShares).toLocaleString()}
+                                Bal {isBuying ? `$${userUsdcBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : isRedeeming ? `${userReceipts.toLocaleString()} Receipts` : (isReceiptPhase ? userReceipts : userShares).toLocaleString()}
                               </span>
                             </div>
 
@@ -1758,7 +1826,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                                 className="w-full bg-transparent text-2xl sm:text-3xl font-bold text-[#111113] focus:outline-none tabular-nums font-mono"
                               />
                               <span className="text-xs font-bold text-[#7A7672] shrink-0 ml-2">
-                                {isBuying ? "USDC" : isReceiptPhase ? `${venture.symbol}-R0` : venture.symbol}
+                                {isBuying ? "USDC" : isRedeeming ? `${venture.symbol}-R0` : isReceiptPhase ? `${venture.symbol}-R0` : venture.symbol}
                               </span>
                             </div>
 
@@ -1816,12 +1884,32 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                             </div>
                           </div>
 
+                          {/* Inline helper if on SELL tab but holding unredeemed receipts */}
+                          {isSelling && isGraduated && userShares <= 0 && userReceipts > 0 && (
+                            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono text-amber-800 dark:text-amber-300">
+                              <span>💡 You hold <strong>{userReceipts.toLocaleString()}</strong> unredeemed receipts. </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTradeAction("REDEEM");
+                                  setTradeInputStr(String(userReceipts));
+                                }}
+                                className="text-amber-600 dark:text-amber-400 font-bold underline hover:opacity-80 cursor-pointer ml-1"
+                              >
+                                Click here to Redeem
+                              </button>
+                              <span> for tradable shares before selling.</span>
+                            </div>
+                          )}
+
                           {/* Estimate */}
                           <div className="flex justify-between items-center text-xs text-[#7A7672] px-1 pt-1">
                             <span>Receive</span>
                             <span className="font-bold text-[#111113] text-sm tabular-nums">
                               {isBuying
                                 ? `${(effectiveTradeUsdc / (venture.sharePriceUsdc || 0.1)).toFixed(1)} ${venture.symbol}${isReceiptPhase ? "-R0" : ""}`
+                                : isRedeeming
+                                ? `${tradeAmount.toLocaleString()} ${venture.symbol} Shares (1:1)`
                                 : `$${(tradeAmount * (venture.sharePriceUsdc || 0.1)).toFixed(2)} USDC`}
                             </span>
                           </div>
@@ -1860,6 +1948,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               ? isReceiptPhase
                                 ? `Refund Receipts for $${(tradeAmount * (venture.sharePriceUsdc || 0.1)).toFixed(2)} USDC`
                                 : `Sell ${venture.symbol}`
+                              : isRedeeming
+                              ? `Redeem ${tradeAmount.toLocaleString()} Shares (1:1)`
                               : `Redeem Receipts`}
                           </span>
                         </button>
@@ -2545,10 +2635,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
 
                       {/* Minimal Ragequit Option */}
                       <button
-                        onClick={() => {
-                          setTxSuccess("Initiated pro-rata ragequit settlement refund to wallet.");
-                        }}
-                        className="text-[11px] text-[#7A7672] hover:text-[#111113] underline transition-colors cursor-pointer"
+                        disabled={!!txLoading}
+                        onClick={handleRagequit}
+                        className="text-[11px] text-[#7A7672] hover:text-[#111113] underline transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Claim Pro-Rata Ragequit Settlement
                       </button>

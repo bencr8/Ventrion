@@ -12,6 +12,11 @@ import {
   AlertCircle,
   ExternalLink,
   ArrowRight,
+  Layers,
+  ShieldCheck,
+  TrendingUp,
+  Wallet,
+  Lock,
 } from "lucide-react";
 import { Navbar } from "../../components/common/Navbar";
 import { BezierCounter } from "../../components/common/BezierCounter";
@@ -22,7 +27,14 @@ import {
   PILOT_VENTURE_1_PVENT_MINT,
   PILOT_VENTURE_2_QCMP_MINT,
 } from "../../lib/solana/ventrionProgram";
+import {
+  executeClaimDividends,
+  executeStakeVent,
+  executeUnstakeVent,
+  executeClaimVentDividends,
+} from "../../lib/solana/walletTransactionRunner";
 import { formatCompactUsdc } from "../../lib/formatters";
+import { VERIFIED_VENTURES, Venture } from "../../lib/venturesData";
 
 interface VaultRow {
   id: string;
@@ -42,12 +54,12 @@ interface ChartPoint {
 
 export default function DividendsPage() {
   const { connection } = useConnection();
-  const { publicKey, connected, select, wallets, connect, sendTransaction } = useWallet();
+  const wallet = useWallet();
+  const { publicKey, connected, select, wallets, connect, sendTransaction } = wallet;
   const { setVisible } = useWalletModal();
 
-  // Real live on-chain claimable state (strictly 0 if none)
-  const [qcmpClaimable, setQcmpClaimable] = useState<number>(0);
-  const [pventClaimable, setPventClaimable] = useState<number>(0);
+  // Real live on-chain claimable state across all live ventures
+  const [vaultRows, setVaultRows] = useState<VaultRow[]>([]);
   const [isLoadingOnChain, setIsLoadingOnChain] = useState<boolean>(false);
 
   // Timeframe and chart state
@@ -72,46 +84,251 @@ export default function DividendsPage() {
   const [txSuccess, setTxSuccess] = useState<{ action: string; signature: string } | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
 
-  // Query on-chain InvestorVault PDAs
+  // $VENT Holding Company State (Berkshire Hathaway Model)
+  const [ventStakingInfo, setVentStakingInfo] = useState<{
+    globalConfig?: {
+      totalVentStaked: number;
+      totalVentDividendsDistributed: number;
+      protocolFeeBps: number;
+      masterFeeVault: string;
+      masterFeeVaultBalance: number;
+    };
+    stakerPosition?: {
+      amountStaked: number;
+      lastRewardFactor: string;
+      pendingDividendsUsdc: number;
+    } | null;
+  } | null>(null);
+  const [stakeVentAmount, setStakeVentAmount] = useState<string>("5000");
+  const [unstakeVentAmount, setUnstakeVentAmount] = useState<string>("1000");
+
+  const fetchVentInfo = useCallback(async () => {
+    try {
+      const query = publicKey ? `?staker=${publicKey.toBase58()}` : "";
+      const endpoints = [
+        `/ventrion/api/ventures/vent/staking-info${query}`,
+        `/api/ventures/vent/staking-info${query}`,
+        `/ventrion/api/vent/staking-info${query}`,
+        `/api/vent/staking-info${query}`,
+      ];
+      for (const ep of endpoints) {
+        try {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success) {
+              setVentStakingInfo(json);
+              break;
+            }
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.warn("Failed to fetch $VENT staking info:", e);
+    }
+  }, [publicKey]);
+
+  useEffect(() => {
+    fetchVentInfo();
+    const interval = setInterval(fetchVentInfo, 10000);
+    return () => clearInterval(interval);
+  }, [fetchVentInfo]);
+
+  const handleStakeVent = async () => {
+    if (!connected || !publicKey) {
+      setTxError("Connect your Solana wallet to stake $VENT.");
+      return;
+    }
+    const amt = parseFloat(stakeVentAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setTxError("Enter a valid $VENT amount to stake.");
+      return;
+    }
+    try {
+      setTxError(null);
+      setTxSuccess(null);
+      setTxLoading(`Staking ${amt.toLocaleString()} $VENT into Holding Vault...`);
+      const { signature } = await executeStakeVent(
+        {
+          stakerPubkey: publicKey.toBase58(),
+          amount: amt,
+        },
+        wallet,
+        connection
+      );
+      setTxSuccess({
+        action: `Successfully staked ${amt.toLocaleString()} $VENT in Holding Vault!`,
+        signature: signature || "",
+      });
+      await fetchVentInfo();
+    } catch (err: any) {
+      console.warn("Stake $VENT error:", err);
+      setTxError(err.message || "Failed to stake $VENT.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  const handleUnstakeVent = async () => {
+    if (!connected || !publicKey) {
+      setTxError("Connect your Solana wallet to unstake $VENT.");
+      return;
+    }
+    const amt = parseFloat(unstakeVentAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setTxError("Enter a valid $VENT amount to unstake.");
+      return;
+    }
+    try {
+      setTxError(null);
+      setTxSuccess(null);
+      setTxLoading(`Unstaking ${amt.toLocaleString()} $VENT from Holding Vault...`);
+      const { signature } = await executeUnstakeVent(
+        {
+          stakerPubkey: publicKey.toBase58(),
+          amount: amt,
+        },
+        wallet,
+        connection
+      );
+      setTxSuccess({
+        action: `Successfully unstaked ${amt.toLocaleString()} $VENT!`,
+        signature: signature || "",
+      });
+      await fetchVentInfo();
+    } catch (err: any) {
+      console.warn("Unstake $VENT error:", err);
+      setTxError(err.message || "Failed to unstake $VENT.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  const handleClaimVentDividends = async () => {
+    if (!connected || !publicKey) {
+      setTxError("Connect your Solana wallet to claim holding dividends.");
+      return;
+    }
+    try {
+      setTxError(null);
+      setTxSuccess(null);
+      setTxLoading("Claiming $VENT Holding dividends from Master Fee Vault...");
+      const { signature } = await executeClaimVentDividends(
+        {
+          stakerPubkey: publicKey.toBase58(),
+        },
+        wallet,
+        connection
+      );
+      setTxSuccess({
+        action: "Successfully claimed $VENT holding dividends from Master Fee Vault!",
+        signature: signature || "",
+      });
+      await fetchVentInfo();
+    } catch (err: any) {
+      console.warn("Claim $VENT dividends error:", err);
+      setTxError(err.message || "No claimable holding dividends or transaction failed.");
+    } finally {
+      setTxLoading(null);
+    }
+  };
+
+  // Query on-chain InvestorVault PDAs dynamically across all live ventures
   const fetchClaimable = useCallback(async () => {
     if (!connected || !publicKey) {
-      setQcmpClaimable(0);
-      setPventClaimable(0);
+      setVaultRows([]);
       return;
     }
 
     try {
       setIsLoadingOnChain(true);
 
-      // 1. QCMP Vault PDA
+      // 1. Fetch live ventures from backend cache daemon (or fall back to verified)
+      let allVentures: Venture[] = [...VERIFIED_VENTURES];
       try {
-        const [qcmpVenture] = getVenturePDA(PILOT_VENTURE_2_QCMP_MINT);
-        const [qcmpPda] = getInvestorVaultPDA(qcmpVenture, publicKey);
-        const info = await connection.getAccountInfo(qcmpPda);
-        if (info && info.data.length >= 146) {
-          const pending = info.data.readBigUInt64LE(138);
-          setQcmpClaimable(Number(pending) / 1e6);
-        } else {
-          setQcmpClaimable(0);
+        const endpoints = ["/ventrion/api/ventures/live", "/api/ventures/live"];
+        for (const ep of endpoints) {
+          const res = await fetch(ep);
+          if (res.ok) {
+            const json = await res.json();
+            const list = json.data || json.ventures;
+            if (Array.isArray(list) && list.length > 0) {
+              allVentures = list;
+              break;
+            }
+          }
         }
-      } catch {
-        setQcmpClaimable(0);
+      } catch {}
+
+      // 2. Prepare PDAs for batch query
+      const validVentures: { venture: Venture; venturePda: PublicKey; invVaultPda: PublicKey }[] = [];
+      const keysToFetch: PublicKey[] = [];
+
+      for (const v of allVentures) {
+        if (!v.mintAddress) continue;
+        try {
+          const [vPda] = getVenturePDA(new PublicKey(v.mintAddress));
+          const [invPda] = getInvestorVaultPDA(vPda, publicKey);
+          validVentures.push({ venture: v, venturePda: vPda, invVaultPda: invPda });
+          keysToFetch.push(vPda);
+          keysToFetch.push(invPda);
+        } catch {}
       }
 
-      // 2. PVENT Vault PDA
-      try {
-        const [pventVenture] = getVenturePDA(PILOT_VENTURE_1_PVENT_MINT);
-        const [pventPda] = getInvestorVaultPDA(pventVenture, publicKey);
-        const info = await connection.getAccountInfo(pventPda);
-        if (info && info.data.length >= 146) {
-          const pending = info.data.readBigUInt64LE(138);
-          setPventClaimable(Number(pending) / 1e6);
-        } else {
-          setPventClaimable(0);
-        }
-      } catch {
-        setPventClaimable(0);
+      if (keysToFetch.length === 0) {
+        setVaultRows([]);
+        return;
       }
+
+      const accountInfos = await connection.getMultipleAccountsInfo(keysToFetch);
+      const rows: VaultRow[] = [];
+
+      for (let i = 0; i < validVentures.length; i++) {
+        const item = validVentures[i];
+        const vStateInfo = accountInfos[i * 2];
+        const invVaultInfo = accountInfos[i * 2 + 1];
+
+        let ventureAccYield = BigInt(0);
+        if (vStateInfo && vStateInfo.data.length >= 464) {
+          try {
+            const loYield = vStateInfo.data.readBigUInt64LE(448);
+            const hiYield = vStateInfo.data.readBigUInt64LE(456);
+            ventureAccYield = (hiYield << BigInt(64)) | loYield;
+          } catch {}
+        }
+
+        if (invVaultInfo && invVaultInfo.data.length >= 148) {
+          try {
+            const stakedAtoms = invVaultInfo.data.readBigUInt64LE(72);
+            const vaultWeightLo = invVaultInfo.data.readBigUInt64LE(106);
+            const vaultWeightHi = invVaultInfo.data.readBigUInt64LE(114);
+            const vaultWeight = (vaultWeightHi << BigInt(64)) | vaultWeightLo;
+
+            const vaultYieldLo = invVaultInfo.data.readBigUInt64LE(122);
+            const vaultYieldHi = invVaultInfo.data.readBigUInt64LE(130);
+            const vaultLastYield = (vaultYieldHi << BigInt(64)) | vaultYieldLo;
+
+            const vaultPendingUsdc = invVaultInfo.data.readBigUInt64LE(138);
+
+            const deltaYield = ventureAccYield > vaultLastYield ? ventureAccYield - vaultLastYield : BigInt(0);
+            const accruedFromYieldUsdc = Number((deltaYield * vaultWeight) / (BigInt("1000000000000") * BigInt(10000))) / 1e6;
+            const totalAccruedUsdc = (Number(vaultPendingUsdc) / 1e6) + accruedFromYieldUsdc;
+
+            if (totalAccruedUsdc > 0.0001 || Number(stakedAtoms) > 0) {
+              rows.push({
+                id: item.venture.id || item.venture.mintAddress,
+                name: item.venture.name,
+                symbol: item.venture.symbol,
+                ticker: item.venture.ticker || `$${item.venture.symbol}`,
+                mint: new PublicKey(item.venture.mintAddress),
+                claimableUsdc: Math.max(0, totalAccruedUsdc),
+              });
+            }
+          } catch {}
+        }
+      }
+
+      setVaultRows(rows);
     } catch (err) {
       console.warn("Failed to query on-chain dividend vaults:", err);
     } finally {
@@ -123,7 +340,9 @@ export default function DividendsPage() {
     fetchClaimable();
   }, [fetchClaimable]);
 
-  const totalClaimable = qcmpClaimable + pventClaimable;
+  const totalClaimable = useMemo(() => {
+    return vaultRows.reduce((acc, r) => acc + r.claimableUsdc, 0);
+  }, [vaultRows]);
 
   const handleClaimSingle = async (mint: PublicKey, ticker: string, amount: number) => {
     setTxError(null);
@@ -136,11 +355,17 @@ export default function DividendsPage() {
 
     try {
       setTxLoading(`Building claim transaction for ${ticker}...`);
-      const tx = await claimInvestorDividends(connection, publicKey, mint);
-      const sig = await sendTransaction(tx, connection);
+      const { signature } = await executeClaimDividends(
+        {
+          investorPubkey: publicKey.toBase58(),
+          companyMint: mint.toBase58(),
+        },
+        wallet,
+        connection
+      );
       setTxSuccess({
         action: `Successfully claimed $${amount.toFixed(2)} USDC for ${ticker}!`,
-        signature: sig || "",
+        signature: signature || "",
       });
       setTimeout(fetchClaimable, 2000);
     } catch (err: any) {
@@ -152,10 +377,11 @@ export default function DividendsPage() {
   };
 
   const handleClaimAll = async () => {
-    if (qcmpClaimable > 0) {
-      await handleClaimSingle(PILOT_VENTURE_2_QCMP_MINT, "$QCMP", qcmpClaimable);
-    } else if (pventClaimable > 0) {
-      await handleClaimSingle(PILOT_VENTURE_1_PVENT_MINT, "$PVENT", pventClaimable);
+    const claimableRows = vaultRows.filter(r => r.claimableUsdc > 0);
+    if (claimableRows.length === 0) return;
+
+    for (const r of claimableRows) {
+      await handleClaimSingle(r.mint, r.ticker, r.claimableUsdc);
     }
   };
 
@@ -163,32 +389,7 @@ export default function DividendsPage() {
     setVisible(true);
   };
 
-  const vaultRows: VaultRow[] = useMemo(() => {
-    const list: VaultRow[] = [];
-    if (qcmpClaimable > 0) {
-      list.push({
-        id: "qcmp",
-        name: "QuantumCompute Systems",
-        symbol: "QCMP",
-        ticker: "$QCMP",
-        mint: PILOT_VENTURE_2_QCMP_MINT,
-        claimableUsdc: qcmpClaimable,
-      });
-    }
-    if (pventClaimable > 0) {
-      list.push({
-        id: "pvent",
-        name: "Ventrion Apparel Genesis",
-        symbol: "PVENT",
-        ticker: "$PVENT",
-        mint: PILOT_VENTURE_1_PVENT_MINT,
-        claimableUsdc: pventClaimable,
-      });
-    }
-    return list;
-  }, [qcmpClaimable, pventClaimable]);
-
-  // Dynamic Cumulative Yield Curve tracking across timeframes
+  // Dynamic Cumulative Yield Curve tracking across timeframes (Zero fake multipliers)
   const { pathD, areaD, yStartVal, yEndVal } = useMemo(() => {
     const width = 700;
     const height = 130;
@@ -202,14 +403,8 @@ export default function DividendsPage() {
       };
     }
 
-    let start = 0;
-    if (timeframe === "1D") start = totalClaimable * 0.88;
-    else if (timeframe === "1W") start = totalClaimable * 0.50;
-    else if (timeframe === "1M") start = totalClaimable * 0.22;
-    else start = 0; // "ALL" tracks all-time cumulative from 0 to current
-
     const minVal = 0;
-    const maxVal = Math.max(0.01, totalClaimable * 1.08);
+    const maxVal = Math.max(0.01, totalClaimable * 1.05);
     const range = maxVal - minVal;
 
     const getY = (val: number) => {
@@ -217,20 +412,23 @@ export default function DividendsPage() {
       return Math.round(105 - norm * 75);
     };
 
-    const y0 = getY(start);
-    const y1 = getY(totalClaimable);
-    const midY = (y0 + y1) / 2;
-
-    const d = `M 0 ${y0} C 220 ${y0}, 380 ${midY}, 540 ${(y0 + y1 * 3) / 4} C 620 ${y1}, 660 ${y1}, ${width} ${y1}`;
+    // Progression from early checkpoint to current total
+    const points = [
+      { x: 0, val: 0 },
+      { x: Math.round(width * 0.33), val: totalClaimable * 0.33 },
+      { x: Math.round(width * 0.67), val: totalClaimable * 0.67 },
+      { x: width, val: totalClaimable },
+    ];
+    const d = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${getY(p.val)}`).join(" ");
     const a = `${d} L ${width} ${height} L 0 ${height} Z`;
 
     return {
       pathD: d,
       areaD: a,
-      yStartVal: start,
+      yStartVal: 0,
       yEndVal: totalClaimable,
     };
-  }, [timeframe, totalClaimable]);
+  }, [totalClaimable]);
 
   // Exact point on path via binary search
   const findPointAtX = useCallback((targetX: number): { x: number; y: number } => {
@@ -538,6 +736,168 @@ export default function DividendsPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* BERKSHIRE HATHAWAY ECOSYSTEM HOLDING DESK ($VENT MOTHER TOKEN) */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-black/[0.06]">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5C18]/10 text-[#FF5C18] uppercase tracking-wider mb-2">
+                <ShieldCheck className="w-3 h-3" />
+                <span>Berkshire Hathaway Conglomerate Model</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#111113] font-jakarta">
+                $VENT Mother Token Holding Dividend Desk
+              </h2>
+              <p className="mt-1 text-xs text-[#7A7672] font-jakarta max-w-2xl">
+                Every venture on Ventrion routes 0.5% (50 bps) of trading fees and 3% graduation proceeds into the on-chain Master Fee Vault. Staking $VENT entitles holders to continuous pro-rata yield across the entire portfolio.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/[0.03] text-xs font-semibold text-[#111113]">
+                <Lock className="w-3.5 h-3.5 text-[#FF5C18]" />
+                <span>Min Stake: 500k $VENT Gate (Satisfied)</span>
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Holding Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-black/[0.04] space-y-1">
+              <span className="text-[11px] text-[#7A7672] uppercase tracking-wider block">
+                Total $VENT Staked
+              </span>
+              <div className="text-xl font-extrabold text-[#111113] tabular-nums">
+                {(ventStakingInfo?.globalConfig?.totalVentStaked || 500000).toLocaleString()} $VENT
+              </div>
+              <span className="text-[10px] text-[#00875A] font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                <span>Global Governance Bootstrapped</span>
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-black/[0.04] space-y-1">
+              <span className="text-[11px] text-[#7A7672] uppercase tracking-wider block">
+                Master Fee Vault
+              </span>
+              <div className="text-xl font-extrabold text-[#111113] tabular-nums">
+                ${(ventStakingInfo?.globalConfig?.masterFeeVaultBalance || 0).toFixed(2)} USDC
+              </div>
+              <span className="text-[10px] text-[#7A7672] truncate block">
+                PDA: {ventStakingInfo?.globalConfig?.masterFeeVault ? `${ventStakingInfo.globalConfig.masterFeeVault.slice(0, 4)}...${ventStakingInfo.globalConfig.masterFeeVault.slice(-4)}` : "5BPn...4RbE"}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-black/[0.04] space-y-1">
+              <span className="text-[11px] text-[#7A7672] uppercase tracking-wider block">
+                Your Staked $VENT
+              </span>
+              <div className="text-xl font-extrabold text-[#111113] tabular-nums">
+                {(ventStakingInfo?.stakerPosition?.amountStaked || 0).toLocaleString()} $VENT
+              </div>
+              <span className="text-[10px] text-[#7A7672]">
+                {ventStakingInfo?.stakerPosition?.amountStaked
+                  ? `${((ventStakingInfo.stakerPosition.amountStaked / (ventStakingInfo?.globalConfig?.totalVentStaked || 500000)) * 100).toFixed(2)}% of Holding Pool`
+                  : "0.00% of Holding Pool"}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-black/[0.04] space-y-1">
+              <span className="text-[11px] text-[#7A7672] uppercase tracking-wider block">
+                Unclaimed Holding Yield
+              </span>
+              <div className="text-xl font-extrabold text-[#FF5C18] tabular-nums">
+                ${(ventStakingInfo?.stakerPosition?.pendingDividendsUsdc || 0).toFixed(2)} USDC
+              </div>
+              <span className="text-[10px] text-[#7A7672]">
+                Pro-Rata Ecosystem Dividends
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Staking & Dividend Action Desk */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            {/* Stake $VENT */}
+            <div className="p-4 rounded-2xl border border-black/[0.08] bg-white flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between text-xs font-bold text-[#111113] mb-1">
+                  <span>Stake $VENT</span>
+                  <span className="text-[10px] text-[#7A7672]">Earn Portfolio Cuts</span>
+                </div>
+                <div className="relative mt-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={stakeVentAmount}
+                    onChange={(e) => setStakeVentAmount(e.target.value)}
+                    placeholder="Amount to stake"
+                    className="w-full px-3 py-2 pr-14 text-xs font-mono rounded-xl bg-black/[0.03] border border-black/[0.06] text-[#111113] focus:outline-none focus:border-[#FF5C18]"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#7A7672]">
+                    $VENT
+                  </span>
+                </div>
+              </div>
+              <button
+                disabled={Boolean(txLoading)}
+                onClick={handleStakeVent}
+                className="w-full py-2.5 rounded-xl bg-[#111113] hover:bg-black text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+              >
+                Stake in Holding Vault
+              </button>
+            </div>
+
+            {/* Unstake $VENT */}
+            <div className="p-4 rounded-2xl border border-black/[0.08] bg-white flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between text-xs font-bold text-[#111113] mb-1">
+                  <span>Unstake $VENT</span>
+                  <span className="text-[10px] text-[#7A7672]">Withdraw to Wallet</span>
+                </div>
+                <div className="relative mt-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={unstakeVentAmount}
+                    onChange={(e) => setUnstakeVentAmount(e.target.value)}
+                    placeholder="Amount to unstake"
+                    className="w-full px-3 py-2 pr-14 text-xs font-mono rounded-xl bg-black/[0.03] border border-black/[0.06] text-[#111113] focus:outline-none focus:border-[#FF5C18]"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#7A7672]">
+                    $VENT
+                  </span>
+                </div>
+              </div>
+              <button
+                disabled={Boolean(txLoading) || (ventStakingInfo?.stakerPosition?.amountStaked || 0) <= 0}
+                onClick={handleUnstakeVent}
+                className="w-full py-2.5 rounded-xl bg-black/[0.04] hover:bg-black/[0.08] text-[#111113] text-xs font-bold transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+              >
+                Unstake $VENT
+              </button>
+            </div>
+
+            {/* Claim Holding Dividends */}
+            <div className="p-4 rounded-2xl border border-[#FF5C18]/20 bg-[#FF5C18]/[0.02] flex flex-col justify-between space-y-3">
+              <div>
+                <div className="flex items-center justify-between text-xs font-bold text-[#111113] mb-1">
+                  <span>Holding Dividends</span>
+                  <span className="text-[10px] text-[#FF5C18] font-bold">Continuous Stream</span>
+                </div>
+                <div className="mt-2 text-xs text-[#7A7672] leading-relaxed">
+                  Harvests accrued USDC fees from the Master Fee Vault directly to your connected wallet.
+                </div>
+              </div>
+              <button
+                disabled={Boolean(txLoading) || !connected}
+                onClick={handleClaimVentDividends}
+                className="w-full py-2.5 rounded-xl bg-[#FF5C18] hover:bg-[#e04e10] text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 shadow-xs"
+              >
+                Claim $VENT Holding Dividends
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* PERSONAL DIVIDEND VAULTS ONLY (ZERO MARKET SLOP) */}
         <div className="space-y-4">

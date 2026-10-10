@@ -272,6 +272,7 @@ async function fetchOnChainMetadata(mintPubkey) {
     const uri = buf.slice(offset, offset + uriLen).toString('utf8').replace(/\0/g, '').trim();
 
     let logoUrl = null;
+    let bannerUrl = null;
     let description = null;
 
     // Check local metadata files first
@@ -286,13 +287,15 @@ async function fetchOnChainMetadata(mintPubkey) {
         try {
           const parsed = JSON.parse(fs.readFileSync(cand, 'utf8'));
           if (parsed.image) logoUrl = parsed.image;
+          if (parsed.banner) bannerUrl = parsed.banner;
+          else if (parsed.bannerUrl) bannerUrl = parsed.bannerUrl;
           if (parsed.description) description = parsed.description;
           break;
         } catch (e) {}
       }
     }
 
-    const meta = { name, symbol, uri, logoUrl, description };
+    const meta = { name, symbol, uri, logoUrl, bannerUrl, description };
     metadataCache.set(mintStr, meta);
     return meta;
   } catch (e) {
@@ -920,6 +923,7 @@ async function syncVenturesFromDevnet() {
           founderVestingShares: Number(vsAcc.founderVestingTokens || 0n) / 1e6,
           meteoraDlmmPool: dlmmPool,
           logoUrl: onChainMeta?.logoUrl || known.logoUrl || '/ventrion-logo.png',
+          bannerUrl: onChainMeta?.bannerUrl || known.bannerUrl || null,
           milestones: known.milestones || [],
           products: known.products || [],
           onChainAccount: va.publicKey.toBase58(),
@@ -958,6 +962,7 @@ async function syncVenturesFromDevnet() {
           founderVestingShares: km.founderVestingShares || 700000,
           meteoraDlmmPool: km.dlmmPoolAddress || null,
           logoUrl: km.logoUrl || '/ventrion-logo.png',
+          bannerUrl: km.bannerUrl || null,
           milestones: km.milestones || [],
           products: km.products || [],
           onChainAccount: mintKey,
@@ -1222,11 +1227,37 @@ router.post('/upload-metadata', (req, res) => {
       ? `https://ventrion.fun/metadata/${logoFileName}`
       : (logoDataUrl && logoDataUrl.startsWith('http') ? logoDataUrl : 'https://ventrion.fun/ventrion-logo.png');
 
+    let bannerFileName = `${cleanSymbol}_banner.png`;
+    let bannerMime = 'image/png';
+    let hasBannerFile = false;
+
+    if (bannerDataUrl && typeof bannerDataUrl === 'string' && bannerDataUrl.startsWith('data:image/')) {
+      const bMatches = bannerDataUrl.match(/^data:(image\/[a-zA-Z0-9.+_-]+);base64,([\s\S]+)$/);
+      if (bMatches) {
+        bannerMime = bMatches[1];
+        const rawExt = bannerMime.split('/')[1].replace('+xml', '');
+        bannerFileName = `${cleanSymbol}_banner.${rawExt === 'jpeg' ? 'jpg' : rawExt}`;
+        const bannerBuffer = Buffer.from(bMatches[2].trim().replace(/\s+/g, ''), 'base64');
+        [outMetaDir, dashPublicVentrionMetaDir, dashPublicMetaDir].forEach((d) => {
+          try {
+            fs.writeFileSync(path.join(d, bannerFileName), bannerBuffer);
+          } catch (e) {}
+        });
+        hasBannerFile = true;
+      }
+    }
+
+    const bannerUrl = hasBannerFile
+      ? `https://ventrion.fun/metadata/${bannerFileName}`
+      : (bannerDataUrl && bannerDataUrl.startsWith('http') ? bannerDataUrl : null);
+
     const metadataJson = {
       name: name || cleanSymbol.toUpperCase(),
       symbol: cleanSymbol.toUpperCase(),
       description: description || `${name || cleanSymbol.toUpperCase()} tokenized venture on Ventrion Protocol.`,
       image: imageUrl,
+      banner: bannerUrl,
+      bannerUrl: bannerUrl,
       attributes: [
         { trait_type: 'Jurisdiction', value: 'MIDAO DAO LLC (Marshall Islands)' },
         { trait_type: 'Total Share Supply', value: '1,000,000 Common Shares' }
@@ -1241,6 +1272,13 @@ router.post('/upload-metadata', (req, res) => {
         category: 'image'
       }
     };
+
+    if (bannerUrl) {
+      metadataJson.properties.files.push({
+        uri: bannerUrl,
+        type: bannerMime
+      });
+    }
 
     const jsonFileName = `${cleanSymbol}_metadata.json`;
     [outMetaDir, dashPublicVentrionMetaDir, dashPublicMetaDir].forEach((d) => {
@@ -1881,7 +1919,46 @@ async function handlePrepareVoteMilestone(req, res) {
 // =============================================================================
 // Replaces discrete/fragile DLMM bin exhaustion with continuous virtual AMM:
 // V_usdc * V_shares = K
-// Guarantees zero-slippage-failure trade execution for any order volume.
+// Persistently tracks virtual reserves so buys increase USDC depth and sells release fair USDC.
+
+const CURVE_POOLS_PATH = path.join(__dirname, 'curve_pools.json');
+let curvePools = {};
+function loadCurvePools() {
+  try {
+    if (fs.existsSync(CURVE_POOLS_PATH)) {
+      curvePools = JSON.parse(fs.readFileSync(CURVE_POOLS_PATH, 'utf8'));
+    }
+  } catch (err) {
+    console.error('[VenturesDaemon] Error loading curve_pools.json:', err);
+  }
+}
+function saveCurvePools() {
+  try {
+    fs.writeFileSync(CURVE_POOLS_PATH, JSON.stringify(curvePools, null, 2), 'utf8');
+  } catch (err) {
+    console.error('[VenturesDaemon] Error saving curve_pools.json:', err);
+  }
+}
+loadCurvePools();
+
+function getOrCreateCurvePool(mintStr, basePriceUsdc = 0.25, targetCapUsdc = 50000) {
+  if (!curvePools[mintStr]) {
+    const vUsdc = BigInt(Math.max(10000, Math.round(targetCapUsdc))) * 1000000n;
+    const p0Scaled = BigInt(Math.max(1, Math.round(basePriceUsdc * 1e6)));
+    const vShares = (vUsdc * 1000000n) / p0Scaled;
+    const k = vUsdc * vShares;
+    curvePools[mintStr] = {
+      vUsdc: vUsdc.toString(),
+      vShares: vShares.toString(),
+      k: k.toString(),
+      basePriceUsdc,
+      lastUpdated: Date.now()
+    };
+    saveCurvePools();
+  }
+  return curvePools[mintStr];
+}
+
 async function executeExponentialCurveSwap({ userPk, companyMintPk, poolAddress, action, amount, slippageBps = 100 }) {
   if (!deployerKeypair) {
     throw new Error('Deployer liquidity provider keypair not loaded on daemon');
@@ -1906,13 +1983,11 @@ async function executeExponentialCurveSwap({ userPk, companyMintPk, poolAddress,
     basePriceUsdc = Number(KNOWN_METADATA[mintStr].sharePriceUsdc);
   }
 
-  // Virtual Reserve Depth:
-  // V_usdc = 50,000 USDC atoms (virtual liquidity base)
-  // V_shares = V_usdc / P0 (virtual share depth)
-  // Invariant K = V_usdc * V_shares
-  const V_usdc = 50000n * 1000000n; // 50,000 USDC
-  const p0Scaled = BigInt(Math.max(1, Math.round(basePriceUsdc * 1e6)));
-  const V_shares = (V_usdc * 1000000n) / p0Scaled;
+  // Stateful Virtual Reserve Depth:
+  // V_usdc * V_shares = K
+  const pool = getOrCreateCurvePool(mintStr, basePriceUsdc, cached?.targetFundingCapUsdc || 50000);
+  const V_usdc = BigInt(pool.vUsdc);
+  const V_shares = BigInt(pool.vShares);
   const feeBps = 100n; // 1.0% protocol & staker fee
 
   const tx = new Transaction();
@@ -1979,6 +2054,16 @@ async function executeExponentialCurveSwap({ userPk, companyMintPk, poolAddress,
         Number(sOut)
       )
     );
+    // STATEFUL UPDATE: Add net USDC to pool, deduct shares from pool
+    const newVUsdc = V_usdc + uNet;
+    const newVShares = V_shares > sOut ? V_shares - sOut : 1000000n;
+    pool.vUsdc = newVUsdc.toString();
+    pool.vShares = newVShares.toString();
+    pool.lastUpdated = Date.now();
+    saveCurvePools();
+    if (cached) {
+      cached.sharePriceUsdc = Number(newVUsdc) / Number(newVShares);
+    }
   } else {
     // SELL: User sells shares for USDC
     const sIn = BigInt(rawAmount);
@@ -2033,6 +2118,17 @@ async function executeExponentialCurveSwap({ userPk, companyMintPk, poolAddress,
         Number(uNet)
       )
     );
+
+    // STATEFUL UPDATE: Deduct gross USDC from pool, add shares back to pool
+    const newVUsdc = V_usdc > uGross ? V_usdc - uGross : 1000000n;
+    const newVShares = V_shares + sIn;
+    pool.vUsdc = newVUsdc.toString();
+    pool.vShares = newVShares.toString();
+    pool.lastUpdated = Date.now();
+    saveCurvePools();
+    if (cached) {
+      cached.sharePriceUsdc = Number(newVUsdc) / Number(newVShares);
+    }
   }
 
   const { blockhash } = await connection.getLatestBlockhash('confirmed');

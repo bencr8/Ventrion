@@ -1,5 +1,5 @@
 {
-  "address": "37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8",
+  "address": "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD",
   "metadata": {
     "name": "ventrion_protocol",
     "version": "1.0.0",
@@ -37,6 +37,10 @@
         },
         {
           "name": "vent_stake_vault",
+          "writable": true
+        },
+        {
+          "name": "master_fee_vault",
           "writable": true
         },
         {
@@ -1122,7 +1126,7 @@
           "writable": true
         },
         {
-          "name": "fee_treasury_usdc",
+          "name": "master_fee_vault",
           "writable": true
         },
         {
@@ -1753,6 +1757,48 @@
           }
         }
       ]
+    },
+    {
+      "name": "claim_vent_dividends",
+      "discriminator": [
+        185,
+        154,
+        20,
+        65,
+        161,
+        248,
+        113,
+        246
+      ],
+      "docs": [
+        "Claims accumulated protocol royalty dividends for a  staker in O(1) time."
+      ],
+      "accounts": [
+        {
+          "name": "staker",
+          "signer": true
+        },
+        {
+          "name": "global_config",
+          "writable": true
+        },
+        {
+          "name": "stake_position",
+          "writable": true
+        },
+        {
+          "name": "master_fee_vault",
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -2251,6 +2297,32 @@
         104,
         13
       ]
+    },
+    {
+      "name": "VentDividendsClaimed",
+      "discriminator": [
+        47,
+        12,
+        211,
+        234,
+        162,
+        120,
+        51,
+        202
+      ]
+    },
+    {
+      "name": "VentDividendsHarvested",
+      "discriminator": [
+        8,
+        197,
+        5,
+        104,
+        48,
+        124,
+        11,
+        34
+      ]
     }
   ],
   "errors": [
@@ -2548,6 +2620,16 @@
       "code": 6058,
       "name": "NothingVested",
       "msg": "6058: Founder vesting has nothing claimable."
+    },
+    {
+      "code": 6059,
+      "name": "InsufficientVentStaked",
+      "msg": "Total  staked does not meet the minimum network threshold for launching ventures."
+    },
+    {
+      "code": 6060,
+      "name": "NoVentDividendsOwed",
+      "msg": "No  holding dividends are currently claimable."
     }
   ],
   "types": [
@@ -2639,9 +2721,6 @@
           },
           {
             "name": "trading_fee_bps",
-            "docs": [
-              "Optional trading fee in basis points (100 to 500 bps, default 200 bps)."
-            ],
             "type": {
               "option": "u16"
             }
@@ -2680,9 +2759,6 @@
           },
           {
             "name": "trading_fee_bps",
-            "docs": [
-              "Optional trading fee in basis points (100 to 500 bps, default 200 bps)."
-            ],
             "type": {
               "option": "u16"
             }
@@ -2700,80 +2776,59 @@
         "fields": [
           {
             "name": "admin",
-            "docs": [
-              "Protocol admin (must be the program upgrade authority at initialization)."
-            ],
             "type": "pubkey"
           },
           {
             "name": "fee_treasury",
-            "docs": [
-              "Owner of the USDC account that receives the protocol royalty on DLMM fees."
-            ],
             "type": "pubkey"
           },
           {
             "name": "legal_setup_authority",
-            "docs": [
-              "Authority allowed to release escrowed legal setup fees (e.g. MIDAO payment)."
-            ],
             "type": "pubkey"
           },
           {
             "name": "usdc_mint",
-            "docs": [
-              "Quote mint used by every venture (canonical USDC on mainnet)."
-            ],
             "type": "pubkey"
           },
           {
             "name": "vent_mint",
-            "docs": [
-              "$VENT mother token mint (governance)."
-            ],
             "type": "pubkey"
           },
           {
             "name": "vent_stake_vault",
-            "docs": [
-              "Program-owned vault holding all staked $VENT. `[b\"vent_stake_vault\"]`"
-            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "master_fee_vault",
             "type": "pubkey"
           },
           {
             "name": "dlmm_preset_parameter",
-            "docs": [
-              "Meteora DLMM `PresetParameter2` used to create every venture pool."
-            ],
             "type": "pubkey"
           },
           {
             "name": "total_vent_staked",
-            "docs": [
-              "Sum of all staked $VENT (quorum denominator)."
-            ],
             "type": "u64"
           },
           {
             "name": "min_approval_bps",
-            "docs": [
-              "Approval requires `for_bps > min_approval_bps` (>= 5000 => strict majority)."
-            ],
             "type": "u16"
           },
           {
             "name": "verification_quorum_bps",
-            "docs": [
-              "Minimum participation (for + against) relative to `total_vent_staked`, in bps."
-            ],
             "type": "u16"
           },
           {
             "name": "protocol_fee_bps",
-            "docs": [
-              "Royalty on harvested DLMM USDC fees routed to `fee_treasury` (e.g. 50 = 0.5%)."
-            ],
             "type": "u16"
+          },
+          {
+            "name": "acc_vent_dividend_per_share",
+            "type": "u128"
+          },
+          {
+            "name": "total_vent_dividends_distributed",
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -2781,6 +2836,10 @@
           },
           {
             "name": "vent_stake_vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "master_fee_vault_bump",
             "type": "u8"
           }
         ]
@@ -2807,10 +2866,19 @@
           },
           {
             "name": "locked_until",
-            "docs": [
-              "Unix timestamp until which `unstake_vent` is blocked (max over all ballots voted on)."
-            ],
             "type": "i64"
+          },
+          {
+            "name": "last_acc_yield",
+            "type": "u128"
+          },
+          {
+            "name": "pending_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed_usdc",
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -3228,10 +3296,6 @@
           {
             "name": "usdc_vault_bump",
             "type": "u8"
-          },
-          {
-            "name": "trading_fee_bps",
-            "type": "u16"
           }
         ]
       }
@@ -3731,10 +3795,6 @@
           {
             "name": "dividend_vault_bump",
             "type": "u8"
-          },
-          {
-            "name": "trading_fee_bps",
-            "type": "u16"
           }
         ]
       }
@@ -4577,6 +4637,54 @@
           }
         ],
         "kind": "struct"
+      }
+    },
+    {
+      "name": "VentDividendsClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "staker",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VentDividendsHarvested",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "new_acc_dividend_per_share",
+            "type": "u128"
+          },
+          {
+            "name": "total_distributed_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
       }
     }
   ]

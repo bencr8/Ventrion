@@ -30,6 +30,7 @@ interface HoldingItem {
   escrowProtectedUsdc: number;
   ownershipPercent: number;
   isRaising: boolean;
+  receipts: number;
 }
 
 interface ChartPoint {
@@ -181,6 +182,7 @@ export default function SharesPage() {
           escrowProtectedUsdc: escrowProtected,
           ownershipPercent: ownership,
           isRaising,
+          receipts: Math.round(receipts),
         });
       }
 
@@ -580,7 +582,13 @@ export default function SharesPage() {
                           <td className="py-3.5 px-4 text-right font-bold text-[#111113]">
                             <div>{formatCompactShares(h.shares)}</div>
                             <div className="text-[10px] text-[#7A7672] font-normal">
-                              {h.isRaising ? "Receipts (R0)" : "Common Stock"}
+                              {h.receipts > 0 && !h.isRaising ? (
+                                <span className="text-amber-600 font-semibold">Unredeemed Receipts</span>
+                              ) : h.isRaising ? (
+                                "Receipts (R0)"
+                              ) : (
+                                "Common Stock"
+                              )}
                             </div>
                           </td>
 
@@ -612,12 +620,21 @@ export default function SharesPage() {
                           </td>
 
                           <td className="py-3.5 px-5 text-right">
-                            <Link
-                              href={`/ventures/${v.mintAddress || v.id}`}
-                              className="px-3 py-1.5 rounded-lg bg-[#111113] hover:bg-black text-white text-xs transition-colors"
-                            >
-                              {h.isRaising ? "View Round" : "Trade"}
-                            </Link>
+                            {h.receipts > 0 && !h.isRaising ? (
+                              <Link
+                                href={`/ventures/${v.mintAddress || v.id}`}
+                                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors inline-flex items-center gap-1 shadow-xs"
+                              >
+                                <span>Redeem</span>
+                              </Link>
+                            ) : (
+                              <Link
+                                href={`/ventures/${v.mintAddress || v.id}`}
+                                className="px-3 py-1.5 rounded-lg bg-[#111113] hover:bg-black text-white text-xs transition-colors"
+                              >
+                                {h.isRaising ? "View Round" : "Trade"}
+                              </Link>
+                            )}
                           </td>
                         </tr>
                       );

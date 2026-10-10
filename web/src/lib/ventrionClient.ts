@@ -6,7 +6,7 @@ import ventrionProtocolIdl from "./idl/ventrion_protocol.json";
 // PROGRAM CONSTANTS & CANONICAL PROGRAM ID
 // =============================================================================
 export const VENTRION_PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_VENTRION_PROGRAM_ID || "37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8"
+  process.env.NEXT_PUBLIC_VENTRION_PROGRAM_ID || "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
 );
 
 export const VENTRION_PROTOCOL_IDL = ventrionProtocolIdl;
@@ -18,6 +18,8 @@ export const METAPLEX_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybz
 
 export const SEEDS = {
   GLOBAL_CONFIG: Buffer.from("global_config"),
+  MASTER_FEE_VAULT: Buffer.from("master_fee_vault"),
+  VENT_STAKE_VAULT: Buffer.from("vent_stake_vault"),
   PROTOCOL_FEE_VAULT: Buffer.from("protocol_fee_vault"),
   STAKING_POOL: Buffer.from("staking_pool"),
   STAKE_RECEIPT: Buffer.from("stake_receipt"),
