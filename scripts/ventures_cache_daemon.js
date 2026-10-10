@@ -2174,11 +2174,15 @@ async function handlePrepareSwapDlmm(req, res) {
 // 6B. POST /api/tx/prepare-swap-curve (Direct Exponential Infinite Liquidity Curve)
 async function handlePrepareSwapCurve(req, res) {
   try {
-    const { userPubkey, companyMint, action, amount, slippageBps = 100 } = req.body || {};
+    const userPubkey = req.body?.userPubkey || req.body?.userWallet;
+    const companyMint = req.body?.companyMint;
+    const action = req.body?.action || req.body?.tradeType;
+    const amount = req.body?.amount;
+    const slippageBps = req.body?.slippageBps || 100;
     if (!userPubkey || !companyMint || !action || !amount) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required parameters: userPubkey, companyMint, action, amount'
+        error: 'Missing required parameters: userPubkey/userWallet, companyMint, action/tradeType, amount'
       });
     }
 
