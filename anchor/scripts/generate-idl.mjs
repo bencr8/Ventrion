@@ -68,7 +68,7 @@ function cleanTypeRef(t) {
 }
 
 const idl = {
-  address: addressBlock || programBlock.address || '37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8',
+  address: addressBlock || programBlock.address || 'AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD',
   metadata: {
     name: 'ventrion_protocol',
     version: '1.0.0',

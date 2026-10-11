@@ -128,7 +128,7 @@ pub fn handle_unstake_vent(ctx: Context<UnstakeVent>, amount: u64) -> Result<()>
     require!(position.amount >= amount, VentrionError::InsufficientStakedBalance);
 
     settle_vent_dividends(&ctx.accounts.global_config, position)?;
-    position.amount -= amount;
+    position.amount = math::sub(position.amount, amount)?;
     let config = &mut ctx.accounts.global_config;
     config.total_vent_staked = math::sub(config.total_vent_staked, amount)?;
 

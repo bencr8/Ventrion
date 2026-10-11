@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 
 /** Canonical Ventrion Protocol Program ID on Solana Devnet */
 export const VENTRION_PROGRAM_ID = new PublicKey(
-  "37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8"
+  "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
 );
 
 /** Canonical Meteora DLMM v2 Program ID */

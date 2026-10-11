@@ -213,7 +213,7 @@ pub fn handle_unstake_investor_shares(ctx: Context<UnstakeInvestorShares>, amoun
 
     let venture = &mut ctx.accounts.venture;
     expire_lock_if_due(venture, vault, now)?;
-    vault.staked_amount -= amount;
+    vault.staked_amount = math::sub(vault.staked_amount, amount)?;
     vault.is_active = vault.staked_amount > 0;
     let new_weight = math::effective_weight(vault.staked_amount, vault.multiplier_bps);
     set_weight(venture, vault, new_weight)?;

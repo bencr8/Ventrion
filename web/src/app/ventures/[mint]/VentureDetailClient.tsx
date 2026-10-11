@@ -386,7 +386,7 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               founderLockMonths: 12,
               founderLockPercentage: 30,
               vTrustTier: "AAA+",
-              schufaRating: "AAA+",
+              institutionalRating: "AAA+",
               totalDividendsPaidUsdc: 0,
               currentApy: 0,
               activeRound: 0,

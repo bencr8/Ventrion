@@ -149,7 +149,7 @@ async function main() {
   // Load IDL
   const idlPath = path.resolve(__dirname, "..", "target", "idl", "ventrion_protocol.json");
   const idl = JSON.parse(fs.readFileSync(idlPath, "utf-8"));
-  const programId = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
+  const programId = new PublicKey("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
   const program = new Program(idl, provider);
 
   const usdcMint = new PublicKey("5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt");

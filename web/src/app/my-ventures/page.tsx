@@ -6,6 +6,7 @@ import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Building2, Plus, ArrowRight } from "lucide-react";
 import { PublicKey } from "@solana/web3.js";
+import { VENTRION_PROGRAM_ID } from "../../lib/solana/ventrionProgram";
 import { Navbar } from "../../components/common/Navbar";
 import { BezierCounter } from "../../components/common/BezierCounter";
 import { formatCompactUsdc, formatCompactShares } from "../../lib/formatters";
@@ -80,7 +81,6 @@ export default function MyVenturesPage() {
       // On-Chain RPC Direct Verification Fallback
       if (matched.length === 0) {
         try {
-          const VENTRION_PROGRAM_ID = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
           const onChainAccounts = await connection.getProgramAccounts(VENTRION_PROGRAM_ID, {
             filters: [
               { memcmp: { offset: 0, bytes: "53zeaRLh9k6" } }, // VentureState discriminator
@@ -120,11 +120,11 @@ export default function MyVenturesPage() {
             if (v.mintAddress) {
               const [vPda] = PublicKey.findProgramAddressSync(
                 [Buffer.from("venture"), new PublicKey(v.mintAddress).toBuffer()],
-                new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8")
+                VENTRION_PROGRAM_ID
               );
               const [vestingPda] = PublicKey.findProgramAddressSync(
                 [Buffer.from("founder_vesting"), vPda.toBuffer(), publicKey.toBuffer()],
-                new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8")
+                VENTRION_PROGRAM_ID
               );
               const vInfo = await connection.getAccountInfo(vestingPda);
               if (vInfo && vInfo.data.length >= 112) {

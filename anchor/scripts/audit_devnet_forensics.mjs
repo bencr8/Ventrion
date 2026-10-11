@@ -12,16 +12,17 @@ async function runForensics() {
   const connection = new Connection("https://api.devnet.solana.com", "confirmed");
   console.log("=== VENTRION DEVNET FORENSIC DATA GATHERING ===");
 
-  const programId = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
-  const pventMint = new PublicKey("5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn");
+  const programId = new PublicKey("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
+  const pventMint = new PublicKey("J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn"); // Apex Quantum ($APEX) Common Shares Mint
   const usdcMint = new PublicKey("5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt");
   const ventMint = new PublicKey("5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ");
-  const r0Mint = new PublicKey("GWyp7KVHoyGZFxsSWMVsDZcpLemPZgsNJAno7X5myKY9");
-  const globalConfigPda = new PublicKey("9W5BqZ32GkZyhbs6KqhfWCNwi1KXNiZemBerMsb2n57M");
-  const venturePda = new PublicKey("GsPUAiuzCcr1PnrkxSXQYosJMYLroDy8tnfcF8YfWSmG");
-  const round0Pda = new PublicKey("ofPFE4gdAg7wkS3NLLPh4vZBMfh7SY5qtuuXq8kJ6ZZ");
-  const meteoraPool = new PublicKey("Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h");
   const meteoraProgram = new PublicKey("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo");
+
+  const [globalConfigPda] = PublicKey.findProgramAddressSync([Buffer.from("global_config")], programId);
+  const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from("venture"), pventMint.toBuffer()], programId);
+  const [round0Pda] = PublicKey.findProgramAddressSync([Buffer.from("funding_round"), venturePda.toBuffer(), Buffer.from([0])], programId);
+  const [r0Mint] = PublicKey.findProgramAddressSync([Buffer.from("receipt_mint"), round0Pda.toBuffer()], programId);
+  const meteoraPool = new PublicKey("DtE8uPsZBjrxj3DgqxacsbpceSeCne3VtEp3XQygkuRg");
 
   // 1. Program Info
   console.log("\n--- 1. PROGRAM INFO ---");

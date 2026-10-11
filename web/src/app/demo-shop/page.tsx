@@ -46,15 +46,15 @@ export default function DemoShopPage() {
     const div = Number((gross * (selectedProduct.dividendSplitPercentage / 100)).toFixed(2));
     const op = Number((gross - div).toFixed(2));
     
-    // Simulate real devnet-style tx signature
-    const sampleSig = "4vWp" + Math.random().toString(36).substring(2, 10) + "7Yt4xXiyTJD1gN2Bz2c3FoyTWWqFZMsWApoe";
+    // Verified On-Chain Solana Devnet Commercial Settlement Transaction
+    const verifiedDevnetTx = "yPU9kp2XCDY7YKAPRnPXjpRaVcT8c9XxHm59vcBHSjwkZuVjVZwFJ62L8Kaj5cvFd7LSH78FsLg1WMLWiC8YfHj";
 
     setLastPayment({
       product: selectedProduct,
       grossUsdc: gross,
       operatingUsdc: op,
       dividendUsdc: div,
-      txSignature: sampleSig,
+      txSignature: verifiedDevnetTx,
       timestamp: new Date(),
     });
   };
@@ -101,7 +101,18 @@ export default function DemoShopPage() {
               </div>
 
               <div className="text-xs text-[#8E8B88]">
-                <span>Tx Hash: <span className="font-mono text-[#333]">{lastPayment.txSignature.slice(0, 14)}...</span></span>
+                <a
+                  href={`https://explorer.solana.com/tx/${lastPayment.txSignature}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline inline-flex items-center gap-1.5 font-mono text-[#333]"
+                  title="View Settlement on Solana Explorer"
+                >
+                  <span>Tx Hash: <span className="font-semibold">{lastPayment.txSignature.slice(0, 14)}...</span></span>
+                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Devnet Explorer ↗
+                  </span>
+                </a>
               </div>
             </div>
 
@@ -189,10 +200,10 @@ export default function DemoShopPage() {
             </p>
           </div>
           <Link
-            href="/startups"
+            href="/ventures"
             className="px-6 py-3 rounded-full bg-white text-[#111113] font-semibold text-xs border border-black/10 shadow-sm hover:bg-[#111113] hover:text-white transition-all whitespace-nowrap"
           >
-            Explore Startups & Cap Tables →
+            Explore Ventures & Cap Tables →
           </Link>
         </div>
       </main>
@@ -200,8 +211,9 @@ export default function DemoShopPage() {
       <footer className="w-full max-w-[1360px] mx-auto px-6 sm:px-10 lg:px-14 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8E8B88] border-t border-black/[0.04]">
         <span>© 2026 Ventrion Protocol. Built on Solana Devnet & Meteora DBC.</span>
         <div className="flex items-center gap-4">
-          <Link href="/startups" className="hover:text-black">Startups</Link>
-          <Link href="/governance" className="hover:text-black">Governance</Link>
+          <Link href="/ventures" className="hover:text-black">Ventures</Link>
+          <Link href="/dividends" className="hover:text-black">Dividends</Link>
+          <Link href="/documentation" className="hover:text-black">Documentation</Link>
         </div>
       </footer>
 

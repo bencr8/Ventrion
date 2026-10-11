@@ -26,9 +26,9 @@ const provider = new AnchorProvider(connection, wallet, {});
 // Initialize Ventrion client
 const client = new VentrionClient(provider, VENTRION_PROGRAM_ID);
 
-// Fetch Pioneer Venture state
-const PVENT_MINT = new PublicKey("5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn");
-const venture = await client.getVentureState(PVENT_MINT);
+// Fetch Pioneer Venture state (e.g. Apex Quantum $APEX)
+const APEX_MINT = new PublicKey("J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn");
+const venture = await client.getVentureState(APEX_MINT);
 
 console.log("Venture Status:", venture.status);
 console.log("Total Supply:", venture.totalSupply.toString());

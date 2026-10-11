@@ -76,7 +76,7 @@ pub fn handle_sell_primary_round(ctx: Context<SellPrimaryRound>, receipt_amount:
 
     // ---------------------------------------------------------------- effects
     let record = &mut ctx.accounts.round_record;
-    record.tokens_purchased -= receipt_amount;
+    record.tokens_purchased = math::sub(record.tokens_purchased, receipt_amount)?;
     record.usdc_contributed = math::sub(record.usdc_contributed, usdc_amount)?;
 
     let round = &mut ctx.accounts.funding_round;

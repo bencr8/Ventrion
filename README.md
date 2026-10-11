@@ -19,8 +19,8 @@
 
 When founders want to bring a real business on-chain today, the only visible options are speculative meme coin launchpads. Those platforms were designed for fast financial speculation, not for building enduring companies:
 
-* **Lifespans in hours:** Tokens launch, pump with sniper bots, dump on retail, and die by midnight.
-* **Founders get exploited:** Creators do not own their equity upon launch. They must spend their own capital to buy tokens off an aggressive curve against sniper bots.
+* **Ephemeral lifespans:** Tokens suffer predatory sniper frontrunning, extreme volatility, and rapid liquidity collapse within hours.
+* **Founders get exploited:** Creators do not own their equity upon launch. They must spend their personal capital to buy tokens off an aggressive curve against sniper bots.
 * **Zero accountability:** 100% of raised capital goes straight into creator personal wallets with zero milestones, zero roadmaps, and zero refunds.
 * **The SOL volatility trap:** Denominating operating budgets in volatile gas tokens makes payroll and real budgeting impossible.
 
@@ -31,7 +31,7 @@ Founders mint 100% of their company equity (exactly 1,000,000 shares) directly i
 
 ## How Ventrion Works
 
-Ventrion replaces chaos with five transparent stages:
+The Ventrion Protocol lifecycle executes across five deterministic stages:
 
 ### 1. Company Genesis
 You mint exactly **1,000,000 common shares** directly into an on-chain company vault. In the very same atomic transaction, the mint authority is permanently revoked. Share dilution is mathematically impossible, and the founder establishes clean cap-table ownership from day one.
@@ -47,10 +47,10 @@ When the funding target is reached, capital is distributed atomically upon gradu
 * **Milestone Escrow:** The entire remaining capital is locked in an on-chain milestone vault, released only as real deliverables are completed.
 
 ### 4. Legal Contract Synthesis & $VENT Decentralized Verification
-Real businesses require operational certainty, not arbitrary 14-day time windows where anonymous internet trolls can freeze payroll for a $250 bond:
+Operating enterprises require predictable liquidity releases and immunity from griefing delays:
 * **Institutional Contract Synthesis:** Ventrion acts as legal architect, translating founder roadmap commitments into binding corporate contracts (MIDAO DAO LLC Operating Agreement, SAFE, or Token Warrant) countersigned by the CEO.
 * **Decentralized $VENT Staker Approval:** Ventrion Foundation locks 10% of $VENT for 3 years (representing 40% of votes at 15% initial public float). Reaching 50%+ majority requires 10% community alignment to verify the venture, seed 17% DLMM liquidity, and activate primary share redemption. Centralization cannot override decentralization.
-* **Tranche-Specific Milestone Governance:** Each funding round possesses its own isolated milestone escrow. Only primary backers who funded that specific round hold voting rights. Releases occur via a dual-path trigger: either immediate fast-track payout (>50% active backer vote) or automatic 7-day optimistic release (countering voter apathy, unless >=33.33% of primary shares cast a veto). If rework is needed, founders utilize the cure cycle (`amend_milestone`).
+* **Tranche-Specific Milestone Governance:** Each funding round possesses its own isolated milestone escrow. Only primary round backers hold voting rights. Releases occur via a dual-path trigger: either immediate fast-track payout (>50% active backer vote) or an automatic 7-day optimistic release (countering voter apathy, unless $\ge 33.33\%$ of primary shares cast a veto). If rework is needed, founders utilize the deterministic cure cycle (`amend_milestone`, up to 3 revisions).
 
 ### 5. Sovereign Founder Flexibility & Institutional Safeguards
 * **Sovereign Token Allocation:** Founders choose whether to lock tokens in linear vesting streams, milestone tranches, or stake directly in the InvestorVault from day one to earn protocol yield alongside community backers.
@@ -110,7 +110,7 @@ Looking for the complete mathematical models, PDA seed matrices, data layouts, a
 
 👉 <a href="./Documentation/MANIFEST.md" target="_blank" rel="noopener noreferrer"><strong>Read the Full Ventrion Protocol Manifest (Documentation/MANIFEST.md)</strong></a>
 
-> **Solana Devnet Verification:** Program deployed at <a href="https://explorer.solana.com/address/37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8</code></a> with live Meteora DLMM pool <a href="https://app.meteora.ag/dlmm/Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h" target="_blank" rel="noopener noreferrer"><code>Fttz288rQq...</code></a>. Complete transaction proofs and account PDAs are documented in the <a href="./Documentation/MANIFEST.md#9-verified-solana-devnet-deployment--transaction-proofs" target="_blank" rel="noopener noreferrer">Manifest Deployment Section</a>.
+> **Solana Devnet Verification:** Core protocol program deployed at [`AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD`](https://explorer.solana.com/address/AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD?cluster=devnet) with Global Config PDA [`E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa`](https://explorer.solana.com/address/E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa?cluster=devnet). Live Pioneer Ventures include **Apex Quantum ($APEX)** ([`J8kr...`](https://explorer.solana.com/address/J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn?cluster=devnet)) with on-chain milestone tranches, and **Endor Markets ($ENDOR)** ([`5mKj...`](https://explorer.solana.com/address/5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK?cluster=devnet)) with continuous exponential bonding curve liquidity. Complete transaction proofs and account PDAs are documented in the [Devnet Deployment Manifest](docs/DEVNET_DEPLOYMENT_MANIFEST.md) and [Manifest Deployment Section](Documentation/MANIFEST.md#9-verified-solana-devnet-deployment--transaction-proofs).
 
 ---
 

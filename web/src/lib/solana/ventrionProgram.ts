@@ -1,7 +1,7 @@
 /**
  * VENTRION PROTOCOL SOLANA SDK BRIDGE
  * 
- * Program ID: 37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8 (Devnet)
+ * Program ID: AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD (Devnet)
  * Protocol Token: $VENT (5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ)
  * Devnet USDC Mint: 5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt
  */
@@ -19,7 +19,7 @@ import ventrionProtocolIdl from "./idl.json";
 // PROTOCOL CONSTANTS (STRICT TRUTH, LIVE SOLANA DEVNET)
 // =============================================================================
 export const VENTRION_PROGRAM_ID = new PublicKey(
-  "37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8"
+  "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
 );
 export const VENT_TOKEN_MINT = new PublicKey(
   "5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ"
@@ -39,6 +39,15 @@ export const QCMP_METAPLEX_METADATA_PDA = new PublicKey(
 );
 export const QCMP_METEORA_DLMM_POOL = new PublicKey(
   "CKfSPXBoLq2Xp5KNPDdp6wKYRBMX5FtMYja8HJKQEvDh"
+);
+export const APEX_QUANTUM_MINT = new PublicKey(
+  "J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn"
+);
+export const APEX_QUANTUM_VENTURE_PDA = new PublicKey(
+  "9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv"
+);
+export const APEX_QUANTUM_MILESTONE_ESCROW_PDA = new PublicKey(
+  "GMjcGkmVboouBdoP9k6rEzHhNHgJk7aXYrA1mEUE6ga5"
 );
 export const METAPLEX_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"

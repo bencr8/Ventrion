@@ -101,7 +101,7 @@ pub fn handle_ragequit_milestone_escrow(ctx: Context<RagequitMilestoneEscrow>, s
     // ---------------------------------------------------------------- effects
     record.tokens_surrendered = math::add(record.tokens_surrendered, shares_amount)?;
     record.usdc_ragequit = math::add(record.usdc_ragequit, refund)?;
-    escrow.primary_tokens_remaining -= shares_amount;
+    escrow.primary_tokens_remaining = math::sub(escrow.primary_tokens_remaining, shares_amount)?;
     escrow.total_ragequit_usdc = math::add(escrow.total_ragequit_usdc, refund)?;
     let venture = &mut ctx.accounts.venture;
     venture.circulating_public_float = math::sub(venture.circulating_public_float, shares_amount)?;

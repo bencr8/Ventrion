@@ -2,9 +2,11 @@ import { Connection, PublicKey } from "@solana/web3.js";
 
 async function main() {
   const connection = new Connection("https://api.devnet.solana.com", "confirmed");
-  const programId = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
+  const programId = new PublicKey("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
   const deployerPk = new PublicKey("2K9r52f1ZxuB1BQ1hhZWFgk1cGPcf7ucdvDHkGgf82TV");
-  const round0Pda = new PublicKey("ofPFE4gdAg7wkS3NLLPh4vZBMfh7SY5qtuuXq8kJ6ZZ");
+  const companyMint = new PublicKey("J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn");
+  const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from("venture"), companyMint.toBuffer()], programId);
+  const [round0Pda] = PublicKey.findProgramAddressSync([Buffer.from("funding_round"), venturePda.toBuffer(), Buffer.from([0])], programId);
   
   const [recordPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("round_record"), round0Pda.toBuffer(), deployerPk.toBuffer()],

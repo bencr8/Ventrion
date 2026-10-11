@@ -143,7 +143,7 @@ async function main() {
     throw new Error(`IDL not found at ${idlPath}. Run anchor build first.`);
   }
   const idl = JSON.parse(fs.readFileSync(idlPath, "utf-8"));
-  const programId = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
+  const programId = new PublicKey("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
 
   // Check program existence on Devnet
   const programInfo = await connection.getAccountInfo(programId);
@@ -182,8 +182,8 @@ async function main() {
   console.log(`Staker Position PDA: ${stakerPositionPda.toBase58()}`);
 
   // Step 4: Pioneer Venture Genesis
-  console.log("\n[Step 4] Pioneer Venture Genesis ($PVENT)...");
-  const ventureTokenMint = new PublicKey("5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn");
+  console.log("\n[Step 4] Pioneer Venture Genesis ($PVENT / Apex Quantum)...");
+  const ventureTokenMint = new PublicKey("J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn");
   const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from("venture"), ventureTokenMint.toBuffer()], programId);
 
   // Derive PDAs

@@ -384,6 +384,8 @@ export default function DocumentationPage() {
                 <div className="pt-3 space-y-2 font-mono text-xs">
                   {[
                     { name: "Program ID", value: VENTRION_PROGRAM_ID.toBase58() },
+                    { name: "Global Config PDA", value: "E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa" },
+                    { name: "Live Pioneer ($APEX)", value: "J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn" },
                     { name: "Mother Token ($VENT)", value: DEVNET_VENT_MINT.toBase58() },
                     { name: "Canonical USDC", value: DEVNET_USDC_MINT.toBase58() },
                     { name: "Pilot 2 ($QCMP)", value: PILOT_VENTURE_2_QCMP_MINT.toBase58() },

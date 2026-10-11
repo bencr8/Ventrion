@@ -96,12 +96,12 @@ async function main() {
 
   const idlPath = path.resolve(__dirname, "..", "target", "idl", "ventrion_protocol.json");
   const idl = JSON.parse(fs.readFileSync(idlPath, "utf-8"));
-  const programId = new PublicKey("37WQY8a7fzyVTTov8U5zZQywWSD5h2gSV5XFo7CL67f8");
+  const programId = new PublicKey("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
   const program = new Program(idl, provider);
 
-  const ventureTokenMint = new PublicKey("5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn");
+  const ventureTokenMint = new PublicKey("J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn");
   const usdcMint = new PublicKey("5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt");
-  const lbPair = new PublicKey("Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h");
+  const lbPair = new PublicKey("DtE8uPsZBjrxj3DgqxacsbpceSeCne3VtEp3XQygkuRg");
 
   const [globalConfigPda] = PublicKey.findProgramAddressSync([Buffer.from("global_config")], programId);
   const [venturePda] = PublicKey.findProgramAddressSync([Buffer.from("venture"), ventureTokenMint.toBuffer()], programId);
@@ -114,8 +114,11 @@ async function main() {
   const [stakedSharesVaultPda] = PublicKey.findProgramAddressSync([Buffer.from("staked_shares_vault"), venturePda.toBuffer()], programId);
   const [dlmmPosition0Pda] = PublicKey.findProgramAddressSync([Buffer.from("dlmm_position"), fundingRound0Pda.toBuffer()], programId);
 
-  const [reserveX] = PublicKey.findProgramAddressSync([lbPair.toBuffer(), ventureTokenMint.toBuffer()], DLMM_PROGRAM_ID);
-  const [reserveY] = PublicKey.findProgramAddressSync([lbPair.toBuffer(), usdcMint.toBuffer()], DLMM_PROGRAM_ID);
+  const [tokenX, tokenY] = Buffer.compare(ventureTokenMint.toBuffer(), usdcMint.toBuffer()) < 0 
+    ? [ventureTokenMint, usdcMint] 
+    : [usdcMint, ventureTokenMint];
+  const [reserveX] = PublicKey.findProgramAddressSync([lbPair.toBuffer(), tokenX.toBuffer()], DLMM_PROGRAM_ID);
+  const [reserveY] = PublicKey.findProgramAddressSync([lbPair.toBuffer(), tokenY.toBuffer()], DLMM_PROGRAM_ID);
   const binArrayLower = deriveBinArray(lbPair, -34n);
   const binArrayUpper = deriveBinArray(lbPair, -33n);
   const eventAuthority = deriveEventAuthority();

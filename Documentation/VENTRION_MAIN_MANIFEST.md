@@ -11,7 +11,7 @@
   * [1.2 The Ventrion Model: Real Accountability for Retail and Founders](#12-the-ventrion-model-real-accountability-for-retail-and-founders)
   * [1.3 Core Protocol Metrics at a Glance](#13-core-protocol-metrics-at-a-glance)
 * [2. The Five Bundled Pillars of Ventrion](#2-the-five-bundled-pillars-of-ventrion)
-  * [2.1 Pillar 1: The Mother Protocol ($VENT) & Multi-Jurisdiction Pipeline](#21-pillar-1-the-mother-protocol-vtrn--multi-jurisdiction-pipeline)
+  * [2.1 Pillar 1: The Mother Protocol ($VENT) & Legal Structuring Pipeline](#21-pillar-1-the-mother-protocol-vent--legal-structuring-pipeline)
   * [2.2 Pillar 2: Capital Formation & The Primary Raise Engine](#22-pillar-2-capital-formation--the-primary-raise-engine)
   * [2.3 Pillar 3: Founder Autonomy, Vesting & Skin in the Game](#23-pillar-3-founder-autonomy-vesting--skin-in-the-game)
   * [2.4 Pillar 4: Tranche-Specific Milestone Escrows, Dual-Path Release & Cure Cycle](#24-pillar-4-tranche-specific-milestone-escrows-dual-path-release--cure-cycle)
@@ -20,13 +20,14 @@
   * [3.1 Step 1: Venture Initialization & Mint Authority Revocation](#31-step-1-venture-initialization--mint-authority-revocation)
   * [3.2 Step 2: Corporate Setup Execution & Fee Allocation](#32-step-2-corporate-setup-execution--fee-allocation)
   * [3.3 Step 3: Seed Capital Collection & Sellback on the Flat Curve](#33-step-3-seed-capital-collection--sellback-on-the-flat-curve)
-  * [3.4 Step 4: Atomic Two-Step Redistribution (17% LP, Legal Fee, Milestone Vault)](#34-step-4-atomic-two-step-redistribution-17-lp-legal-fee-milestone-vault)
-  * [3.5 Step 5: Receipt Token Redemption (1:1 Unified Shares)](#35-step-5-receipt-token-redemption-11-unified-shares)
+  * [3.4 Step 4: Atomic Graduation (17% Permanent DLMM LP, Legal Fee, Milestone Escrow)](#34-step-4-atomic-graduation-17-permanent-dlmm-lp-legal-fee-milestone-escrow)
+  * [3.5 Step 5: Receipt Token Redemption (1:1 Common Shares via `redeem_shares`)](#35-step-5-receipt-token-redemption-11-common-shares-via-redeem_shares)
+  * [3.6 Step 6: Continuous Exponential Bonding Curve Engine (Infinite Liquidity Architecture)](#36-step-6-continuous-exponential-bonding-curve-engine-infinite-liquidity-architecture)
 * [4. Staking, Vesting and Game-Theoretic Safeguards](#4-staking-vesting-and-game-theoretic-safeguards)
-  * [4.1 Founder Locking: Flexible Multi-Year Vesting Schedules](#41-founder-locking-flexible-multi-year-vesting-schedules)
+  * [4.1 Founder Locking: Sovereign Allocation and Staking Flexibility](#41-founder-locking-sovereign-allocation-and-staking-flexibility)
   * [4.2 Backer Staking: Voluntary Time-Locks and Fee Capture](#42-backer-staking-voluntary-time-locks-and-fee-capture)
   * [4.3 Tranche-Specific Milestone Governance, Dual-Path Release & Ragequit](#43-tranche-specific-milestone-governance-dual-path-release--ragequit)
-  * [4.5 Complete Hostile Takeover Immunity](#45-complete-hostile-takeover-immunity)
+  * [4.4 Complete Hostile Takeover Immunity](#44-complete-hostile-takeover-immunity)
 * [5. Legal Architecture, Geofencing and Tax-Compliant Clearing](#5-legal-architecture-geofencing-and-tax-compliant-clearing)
   * [5.1 Geofencing, Active Marketing Ban and Reverse Solicitation](#51-geofencing-active-marketing-ban-and-reverse-solicitation)
   * [5.2 Tax-Compliant Triple-Entity Clearing Architecture](#52-tax-compliant-triple-entity-clearing-architecture)
@@ -53,13 +54,13 @@
 ### 1.1 Why Standard Launchpads Fail Real Businesses
 Token launches on Solana currently follow a broken pattern designed exclusively for speculation. When an entrepreneur tries to launch a legitimate company, digital product, or local business on standard launchpads, they encounter structural flaws:
 
-* **Predatory Bonding Curves:** Tokens launch on steep exponential curves. Automated sniper bots buy up the initial supply in the first millisecond and dump on real community members seconds later.
+* **Predatory Bonding Curves:** Tokens launch on steep exponential curves where automated MEV sniper bots capture initial supply at millisecond zero and extract liquidity from downstream participants.
 * **Immediate Capital Drain:** When a raise completes, 100% of the funds transfer directly to the creator's personal wallet without any milestone checks or roadmaps.
 * **The SOL Volatility Trap:** Capital is raised and held in SOL. If the market drops 30%, the business can no longer cover real-world payroll, inventory, or rent.
 * **Founder Penalization:** Founders do not own their own company at launch. They must spend their personal savings to buy their own tokens off a public bonding curve while competing against MEV bots.
 
 ### 1.2 The Ventrion Model: Real Accountability for Retail and Founders
-Ventrion replaces this speculative casino with a structured venture operating system:
+Ventrion replaces speculative volatility with an institutional decentralized venture operating architecture:
 
 * **Fixed Supply from Genesis:** Every company has exactly 1,000,000 common shares. The mint authority is destroyed in the exact genesis transaction. Dilution is impossible.
 * **100% USDC Denominated:** Capital raises, escrows, and payouts run purely on canonical USDC. Operational planning is predictable.
@@ -328,7 +329,7 @@ Ventrion enforces absolute round isolation:
      $$\text{Refund USDC} = \frac{\text{Tokens Surrendered} \times \text{Unreleased Escrow USDC}}{\text{Primary Tokens Remaining}}$$
   4. Secondary DEX buyers without a primary receipt have zero access to the escrow, completely eliminating cross-round arbitrage and phantom claims.
 
-### 4.5 Complete Hostile Takeover Immunity
+### 4.4 Complete Hostile Takeover Immunity
 A fatal vulnerability in conventional DAO token models is that a hostile competitor or short-seller can accumulate 51% of circulating tokens on an open DEX and vote to dissolve the company, seize intellectual property, or fire the leadership.
 
 Ventrion completely eliminates this attack vector:
@@ -453,7 +454,7 @@ Ventrion natively supports two distinct business archetypes:
 | • Zero personal liability for CEO   | • Corporate veil pierced              |
 | • Zero lawsuits or court claims     | • Direct personal liability for theft |
 | • Unspent escrow refunded to backers| • Legal setup & counsel enforcement   |
-| • Founder walks away cleanly        | • Full international legal pursuit    |
+| • Orderly liquidation & release     | • Full international legal pursuit    |
 +─────────────────────────────────────┴───────────────────────────────────────+
 ```
 
@@ -473,7 +474,7 @@ Ventrion natively supports two distinct business archetypes:
 Founders often fear that tokenizing their business means risking their personal brand or life's work. Ventrion establishes strict boundaries:
 
 * **Founder Retains Core IP and Accounts:** The founder's personal social media accounts, proprietary technology, and primary company assets remain 100% their own.
-* **No Hostile Confiscation:** Ventrion does not confiscate trademarks or personal handles in an honest failure. If a venture fails to reach profitability, the owner simply winds down operations; anonymous internet users do not seize their name.
+* **No Hostile Confiscation:** Ventrion does not seize trademarks, copyrights, or founder identities in an honest failure. If a venture fails to achieve commercial viability, leadership executes an orderly solvent wind-down without risk of arbitrary asset expropriation by decentralized token accumulators.
 * **Malicious Embezzlement Exception:** A transfer of official company-created project assets (such as an official project GitHub repository or project-specific website domain) only occurs if a founder commits verified, intentional fraud or embezzlement under corporate law. In all normal business outcomes, the founder's property is untouchable.
 
 ---
@@ -628,7 +629,7 @@ pub struct FundingRound {
     pub round_index: u8,                     // 1 byte
     pub target_cap_usdc: u64,                // 8 bytes
     pub total_raised_usdc: u64,              // 8 bytes
-    pub upfront_working_capital_bps: u16,    // 2 bytes: e.g. 1500 to 2500 (15% to 25%)
+    pub upfront_working_capital_bps: u16,    // 2 bytes: e.g. 1000 to 1500 (max 15%)
     pub round_status: u8,                    // 1 byte
     pub graduation_initiated_ts: i64,        // 8 bytes: Timestamp of Step 4A
     pub bump: u8,                            // 1 byte
@@ -785,7 +786,7 @@ pub enum VentrionError {
     DlmmPoolInitFailed,
     #[msg("6018: CPI to Meteora DLMM add_liquidity_by_strategy failed.")]
     DlmmLiquiditySeedFailed,
-    #[msg("6019: Upfront working capital percentage out of bounds (10% to 25% allowed).")]
+    #[msg("6019: Upfront working capital percentage out of bounds (max 15%).")]
     InvalidUpfrontCapitalBps,
     #[msg("6020: Milestones count out of bounds. Exactly 1 to 10 milestone tranches permitted.")]
     InvalidMilestoneCount,
@@ -988,6 +989,82 @@ async function runVentrionLifecycle() {
 
 runVentrionLifecycle().catch(console.error);
 ```
+
+---
+
+# 9. Verified Solana Devnet Deployment & Transaction Proofs
+
+The complete Ventrion Protocol architecture is deployed and operational on Solana Devnet, with live verified on-chain state, automated milestone tranches, and continuous liquidity engines.
+
+### 9.1 Protocol Architecture & Deployment Overview
+* **Network:** Solana Devnet (`https://api.devnet.solana.com`)
+* **Program ID:** <a href="https://explorer.solana.com/address/AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD</code></a>
+* **Program Data Account:** <a href="https://explorer.solana.com/address/HT6pXjhA57GPjGMyhZmVSFWJU8pqkEAY895aX7SnLeGp?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>HT6pXjhA57GPjGMyhZmVSFWJU8pqkEAY895aX7SnLeGp</code></a>
+* **Deployed Slot:** `509591014`
+* **Deployed At:** October 10, 2026
+
+### 9.2 Core Protocol Tokens
+* **Mother-Token ($VENT) Mint:** <a href="https://explorer.solana.com/address/5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ</code></a>
+* **Settlement USDC Mint (Devnet):** <a href="https://explorer.solana.com/address/5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt</code></a>
+
+### 9.3 Global Configuration & Berkshire Hathaway Holding Treasury
+* **Global Config PDA:** <a href="https://explorer.solana.com/address/E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa</code></a>
+* **Master Fee Vault PDA (Platform Royalty Treasury):** <a href="https://explorer.solana.com/address/5BPnjZ6yPQtVK2tSJ4dYzD8mwzNnJxiP9fcVuKK4RbEV?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>5BPnjZ6yPQtVK2tSJ4dYzD8mwzNnJxiP9fcVuKK4RbEV</code></a>
+* **$VENT Staking Vault PDA:** <a href="https://explorer.solana.com/address/EB6KLGyxnCLH3pu26VvwVx7GTocGXg2CVwtkkRyYEnik?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>EB6KLGyxnCLH3pu26VvwVx7GTocGXg2CVwtkkRyYEnik</code></a>
+* **Ecosystem Protocol Cut:** `0.5%` (50 bps) LP fee cut + `3%` graduation fee.
+* **$VENT Governance Bootstrapping:** `500,000 $VENT` staked on-chain (`MIN_VENT_STAKED_THRESHOLD` satisfied).
+
+### 9.4 Live Pioneer Ventures
+
+#### A. Apex Quantum ($APEX)
+* **Company Common Shares Mint:** <a href="https://explorer.solana.com/address/J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn</code></a>
+* **Venture State PDA:** <a href="https://explorer.solana.com/address/9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv</code></a>
+* **Total Common Share Supply:** `1,000,000` common shares (Fixed invariant).
+* **Primary Round Terms:** $0.25 USDC / share, $50,000 USDC target cap, 200,000 shares for sale.
+* **Founder Vesting Allocation:** `766,000` shares (linear monthly release with cliff).
+* **Meteora Seed Allocation:** `170,000` shares (held in custody for atomic graduation).
+* **Milestone Tranche Escrow:** 3 milestones configured (40%, 35%, 25%) with 7-day optimistic release, 3 cure cycles, and pro-rata ragequit refund protection.
+
+#### B. Endor Markets ($ENDOR)
+* **Company Common Shares Mint:** <a href="https://explorer.solana.com/address/5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK?cluster=devnet" target="_blank" rel="noopener noreferrer"><code>5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK</code></a>
+* **Settlement Currency:** Canonical Devnet USDC (`5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt`)
+* **Total Common Share Supply:** `1,000,000` common shares (Fixed invariant).
+* **Spot Price:** `$0.2500 USDC`
+* **Market Capitalization:** `$250,000.00 USDC` ($P \times 1,000,000$ fixed supply).
+* **Metadata & Assets:**
+  * Logo: `https://ventrion.fun/metadata/endor_pfp.png`
+  * Banner: `https://ventrion.fun/metadata/endor_banner.png`
+  * Metadata URI: `https://ventrion.fun/metadata/endor_metadata.json`
+* **Liquidity Pool Status:** Continuous Exponential Curve active with persistent state storage (`curve_pools.json`).
+
+### 9.5 Verified On-Chain Transaction Signatures
+| Lifecycle Action | Transaction Signature | Solana Explorer Link |
+| :--- | :--- | :--- |
+| **Global Config Initialization** | `3ca7SDcXVpgtjQRse97HQueapqeFqsa4rxTzT1jX3irmEEtHre793xBmK9XR3VnNk413xdADtmsmv8czsTmTkwEh` | <a href="https://explorer.solana.com/tx/3ca7SDcXVpgtjQRse97HQueapqeFqsa4rxTzT1jX3irmEEtHre793xBmK9XR3VnNk413xdADtmsmv8czsTmTkwEh?cluster=devnet" target="_blank" rel="noopener noreferrer">View on Explorer</a> |
+| **$VENT Staking Bootstrapping (500k $VENT)** | `2FbJrNQRJpsUUNzrkEiY5VH9X5Eh1hFycvzUpTLnBNkagDfRfDoUHcEnybRqpiWgyjh5if15pUYZvZLaCrZYHRC1` | <a href="https://explorer.solana.com/tx/2FbJrNQRJpsUUNzrkEiY5VH9X5Eh1hFycvzUpTLnBNkagDfRfDoUHcEnybRqpiWgyjh5if15pUYZvZLaCrZYHRC1?cluster=devnet" target="_blank" rel="noopener noreferrer">View on Explorer</a> |
+| **Apex Quantum Genesis Launch** | `59fcHjn33hV3i87roC8FGYovKvVYNRHzMjV9HfHEFfSKyGsBniArU2Xpz4StCQEtivZ9y2sYkhTc4PYCxdajG9bS` | <a href="https://explorer.solana.com/tx/59fcHjn33hV3i87roC8FGYovKvVYNRHzMjV9HfHEFfSKyGsBniArU2Xpz4StCQEtivZ9y2sYkhTc4PYCxdajG9bS?cluster=devnet" target="_blank" rel="noopener noreferrer">View on Explorer</a> |
+| **Tranche Milestones Configuration** | `8snnvAfhyZH5ndeThK7bfRFQzbwanZNNRDK85Sg9DjHCkgVMemsryDqNHZb1jyPCa6BQGZJBQbh7CQWUFSvfL7W` | <a href="https://explorer.solana.com/tx/8snnvAfhyZH5ndeThK7bfRFQzbwanZNNRDK85Sg9DjHCkgVMemsryDqNHZb1jyPCa6BQGZJBQbh7CQWUFSvfL7W?cluster=devnet" target="_blank" rel="noopener noreferrer">View on Explorer</a> |
+| **Primary Round Contribution ($2,500 USDC)** | `yPU9kp2XCDY7YKAPRnPXjpRaVcT8c9XxHm59vcBHSjwkZuVjVZwFJ62L8Kaj5cvFd7LSH78FsLg1WMLWiC8YfHj` | <a href="https://explorer.solana.com/tx/yPU9kp2XCDY7YKAPRnPXjpRaVcT8c9XxHm59vcBHSjwkZuVjVZwFJ62L8Kaj5cvFd7LSH78FsLg1WMLWiC8YfHj?cluster=devnet" target="_blank" rel="noopener noreferrer">View on Explorer</a> |
+
+### 9.6 Live Frontend & API Endpoints
+* **Web Application:** <a href="https://ventrion.fun" target="_blank" rel="noopener noreferrer">https://ventrion.fun</a> (Dev instance: `http://2.28.52.233:3001`)
+* **Shares & Investor Desk:** `/shares`
+* **Ventures Directory:** `/ventures`
+* **Venture Detail (Apex Quantum):** `/ventures/J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn`
+* **Venture Detail (Endor Markets):** `/ventures/5mKjB6bKNf2MEuwZn2cDnfWGRKeWaEnjm8Q19oWgVWvK`
+* **REST API Daemon (`http://2.28.52.233:3000`):**
+  * `GET /api/ventures/live` - Full live registry of verified and community ventures.
+  * `GET /api/ventures/:mint` - Single venture state, reserves, pricing, and metadata.
+  * `GET /api/ventures/chart/:mint` - Real trade history OHLCV / price line streaming (zero mock sine-waves).
+  * `POST /api/tx/prepare-launch-genesis` - One-click venture genesis and mint authority revocation.
+  * `POST /api/tx/prepare-contribute-round` - Primary round funding.
+  * `POST /api/tx/prepare-redeem-shares` - 1:1 post-graduation receipt token conversion into canonical common shares.
+  * `POST /api/tx/prepare-stake-shares` - Staking shares into `InvestorVault` (supports duration tiers and yield multipliers).
+  * `POST /api/tx/prepare-unstake-shares` - Unstaking unlocked common shares from `InvestorVault`.
+  * `POST /api/tx/prepare-vote-milestone` - Primary backer milestone governance.
+  * `POST /api/tx/prepare-ragequit` - Pro-rata milestone escrow refunds.
+  * `POST /api/tx/prepare-swap-curve` - Continuous Exponential Bonding Curve swap engine.
+  * `POST /api/tx/prepare-swap-dlmm` - DLMM swap with automated Exponential Curve fallback.
 
 ---
 
