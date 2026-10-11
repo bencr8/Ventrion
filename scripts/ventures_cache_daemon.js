@@ -1,5 +1,5 @@
 const express = require('express');
-const { Connection, PublicKey, Keypair, Transaction, ComputeBudgetProgram, SystemProgram } = require('@solana/web3.js');
+const { Connection, PublicKey, Keypair, Transaction, TransactionInstruction, ComputeBudgetProgram, SystemProgram } = require('@solana/web3.js');
 const crypto = require('crypto');
 let bs58 = require('bs58');
 if (bs58.default) bs58 = bs58.default;
@@ -2858,6 +2858,25 @@ async function handlePrepareClaimInvestorDividends(req, res) {
 
     const tx = new Transaction();
     tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
+
+    const ataInfo = await connection.getAccountInfo(investorUsdcAta).catch(() => null);
+    if (!ataInfo) {
+      const createAtaIx = splToken?.createAssociatedTokenAccountInstruction
+        ? splToken.createAssociatedTokenAccountInstruction(investorPk, investorUsdcAta, investorPk, DEVNET_USDC_MINT)
+        : new TransactionInstruction({
+            keys: [
+              { pubkey: investorPk, isSigner: true, isWritable: true },
+              { pubkey: investorUsdcAta, isSigner: false, isWritable: true },
+              { pubkey: investorPk, isSigner: false, isWritable: false },
+              { pubkey: DEVNET_USDC_MINT, isSigner: false, isWritable: false },
+              { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+              { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+            ],
+            programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+            data: Buffer.alloc(0),
+          });
+      tx.add(createAtaIx);
+    }
 
     const ix = await anchorProgram.methods
       .claimInvestorDividends()

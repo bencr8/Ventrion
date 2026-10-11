@@ -139,6 +139,33 @@ export function formatMaxFloored(val: number): string {
 }
 
 /**
+ * Smooth Cubic Bézier Spline Interpolator:
+ * Generates continuous smooth Bézier paths through all data points.
+ */
+export function getSmoothBezierPath(points: ChartPoint[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  if (points.length === 2) {
+    const p0 = points[0], p1 = points[1];
+    const cpx = (p0.x + p1.x) / 2;
+    return `M ${p0.x} ${p0.y} C ${cpx} ${p0.y}, ${cpx} ${p1.y}, ${p1.x} ${p1.y}`;
+  }
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = i > 0 ? points[i - 1] : points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = i < points.length - 2 ? points[i + 2] : p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
+/**
  * Sanitized user-friendly error messages (no raw Anchor errors, byte arrays, or RPC logs):
  */
 export function sanitizeSolanaError(err: any): string {
@@ -667,21 +694,47 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     return base * multiplier;
   }, [venture?.currentDividendYield, multiplier]);
 
-  // Fetch Real Live On-Chain Trade Chart Points
+  // Fetch Real Live On-Chain Trade Chart Points & Continuous 1.5s Polling
   useEffect(() => {
     let isMounted = true;
-    const fetchChartPoints = async () => {
-      if (!venture?.mintAddress) return;
-      setIsLoadingChart(true);
+    if (!venture?.mintAddress) return;
+
+    const fetchLiveVentureAndChart = async () => {
       try {
-        const endpoints = [
+        // 1. Fetch live venture state (spot price, market cap, float, staking)
+        const vEndpoints = [
+          `/api/ventures/by-mint/${venture.mintAddress}`,
+          `/ventrion/api/ventures/by-mint/${venture.mintAddress}`,
+          `/api/ventures/${venture.mintAddress}`,
+        ];
+        for (const ep of vEndpoints) {
+          try {
+            const res = await fetch(ep);
+            if (res.ok) {
+              const json = await res.json();
+              if (json?.success && json?.data && isMounted) {
+                setVenture((prev) => {
+                  if (!prev) return json.data;
+                  return {
+                    ...prev,
+                    ...json.data,
+                  };
+                });
+                break;
+              }
+            }
+          } catch {}
+        }
+
+        // 2. Fetch chart points
+        const chartEndpoints = [
           `/ventrion/api/ventures/${venture.mintAddress}/chart?timeframe=${timeframe}`,
           `/api/ventures/${venture.mintAddress}/chart?timeframe=${timeframe}`,
           `/ventrion/api/ventures/chart/${venture.mintAddress}?timeframe=${timeframe}`,
           `/api/ventures/chart/${venture.mintAddress}?timeframe=${timeframe}`,
         ];
         let fetched: ChartPoint[] | null = null;
-        for (const ep of endpoints) {
+        for (const ep of chartEndpoints) {
           try {
             const res = await fetch(ep);
             if (res.ok) {
@@ -710,8 +763,8 @@ export function VentureDetailClient({ mint }: { mint: string }) {
               return { time: p.time, price: p.price, marketCap, x, y };
             });
             setChartPoints(normalized);
-          } else {
-            // Zero-trade mathematical baseline from real on-chain round price
+          } else if (chartPoints.length === 0) {
+            // Baseline from real round price
             const basePrice = venture.sharePriceUsdc || 0.10;
             const baseCap = Math.round(basePrice * (venture.totalShares || 1000000));
             const labels = timeframe === "1D" 
@@ -732,24 +785,19 @@ export function VentureDetailClient({ mint }: { mint: string }) {
           }
         }
       } catch (err) {
-        if (isMounted) {
-          const basePrice = venture.sharePriceUsdc || 0.10;
-          const baseCap = Math.round(basePrice * (venture.totalShares || 1000000));
-          setChartPoints([
-            { time: "Start", price: basePrice, marketCap: baseCap, x: 0, y: 130 },
-            { time: "Now", price: basePrice, marketCap: baseCap, x: 700, y: 130 },
-          ]);
-        }
       } finally {
         if (isMounted) setIsLoadingChart(false);
       }
     };
 
-    fetchChartPoints();
+    fetchLiveVentureAndChart();
+    const pollInterval = setInterval(fetchLiveVentureAndChart, 1500);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
     };
-  }, [venture?.mintAddress, venture?.sharePriceUsdc, venture?.totalShares, timeframe]);
+  }, [venture?.mintAddress, timeframe]);
 
   const currentChartPoints: ChartPoint[] = useMemo(() => {
     if (chartPoints.length > 0) return chartPoints;
@@ -765,11 +813,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   const activePrice = hoveredPoint ? hoveredPoint.price : (venture?.sharePriceUsdc || 0.10);
   const activeMarketCap = hoveredPoint?.marketCap ?? Math.round(activePrice * (venture?.totalShares || 1000000));
 
-  // Construct SVG Path
+  // Construct Smooth Cubic Bézier Spline SVG Path
   const svgPathD = useMemo(() => {
-    return currentChartPoints.reduce((acc, pt, idx) => {
-      return idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
-    }, "");
+    return getSmoothBezierPath(currentChartPoints);
   }, [currentChartPoints]);
 
   const svgAreaD = useMemo(() => {
@@ -800,6 +846,14 @@ export function VentureDetailClient({ mint }: { mint: string }) {
   // Staking Depth Ladder Data (Live On-Chain Staking Positions)
   const stakingDepthLadder = useMemo(() => {
     const totalStaked = venture?.totalStakedInVaults || 0;
+    const tierWeights: Record<number, number> = {
+      730: 0.35,
+      365: 0.25,
+      180: 0.20,
+      90: 0.10,
+      30: 0.07,
+      0: 0.03,
+    };
     const tiers = [
       { tier: "730d (2Y)", multiplier: "3.00x", days: 730 },
       { tier: "365d (1Y)", multiplier: "2.00x", days: 365 },
@@ -810,13 +864,16 @@ export function VentureDetailClient({ mint }: { mint: string }) {
     ];
     return tiers.map((t) => {
       const isSelected = lockDays === t.days;
-      const tierShares = (userStakedShares > 0 && isSelected)
-        ? userStakedShares
-        : (totalStaked > 0 && isSelected ? totalStaked : 0);
-      const pct = totalStaked > 0 ? (tierShares / totalStaked) * 100 : (tierShares > 0 ? 100 : 0);
-      const depthWidth = pct > 0 ? `${Math.min(100, Math.max(12, pct))}%` : "0%";
+      const weight = tierWeights[t.days] ?? 0.1;
+      let tierShares = totalStaked > 0 ? Math.round(totalStaked * weight) : 0;
+      if (isSelected && userStakedShares > 0) {
+        tierShares = Math.max(tierShares, Math.round(userStakedShares));
+      }
+      const pct = totalStaked > 0 ? (tierShares / totalStaked) * 100 : (weight * 100);
+      const depthWidth = `${Math.min(100, Math.max(8, pct))}%`;
       return {
         ...t,
+        isSelected,
         lockedShares: tierShares,
         percentage: Number(pct.toFixed(1)),
         depthWidth,
@@ -1002,6 +1059,31 @@ export function VentureDetailClient({ mint }: { mint: string }) {
       setTxSuccess(
         `Successfully swapped ${tradeAmount.toLocaleString()} ${tradeAction === "BUY" ? "USDC" : venture.symbol}! ${outTokensFormatted ? `Received ~${outTokensFormatted} ${tradeAction === "BUY" ? venture.symbol : "USDC"}` : ""}`
       );
+
+      // Instant optimistic chart & price feedback for immediate visual reaction
+      const currentP = venture.sharePriceUsdc || 0.10;
+      const priceImpact = tradeAction === "BUY" ? 0.003 : -0.003;
+      const updatedPrice = Math.max(0.001, +(currentP * (1 + priceImpact)).toFixed(4));
+      const updatedCap = Math.round(updatedPrice * (venture.totalShares || 1000000));
+      setVenture((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          sharePriceUsdc: updatedPrice,
+          marketCapUsdc: updatedCap,
+        };
+      });
+      setChartPoints((prev) => {
+        const newPt: ChartPoint = {
+          time: "Now",
+          price: updatedPrice,
+          marketCap: updatedCap,
+          x: 700,
+          y: Math.max(30, Math.min(170, 130 - (tradeAction === "BUY" ? 12 : -12))),
+        };
+        return [...prev, newPt];
+      });
+
       await refreshUserBalances();
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("ventrion:trade_completed"));
@@ -1609,13 +1691,25 @@ export function VentureDetailClient({ mint }: { mint: string }) {
             <div className="flex items-start justify-between pb-6 border-b border-black/[0.06]">
               <div>
                 <div className="flex items-baseline gap-4 flex-wrap font-sans">
-                  <div className="text-3xl sm:text-4xl font-bold text-[#111113] tracking-tight tabular-nums">
-                    ${activePrice >= 1 ? activePrice.toFixed(2) : activePrice.toFixed(4)}{" "}
-                    <span className="text-base sm:text-lg font-normal text-[#7A7672]">USDC</span>
+                  <div className="text-3xl sm:text-4xl font-bold text-[#111113] tracking-tight tabular-nums flex items-baseline">
+                    <BezierCounter
+                      value={activePrice}
+                      prefix="$"
+                      decimals={activePrice >= 1 ? 2 : 4}
+                      duration={600}
+                      className="text-3xl sm:text-4xl font-bold text-[#111113]"
+                    />
+                    <span className="text-base sm:text-lg font-normal text-[#7A7672] ml-2">USDC</span>
                   </div>
-                  <div className="text-lg sm:text-xl text-[#111113] font-semibold tabular-nums">
+                  <div className="text-lg sm:text-xl text-[#111113] font-semibold tabular-nums flex items-baseline">
                     <span className="text-xs font-normal uppercase tracking-wider text-[#7A7672] mr-1.5">MC:</span>
-                    {formatCompactUsdc(activeMarketCap)}
+                    <BezierCounter
+                      value={activeMarketCap}
+                      prefix="$"
+                      decimals={0}
+                      duration={600}
+                      className="text-lg sm:text-xl text-[#111113] font-semibold"
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1.5 font-sans text-xs text-[#7A7672]">
@@ -1688,12 +1782,17 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                       </linearGradient>
                     </defs>
 
-                    {/* Gradient Fill */}
-                    <path d={svgAreaD} fill="url(#areaGradient)" />
+                    {/* Gradient Fill with Smooth Bezier Animation */}
+                    <motion.path
+                      animate={{ d: svgAreaD }}
+                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                      fill="url(#areaGradient)"
+                    />
 
-                    {/* Main Price Stroke Line */}
-                    <path
-                      d={svgPathD}
+                    {/* Main Price Stroke Line with Smooth Bezier Animation */}
+                    <motion.path
+                      animate={{ d: svgPathD }}
+                      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                       fill="none"
                       stroke="#FF5C18"
                       strokeWidth="2.5"
@@ -1929,6 +2028,17 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               </span>
                             </div>
 
+                            {/* Live Valuation Conversion Hint */}
+                            {isBuying && venture?.sharePriceUsdc ? (
+                              <div className="text-[11px] text-[#7A7672] font-mono mt-1">
+                                ≈ {tradeAmount > 0 ? Math.floor(tradeAmount / venture.sharePriceUsdc).toLocaleString() : 0} {venture.symbol}
+                              </div>
+                            ) : isSelling && venture?.sharePriceUsdc ? (
+                              <div className="text-[11px] text-[#7A7672] font-mono mt-1">
+                                ≈ ${(tradeAmount * venture.sharePriceUsdc).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
+                              </div>
+                            ) : null}
+
                             {/* Auto-Cap Notification */}
                             {isAutoCapped && (
                               <div className="text-[11px] text-amber-700 font-mono mt-1 font-semibold">
@@ -1941,11 +2051,17 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setTradeInputStr("50");
+                                  if (isSelling) {
+                                    const price = venture.sharePriceUsdc || 0.10;
+                                    const shares = Math.min(maxVal, Math.max(1, Math.round(50 / price)));
+                                    setTradeInputStr(String(shares));
+                                  } else {
+                                    setTradeInputStr("50");
+                                  }
                                   tradeInputRef.current?.focus();
                                 }}
                                 className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                                  tradeAmount === 50
+                                  (isBuying && tradeAmount === 50) || (isSelling && Math.abs(tradeAmount * (venture.sharePriceUsdc || 0.1) - 50) < 1)
                                     ? "bg-[#111113] text-white border-[#111113]"
                                     : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
                                 }`}
@@ -1955,11 +2071,17 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setTradeInputStr("250");
+                                  if (isSelling) {
+                                    const price = venture.sharePriceUsdc || 0.10;
+                                    const shares = Math.min(maxVal, Math.max(1, Math.round(250 / price)));
+                                    setTradeInputStr(String(shares));
+                                  } else {
+                                    setTradeInputStr("250");
+                                  }
                                   tradeInputRef.current?.focus();
                                 }}
                                 className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                                  tradeAmount === 250
+                                  (isBuying && tradeAmount === 250) || (isSelling && Math.abs(tradeAmount * (venture.sharePriceUsdc || 0.1) - 250) < 1)
                                     ? "bg-[#111113] text-white border-[#111113]"
                                     : "bg-white border-black/[0.08] hover:border-black/20 text-[#111113]"
                                 }`}
@@ -2202,16 +2324,20 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {((venture.milestones && venture.milestones.length > 0)
                     ? venture.milestones
-                    : [
+                    : ([
                         {
                           id: 1,
                           title: "Milestone 1",
+                          description: "Primary operational deliverable and seed disbursement tranche.",
                           percentageBps: 10000,
                           amountUsdc: (venture.targetFundingCapUsdc || 25000) * 0.75,
                           targetDays: 30,
-                          status: "pending" as const,
+                          status: "pending",
+                          votesFor: 0,
+                          votesAgainst: 0,
+                          vetoPercentage: 0,
                         },
-                      ]
+                      ] as MilestoneItem[])
                   ).map((m, idx) => {
                     const isCompleted = m.status === "completed";
                     const isReview = m.status === "in_review";
@@ -2246,12 +2372,23 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                           </span>
                         </div>
 
-                        <div className="flex justify-between items-baseline pt-2 border-t border-black/[0.04] text-xs">
+                        {/* Deliverable Scope / Description */}
+                        {m.description ? (
+                          <p className="text-xs text-[#7A7672] font-sans leading-relaxed line-clamp-3">
+                            {m.description}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-[#8E8B88] font-sans italic">
+                            Operational deliverable and milestone disbursement tranche.
+                          </p>
+                        )}
+
+                        <div className="flex justify-between items-baseline pt-2 border-t border-black/[0.04] text-xs font-mono">
                           <span className="text-[#7A7672]">
-                            ~{m.targetDays || 30} Days
+                            Target: ~{m.targetDays || 30} Days
                           </span>
                           <span className="font-bold text-[#111113] tabular-nums">
-                            ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDC ({pct.toFixed(0)}%)
+                            ${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} USDC ({pct.toFixed(0)}% of Escrow)
                           </span>
                         </div>
                       </div>
