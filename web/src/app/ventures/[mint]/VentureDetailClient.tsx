@@ -1544,24 +1544,28 @@ export function VentureDetailClient({ mint }: { mint: string }) {
           </Link>
 
           {/* Background Visual Texture (Uses Dedicated Banner or Elegant Mesh, NEVER PFP/Logo) */}
-          <div className="h-48 sm:h-60 lg:h-68 w-full relative overflow-hidden bg-[#111113]">
+          <div className="h-48 sm:h-60 lg:h-72 w-full relative overflow-hidden bg-[#111113]">
             {venture.bannerUrl && venture.bannerUrl !== venture.logoUrl ? (
               <img
                 src={venture.bannerUrl}
                 alt={`${venture.name} Banner`}
-                className="w-full h-full object-cover opacity-70 scale-100"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/ventrion_banner.jpg";
+                }}
+                className="w-full h-full object-cover opacity-90 scale-100 transition-opacity duration-300"
               />
             ) : (
               <div className="w-full h-full relative">
                 <img
-                  src="/tokens.jpg"
+                  src="/ventrion_banner.jpg"
                   alt="Ventrion Banner Texture"
-                  className="w-full h-full object-cover opacity-25 mix-blend-luminosity scale-105"
+                  className="w-full h-full object-cover opacity-60 scale-100"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#111113] via-[#161619]/80 to-[#111113]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#111113] via-[#161619]/60 to-[#111113]" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/40 to-transparent" />
           </div>
 
           {/* Banner Meta Overlay */}
@@ -1569,8 +1573,12 @@ export function VentureDetailClient({ mint }: { mint: string }) {
             {/* Identity Well */}
             <div className="flex items-center gap-4 sm:gap-5">
               <img
-                src={venture.logoUrl || "/tokens.jpg"}
+                src={venture.logoUrl || "/ventrion-logo.png"}
                 alt={venture.symbol}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/ventrion-logo.png";
+                }}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-white/20 shadow-md object-cover bg-black shrink-0"
               />
               <div>

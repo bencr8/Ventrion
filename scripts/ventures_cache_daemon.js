@@ -136,7 +136,7 @@ const KNOWN_METADATA = {
     legalEntity: 'MIDAO DAO LLC, Marshall Islands',
     registrationNumber: 'MIDAO-VENT-00001-REG',
     logoUrl: 'https://ventrion.fun/ventrion-logo.png',
-    bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
+    bannerUrl: 'https://ventrion.fun/ventrion_banner.jpg',
     targetFundingCapUsdc: 100000,
     totalCapitalRaisedUsdc: 0,
     fundingProgressPercent: 0.0,
@@ -158,8 +158,8 @@ const KNOWN_METADATA = {
     statusBadge: 'Raising',
     legalEntity: 'MIDAO DAO LLC, Marshall Islands',
     registrationNumber: 'MIDAO-APEX-84920-REG',
-    logoUrl: 'https://ventrion.fun/ventrion-logo.png',
-    bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
+    logoUrl: 'https://ventrion.fun/apex_quantum_logo.jpg',
+    bannerUrl: 'https://ventrion.fun/apex_quantum_banner.jpg',
     targetFundingCapUsdc: 50000,
     totalCapitalRaisedUsdc: 0,
     fundingProgressPercent: 0.0,
@@ -167,7 +167,7 @@ const KNOWN_METADATA = {
     currentDividendYield: 0.0,
     sharePriceUsdc: 0.25,
     vol24h: 1800,
-    receiptMint: '9XGmReBLjnhXFL9JnNPWrTJWKgt4ux7NUb5T7FPV7xcX',
+    receiptMint: 'HQGn3cN7pke8g2CCon3M67GiWbAuNGqfQpvAa3wzVvtc',
   },
   '3VnWqQjw7T7YGSUVYYgrW6SZavMQ24u1FsrEzDvXwUYC': {
     id: '3VnWqQjw7T7YGSUVYYgrW6SZavMQ24u1FsrEzDvXwUYC',
@@ -181,8 +181,8 @@ const KNOWN_METADATA = {
     statusBadge: 'Raising',
     legalEntity: 'MIDAO DAO LLC, Marshall Islands',
     registrationNumber: 'MIDAO-SBD-91023-REG',
-    logoUrl: 'https://ventrion.fun/ventrion-logo.png',
-    bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
+    logoUrl: 'https://ventrion.fun/sbd_logo.jpg',
+    bannerUrl: 'https://ventrion.fun/sbd_banner.jpg',
     targetFundingCapUsdc: 60000,
     totalCapitalRaisedUsdc: 0,
     fundingProgressPercent: 0.0,
@@ -190,7 +190,7 @@ const KNOWN_METADATA = {
     currentDividendYield: 0.0,
     sharePriceUsdc: 0.24,
     vol24h: 2400,
-    receiptMint: '2rMJ4CsvmjTZQDJbkT6FGmNGxy8fxv2Au8KtkqHSP5xr',
+    receiptMint: 'AaZVxzeT8wZXT1zQWMQMSykRhJ5ZTT9G9hhaHdrHrBx6',
   }
 };
 
@@ -943,9 +943,9 @@ async function syncVenturesFromDevnet() {
           }
         }
 
-        const resolvedLogo = onChainMeta?.logoUrl || known.logoUrl || '/ventrion-logo.png';
+        const resolvedLogo = onChainMeta?.logoUrl || known.logoUrl || 'https://ventrion.fun/ventrion-logo.png';
         const rawBanner = onChainMeta?.bannerUrl || known.bannerUrl || null;
-        const resolvedBanner = (rawBanner && rawBanner !== resolvedLogo) ? rawBanner : '/flawless_studio_backdrop.png';
+        const resolvedBanner = (rawBanner && rawBanner !== resolvedLogo) ? rawBanner : 'https://ventrion.fun/ventrion_banner.jpg';
 
         const record = {
           id: known.id || mintStr,
@@ -1314,7 +1314,7 @@ router.post('/upload-metadata', (req, res) => {
 
     const bannerUrl = hasBannerFile
       ? `https://ventrion.fun/metadata/${bannerFileName}`
-      : (bannerDataUrl && bannerDataUrl.startsWith('http') ? bannerDataUrl : 'https://ventrion.fun/flawless_studio_backdrop.png');
+      : (bannerDataUrl && bannerDataUrl.startsWith('http') ? bannerDataUrl : 'https://ventrion.fun/ventrion_banner.jpg');
 
     const metadataJson = {
       name: name || cleanSymbol.toUpperCase(),
@@ -1425,8 +1425,8 @@ async function handlePrepareLaunchGenesis(req, res) {
         symbol: cleanSymbol,
         description: `${cleanName} tokenized venture on Ventrion Protocol.`,
         image: 'https://ventrion.fun/ventrion-logo.png',
-        banner: 'https://ventrion.fun/flawless_studio_backdrop.png',
-        bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
+        banner: 'https://ventrion.fun/ventrion_banner.jpg',
+        bannerUrl: 'https://ventrion.fun/ventrion_banner.jpg',
         attributes: [
           { trait_type: 'Jurisdiction', value: 'MIDAO DAO LLC (Marshall Islands)' },
           { trait_type: 'Total Share Supply', value: '1,000,000 Common Shares' }
@@ -1434,7 +1434,7 @@ async function handlePrepareLaunchGenesis(req, res) {
         properties: {
           files: [
             { uri: 'https://ventrion.fun/ventrion-logo.png', type: 'image/png' },
-            { uri: 'https://ventrion.fun/flawless_studio_backdrop.png', type: 'image/png' }
+            { uri: 'https://ventrion.fun/ventrion_banner.jpg', type: 'image/jpeg' }
           ],
           category: 'image'
         }

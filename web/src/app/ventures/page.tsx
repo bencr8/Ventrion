@@ -482,10 +482,14 @@ export default function VenturesPage() {
                           <div className="flex items-center gap-3">
                             {/* Round-cornered logo replacing black square */}
                             <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#111113]/5 border border-black/[0.08] shrink-0 shadow-2xs flex items-center justify-center">
-                              {v.logoUrl && v.logoUrl.startsWith("http") ? (
+                              {v.logoUrl ? (
                                 <img
                                   src={v.logoUrl}
                                   alt={cleanName}
+                                  onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = "/ventrion-logo.png";
+                                  }}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
