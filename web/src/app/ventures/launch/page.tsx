@@ -256,27 +256,33 @@ export default function LaunchVenturePage() {
     try {
       setLaunchStepIndex(1); // Building transaction & deriving PDAs
 
-      let effectiveUri = metadataUri;
-      if (!effectiveUri) {
-        try {
-          const res = await fetch("/ventrion/api/ventures/upload-metadata", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              symbol: symbol.trim().toUpperCase(),
-              name: name.trim(),
-              description: description.trim(),
-              logoDataUrl: logoPreview || undefined,
-              bannerDataUrl: bannerPreview || undefined,
-            }),
-          });
-          if (res.ok) {
-            const json = await res.json();
-            if (json.uri) effectiveUri = json.uri;
+      // Always finalize & upload metadata package with the verified symbol, name, and images
+      let effectiveUri = "";
+      try {
+        const res = await fetch("/ventrion/api/ventures/upload-metadata", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            symbol: symbol.trim().toUpperCase(),
+            name: name.trim(),
+            description: description.trim(),
+            logoDataUrl: logoPreview || undefined,
+            bannerDataUrl: bannerPreview || undefined,
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.uri) {
+            effectiveUri = json.uri;
+            setMetadataUri(json.uri);
           }
-        } catch (e) {
-          console.warn("Metadata sync warning:", e);
         }
+      } catch (e) {
+        console.warn("Metadata upload error:", e);
+      }
+
+      if (!effectiveUri) {
+        effectiveUri = metadataUri || `https://ventrion.fun/metadata/${symbol.trim().toLowerCase()}_metadata.json`;
       }
       if (!effectiveUri || effectiveUri.startsWith("/")) {
         effectiveUri = `https://ventrion.fun/metadata/${symbol.trim().toLowerCase()}_metadata.json`;

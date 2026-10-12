@@ -191,6 +191,28 @@ const KNOWN_METADATA = {
     sharePriceUsdc: 0.24,
     vol24h: 2400,
     receiptMint: 'AaZVxzeT8wZXT1zQWMQMSykRhJ5ZTT9G9hhaHdrHrBx6',
+  },
+  '5K1NGfiijjeXsKiAhYixR4bs6U3t6rPCKXbSCs65uUE7': {
+    id: '5K1NGfiijjeXsKiAhYixR4bs6U3t6rPCKXbSCs65uUE7',
+    name: 'Endor Markets',
+    symbol: 'ENDOR',
+    ticker: '$ENDOR',
+    tagline: 'Luxury goods & secondary asset liquid markets on Solana.',
+    description: 'Endor Markets provides secondary liquidity and tokenized fractional ownership for luxury assets and commodities under Ventrion Protocol.',
+    category: 'Real Commerce',
+    canonicalStatus: 'Raising',
+    statusBadge: 'Raising',
+    legalEntity: 'MIDAO DAO LLC, Marshall Islands',
+    registrationNumber: 'MIDAO-ENDOR-77102-REG',
+    logoUrl: 'https://ventrion.fun/metadata/endor_logo.png',
+    bannerUrl: 'https://ventrion.fun/metadata/endor_banner.png',
+    targetFundingCapUsdc: 100000,
+    totalCapitalRaisedUsdc: 20000,
+    fundingProgressPercent: 20.0,
+    lockedEscrowUsdc: 15000,
+    currentDividendYield: 0.0,
+    sharePriceUsdc: 0.50,
+    vol24h: 1200,
   }
 };
 
@@ -236,11 +258,14 @@ function ensureVentureStaticRoutes(mintAddress) {
   }
 }
 
-// Metaplex metadata reader
+// Metaplex metadata reader with full on-chain URI resolution & local disk fallback
 async function fetchOnChainMetadata(mintPubkey) {
   const mintStr = mintPubkey.toBase58();
   if (metadataCache.has(mintStr)) {
-    return metadataCache.get(mintStr);
+    const cached = metadataCache.get(mintStr);
+    if (cached && cached.bannerUrl) {
+      return cached;
+    }
   }
   try {
     const [pda] = PublicKey.findProgramAddressSync(
@@ -266,28 +291,116 @@ async function fetchOnChainMetadata(mintPubkey) {
     let bannerUrl = null;
     let description = null;
 
-    // Check local metadata files first
-    const cleanSym = symbol.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    const metaCandidates = [
-      path.join('/var/www/ventrion-web/out/metadata', `${cleanSym}_metadata.json`),
-      path.join(__dirname, 'public', 'ventrion', 'metadata', `${cleanSym}_metadata.json`),
-      path.join(__dirname, 'public', 'metadata', `${cleanSym}_metadata.json`),
-    ];
-    for (const cand of metaCandidates) {
-      if (fs.existsSync(cand)) {
+    // Helper to extract media fields from parsed JSON
+    const extractMedia = (parsed) => {
+      if (!parsed || typeof parsed !== 'object') return false;
+      if (parsed.image) logoUrl = parsed.image;
+      else if (parsed.logoUrl) logoUrl = parsed.logoUrl;
+      else if (parsed.logo) logoUrl = parsed.logo;
+
+      if (parsed.banner) bannerUrl = parsed.banner;
+      else if (parsed.bannerUrl) bannerUrl = parsed.bannerUrl;
+      else if (parsed.header) bannerUrl = parsed.header;
+      else if (parsed.cover) bannerUrl = parsed.cover;
+
+      if (!bannerUrl && Array.isArray(parsed.properties?.files)) {
+        const bannerFile = parsed.properties.files.find(f => 
+          f.uri && f.uri !== logoUrl && (f.type?.startsWith('image/') || f.uri.includes('banner'))
+        );
+        if (bannerFile) bannerUrl = bannerFile.uri;
+      }
+
+      if (parsed.description) description = parsed.description;
+      return Boolean(logoUrl || bannerUrl);
+    };
+
+    // 1. PRIMARY: Resolve directly from the on-chain Metaplex URI!
+    if (uri && uri.length > 5) {
+      let resolvedFromUri = false;
+      if (uri.includes('/metadata/') || uri.startsWith('https://ventrion.fun') || uri.startsWith('http://localhost') || uri.startsWith('/')) {
+        let uriFilename = '';
         try {
-          const parsed = JSON.parse(fs.readFileSync(cand, 'utf8'));
-          if (parsed.image) logoUrl = parsed.image;
-          if (parsed.banner) bannerUrl = parsed.banner;
-          else if (parsed.bannerUrl) bannerUrl = parsed.bannerUrl;
-          if (parsed.description) description = parsed.description;
-          break;
-        } catch (e) {}
+          if (uri.startsWith('http://') || uri.startsWith('https://')) {
+            uriFilename = path.basename(new URL(uri).pathname);
+          } else {
+            uriFilename = path.basename(uri);
+          }
+        } catch {
+          uriFilename = uri.split('/').pop() || '';
+        }
+
+        if (uriFilename) {
+          const directDiskCandidates = [
+            path.join('/var/www/ventrion-web/out/metadata', uriFilename),
+            path.join(__dirname, 'public', 'ventrion', 'metadata', uriFilename),
+            path.join(__dirname, 'public', 'metadata', uriFilename),
+          ];
+          for (const cand of directDiskCandidates) {
+            if (fs.existsSync(cand)) {
+              try {
+                const parsed = JSON.parse(fs.readFileSync(cand, 'utf8'));
+                if (extractMedia(parsed)) {
+                  resolvedFromUri = true;
+                  break;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+      }
+
+      if (!resolvedFromUri && (uri.startsWith('http://') || uri.startsWith('https://'))) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const resp = await fetch(uri, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (resp.ok) {
+            const parsed = await resp.json();
+            if (extractMedia(parsed)) {
+              resolvedFromUri = true;
+            }
+          }
+        } catch (fetchErr) {}
       }
     }
 
+    // 2. SECONDARY: Fall back to local symbol/mint candidate files
+    if (!bannerUrl || !logoUrl) {
+      const cleanSym = symbol.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const metaCandidates = [
+        path.join('/var/www/ventrion-web/out/metadata', `${cleanSym}_metadata.json`),
+        path.join(__dirname, 'public', 'ventrion', 'metadata', `${cleanSym}_metadata.json`),
+        path.join(__dirname, 'public', 'metadata', `${cleanSym}_metadata.json`),
+        path.join('/var/www/ventrion-web/out/metadata', `${mintStr}_metadata.json`),
+        path.join(__dirname, 'public', 'metadata', `${mintStr}_metadata.json`),
+      ];
+      for (const cand of metaCandidates) {
+        if (fs.existsSync(cand)) {
+          try {
+            const parsed = JSON.parse(fs.readFileSync(cand, 'utf8'));
+            extractMedia(parsed);
+            if (bannerUrl && logoUrl) break;
+          } catch (e) {}
+        }
+      }
+    }
+
+    // 3. TERTIARY: Check KNOWN_METADATA fallback
+    if (KNOWN_METADATA[mintStr]) {
+      const km = KNOWN_METADATA[mintStr];
+      if (!logoUrl && km.logoUrl) logoUrl = km.logoUrl;
+      if (!bannerUrl && km.bannerUrl) bannerUrl = km.bannerUrl;
+      if (!description && km.description) description = km.description;
+    }
+
+    if (logoUrl && logoUrl.startsWith('/')) logoUrl = `https://ventrion.fun${logoUrl}`;
+    if (bannerUrl && bannerUrl.startsWith('/')) bannerUrl = `https://ventrion.fun${bannerUrl}`;
+
     const meta = { name, symbol, uri, logoUrl, bannerUrl, description };
-    metadataCache.set(mintStr, meta);
+    if (bannerUrl && logoUrl) {
+      metadataCache.set(mintStr, meta);
+    }
     return meta;
   } catch (e) {
     return null;
@@ -1048,9 +1161,9 @@ async function syncVenturesFromDevnet() {
     }
 
     // STRICT ZERO-MOCK ENFORCEMENT & CACHE PRESERVATION:
-    // If the on-chain fetch failed or returned fewer ventures due to RPC rate limiting, DO NOT wipe existing cache!
-    if (processedList.length < 5 && cachedVentures.length >= 5) {
-      console.warn(`[VenturesDaemon] On-chain scan yielded only ${processedList.length} ventures (likely RPC rate-limit / timeout). Preserving current ${cachedVentures.length} ventures.`);
+    // If the on-chain fetch failed (returned 0 ventures) due to RPC rate limiting, DO NOT wipe existing cache!
+    if (processedList.length === 0 && cachedVentures.length > 0) {
+      console.warn(`[VenturesDaemon] On-chain scan yielded 0 ventures (likely RPC rate-limit / timeout). Preserving current ${cachedVentures.length} ventures.`);
       return;
     }
 
@@ -1257,6 +1370,7 @@ router.post('/upload-metadata', (req, res) => {
   try {
     const { symbol, name, description, logoDataUrl, bannerDataUrl } = req.body || {};
     const cleanSymbol = (symbol || 'VENT').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const timestamp = Date.now();
 
     const outMetaDir = '/var/www/ventrion-web/out/metadata';
     const dashPublicVentrionMetaDir = path.join(__dirname, 'public', 'ventrion', 'metadata');
@@ -1269,6 +1383,7 @@ router.post('/upload-metadata', (req, res) => {
     });
 
     let logoFileName = `${cleanSymbol}_logo.png`;
+    let uniqueLogoFileName = `${cleanSymbol}_${timestamp}_logo.png`;
     let logoMime = 'image/png';
     let hasLogoFile = false;
 
@@ -1277,11 +1392,14 @@ router.post('/upload-metadata', (req, res) => {
       if (matches) {
         logoMime = matches[1];
         const rawExt = logoMime.split('/')[1].replace('+xml', '');
-        logoFileName = `${cleanSymbol}_logo.${rawExt === 'jpeg' ? 'jpg' : rawExt}`;
+        const ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
+        logoFileName = `${cleanSymbol}_logo.${ext}`;
+        uniqueLogoFileName = `${cleanSymbol}_${timestamp}_logo.${ext}`;
         const imageBuffer = Buffer.from(matches[2].trim().replace(/\s+/g, ''), 'base64');
         [outMetaDir, dashPublicVentrionMetaDir, dashPublicMetaDir].forEach((d) => {
           try {
             fs.writeFileSync(path.join(d, logoFileName), imageBuffer);
+            fs.writeFileSync(path.join(d, uniqueLogoFileName), imageBuffer);
           } catch (e) {}
         });
         hasLogoFile = true;
@@ -1289,10 +1407,11 @@ router.post('/upload-metadata', (req, res) => {
     }
 
     const imageUrl = hasLogoFile
-      ? `https://ventrion.fun/metadata/${logoFileName}`
+      ? `https://ventrion.fun/metadata/${uniqueLogoFileName}`
       : (logoDataUrl && logoDataUrl.startsWith('http') ? logoDataUrl : 'https://ventrion.fun/ventrion-logo.png');
 
     let bannerFileName = `${cleanSymbol}_banner.png`;
+    let uniqueBannerFileName = `${cleanSymbol}_${timestamp}_banner.png`;
     let bannerMime = 'image/png';
     let hasBannerFile = false;
 
@@ -1301,11 +1420,14 @@ router.post('/upload-metadata', (req, res) => {
       if (bMatches) {
         bannerMime = bMatches[1];
         const rawExt = bannerMime.split('/')[1].replace('+xml', '');
-        bannerFileName = `${cleanSymbol}_banner.${rawExt === 'jpeg' ? 'jpg' : rawExt}`;
+        const ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
+        bannerFileName = `${cleanSymbol}_banner.${ext}`;
+        uniqueBannerFileName = `${cleanSymbol}_${timestamp}_banner.${ext}`;
         const bannerBuffer = Buffer.from(bMatches[2].trim().replace(/\s+/g, ''), 'base64');
         [outMetaDir, dashPublicVentrionMetaDir, dashPublicMetaDir].forEach((d) => {
           try {
             fs.writeFileSync(path.join(d, bannerFileName), bannerBuffer);
+            fs.writeFileSync(path.join(d, uniqueBannerFileName), bannerBuffer);
           } catch (e) {}
         });
         hasBannerFile = true;
@@ -1313,7 +1435,7 @@ router.post('/upload-metadata', (req, res) => {
     }
 
     const bannerUrl = hasBannerFile
-      ? `https://ventrion.fun/metadata/${bannerFileName}`
+      ? `https://ventrion.fun/metadata/${uniqueBannerFileName}`
       : (bannerDataUrl && bannerDataUrl.startsWith('http') ? bannerDataUrl : 'https://ventrion.fun/ventrion_banner.jpg');
 
     const metadataJson = {
@@ -1346,13 +1468,22 @@ router.post('/upload-metadata', (req, res) => {
     }
 
     const jsonFileName = `${cleanSymbol}_metadata.json`;
+    const uniqueJsonFileName = `${cleanSymbol}_${timestamp}_metadata.json`;
     [outMetaDir, dashPublicVentrionMetaDir, dashPublicMetaDir].forEach((d) => {
       try {
         fs.writeFileSync(path.join(d, jsonFileName), JSON.stringify(metadataJson, null, 2));
+        fs.writeFileSync(path.join(d, uniqueJsonFileName), JSON.stringify(metadataJson, null, 2));
       } catch (e) {}
     });
 
-    const publicUri = `https://ventrion.fun/metadata/${jsonFileName}`;
+    // Invalidate any stale metadata cache entries for this symbol
+    for (const [key, val] of metadataCache.entries()) {
+      if (val && val.symbol && val.symbol.toLowerCase() === cleanSymbol) {
+        metadataCache.delete(key);
+      }
+    }
+
+    const publicUri = `https://ventrion.fun/metadata/${uniqueJsonFileName}`;
     return res.json({ success: true, uri: publicUri, metadata: metadataJson });
   } catch (err) {
     console.error('[VenturesDaemon] upload-metadata error:', err);
@@ -1412,11 +1543,25 @@ async function handlePrepareLaunchGenesis(req, res) {
       } catch (e) {}
     });
 
+    let uriBaseName = '';
+    try {
+      uriBaseName = path.basename(new URL(cleanUri).pathname);
+    } catch {
+      uriBaseName = cleanUri.split('/').pop() || '';
+    }
+
     const metaFileCandidates = [
       path.join(outMetaDir, `${cleanSymLower}_metadata.json`),
       path.join(dashPublicVentrionMetaDir, `${cleanSymLower}_metadata.json`),
       path.join(dashPublicMetaDir, `${cleanSymLower}_metadata.json`),
     ];
+    if (uriBaseName) {
+      metaFileCandidates.push(
+        path.join(outMetaDir, uriBaseName),
+        path.join(dashPublicVentrionMetaDir, uriBaseName),
+        path.join(dashPublicMetaDir, uriBaseName)
+      );
+    }
 
     const hasMeta = metaFileCandidates.some((f) => fs.existsSync(f));
     if (!hasMeta) {
