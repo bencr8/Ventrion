@@ -1953,9 +1953,9 @@ export function VentureDetailClient({ mint }: { mint: string }) {
                     <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     <span>Primary Raise 100% Filled</span>
                   </div>
-                  <div className="text-sm font-bold text-[#111113]">Migration in Progress</div>
+                  <div className="text-sm font-bold text-[#111113]">Graduation &amp; Legal Setup in Progress</div>
                   <p className="text-xs text-[#7A7672] max-w-sm mx-auto leading-relaxed">
-                    Target capital hard cap reached. Seeding Meteora DLMM pool. Select "Sell" above to refund primary receipts back to USDC.
+                    Target capital reached. Legal entity formation (MIDAO DAO LLC), milestone escrow allocation, and Meteora DLMM seeding in progress. Select &quot;Sell&quot; above to refund primary receipts back to USDC if desired.
                   </p>
                 </div>
               ) : (

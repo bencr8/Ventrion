@@ -35,12 +35,12 @@ const CARDS = [
   {
     id: 2,
     number: "03",
-    shortLabel: "Liquidity",
-    tag: "03 / Instant Liquidity",
-    headline1: "Instant Liquidity.",
-    headline2: "Trading in One Block.",
+    shortLabel: "Graduation",
+    tag: "03 / Legal Setup & Liquidity",
+    headline1: "Legal Structuring.",
+    headline2: "Secondary DLMM Market.",
     description:
-      "Filling the primary raise triggers autonomous migration into a Meteora DLMM pool. Liquidity is permanently locked on-chain—enabling immediate secondary trading without manual market making.",
+      "Hitting the target funding triggers the MIDAO DAO LLC corporate setup, secures milestone tranches under backer governance, and seeds 17% permanent liquidity into Meteora DLMM for continuous secondary trading.",
     component: TradeDexView,
   },
   {
