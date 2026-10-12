@@ -7,51 +7,46 @@ export const DIVIDEND_PRECISION = 1_000_000_000_000_000_000; // 1e18 (ACC_PRECIS
 // SOLANA DEVNET DEPLOYMENT CONSTANTS & ADDRESSES (LIVE CLUSTER VERIFIED)
 // =============================================================================
 export const DEVNET_RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
-export const DEVNET_PROGRAM_ID = "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD";
-export const DEVNET_DEPLOYER_KEY = "2K9r52f1ZxuB1BQ1hhZWFgk1cGPcf7ucdvDHkGgf82TV";
-export const DEVNET_GLOBAL_CONFIG_PDA = "E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa";
-export const DEVNET_VENT_STAKE_VAULT_PDA = "EB6KLGyxnCLH3pu26VvwVx7GTocGXg2CVwtkkRyYEnik";
-export const DEVNET_MASTER_FEE_VAULT_PDA = "5BPnjZ6yPQtVK2tSJ4dYzD8mwzNnJxiP9fcVuKK4RbEV";
+export const DEVNET_PROGRAM_ID = "vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY";
+export const DEVNET_LEGACY_PROGRAM_ID = "vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY";
+export const DEVNET_DEPLOYER_KEY = "2Yt4xXiyTJD1gN2Bz2c3FoyTWWqFZMsWApoe75DrYbPH";
+export const DEVNET_GLOBAL_CONFIG_PDA = "2Hdse1LPfiJRZcxZfKgKZsDXYB1MCBJyBRuZGi9rTzoW";
+export const DEVNET_VENT_STAKE_VAULT_PDA = "Bv7CyZCMYnfZYyPRdH34p8F18mAFdeWoLiicXuGY8xYb";
+export const DEVNET_MASTER_FEE_VAULT_PDA = "CDLo9pYdLKzULbLNVkFuCJJBfSVxhcXWLh1hXvBsVHxh";
 export const DEVNET_VENT_MINT = "5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ";
 export const DEVNET_USDC_MINT = "5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt";
 export const DEVNET_DLMM_PRESET_PARAMETER = "4vP4DFDJLRz85NBCfJALYPNdieWwzQSstrUuTms1gekn";
 
-// Pioneer Venture 1 ($PVENT) - Live Post-Graduation State
-export const DEVNET_PIONEER_VENTURE_PDA = "GsPUAiuzCcr1PnrkxSXQYosJMYLroDy8tnfcF8YfWSmG";
-export const DEVNET_PIONEER_VENTURE_MINT = "5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn";
-export const DEVNET_PIONEER_FUNDING_ROUND_0_PDA = "ofPFE4gdAg7wkS3NLLPh4vZBMfh7SY5qtuuXq8kJ6ZZ";
-export const DEVNET_PIONEER_RECEIPT_MINT_PDA = "GWyp7KVHoyGZFxsSWMVsDZcpLemPZgsNJAno7X5myKY9";
-export const DEVNET_PIONEER_METEORA_LB_PAIR = "Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h";
-export const DEVNET_PIONEER_STATUS = "GraduatedDLMMLive";
-export const DEVNET_PIONEER_DLMM_RESERVE_X_PVENT = "B94c7Meb8CQUx7hbzqKFGFRs4jyFCBPgxKL47YULBfvV";
-export const DEVNET_PIONEER_DLMM_RESERVE_Y_USDC = "adNDo8J6unTz3jimQUFTr6J45YXd43x6yHw9fZ449ki";
-export const DEVNET_PIONEER_MASTER_LOCK_VAULT = "HccspiobbsMgm8yMdVTRfW4peebray7JA8fdJrsjdhC";
-export const DEVNET_PIONEER_DIVIDEND_VAULT = "D1V21FL2ofrFePRUicQiGBiPtphGwpKRSVNLWcdcyyew";
-export const DEVNET_PIONEER_STAKED_SHARES_VAULT = "3b9TFYemxrRs6EibT53GF4BrSSUvJG8W9AtNeFJBNNKt";
-export const DEVNET_PIONEER_MILESTONE_ESCROW = "9oHnjiAfiPj645NyEKVzsveKgNDou8mLADMpgHmzPmdb";
-export const DEVNET_PIONEER_MILESTONE_USDC_VAULT = "79AGSm67xMAbkrqUYsuqNCe9Z8cF8yEEUDk2p1MDfNzy";
+// Ventrion Protocol Venture ($VENT)
+export const DEVNET_VENTRION_VENTURE_MINT = "48X1XhQr7rSLKLQsmwUPyQ7snURtVcprFSWQV8x3YeDU";
+export const DEVNET_VENTRION_VENTURE_PDA = "FcLYBmNTL4qDoyRbVkn6ATSEtbLwprZLNbdnjAW8jDck";
+export const DEVNET_VENTRION_FUNDING_ROUND_0_PDA = "2EzBRr8FpWbdBfspx1AAa7e5yCMvBaiQxvZ53ESwxvLP";
+export const DEVNET_VENTRION_RECEIPT_MINT_PDA = "6h5hcLoR6GmXgaGtsA5rT7qCWKhDEURb5wiVBC5WDQy3";
 
-// Pilot Venture 2 ($QCMP - Metaplex Verified)
-export const DEVNET_QCMP_VENTURE_MINT = "Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E";
-export const DEVNET_QCMP_METAPLEX_METADATA_PDA = "AAJwDz75nu3oxL23xQzxTUgQYdR7T5F1b9YU5s4b8GzH";
-export const DEVNET_QCMP_METEORA_DLMM_POOL = "CKfSPXBoLq2Xp5KNPDdp6wKYRBMX5FtMYja8HJKQEvDh";
+// Apex Quantum ($APEX)
+export const DEVNET_APEX_VENTURE_MINT = "C8UNEaZhDFxy4H8kdhwk3Y4zxDFpPfkLN1E5Hc6ypupJ";
+export const DEVNET_APEX_VENTURE_PDA = "5n7DHyU8mT73UpftmemFxHK6jgba7FKiBbPZvan4C3Qn";
+export const DEVNET_APEX_FUNDING_ROUND_0_PDA = "HQGn3cN7pke8g2CCon3M67GiWbAuNGqfQpvAa3wzVvtc";
+export const DEVNET_APEX_RECEIPT_MINT_PDA = "9XGmReBLjnhXFL9JnNPWrTJWKgt4ux7NUb5T7FPV7xcX";
 
-// Live Pioneer Venture ($APEX - Apex Quantum)
-export const DEVNET_APEX_VENTURE_MINT = "J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn";
-export const DEVNET_APEX_VENTURE_PDA = "9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv";
-export const DEVNET_APEX_MILESTONE_ESCROW_PDA = "GMjcGkmVboouBdoP9k6rEzHhNHgJk7aXYrA1mEUE6ga5";
+// Solana BioDynamics ($SBD)
+export const DEVNET_SBD_VENTURE_MINT = "3VnWqQjw7T7YGSUVYYgrW6SZavMQ24u1FsrEzDvXwUYC";
+export const DEVNET_SBD_VENTURE_PDA = "91FMqn4zTLE2WZ1LT8MzPV4NiciAmHYUr3k5yFdu9WRy";
+export const DEVNET_SBD_FUNDING_ROUND_0_PDA = "AaZVxzeT8wZXT1zQWMQMSykRhJ5ZTT9G9hhaHdrHrBx6";
+export const DEVNET_SBD_RECEIPT_MINT_PDA = "2rMJ4CsvmjTZQDJbkT6FGmNGxy8fxv2Au8KtkqHSP5xr";
+
 export const METAPLEX_TOKEN_METADATA_PROGRAM_ID = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 
 export const DEFAULT_VENTURE = {
-  name: "Ventrion Pioneer 1 ($PVENT)",
-  symbol: "$PVENT",
-  founder: "2K9r5...82TV",
+  name: "Ventrion Protocol ($VENT)",
+  symbol: "$VENT",
+  founder: "2Yt4x...YbPH",
   totalShares: TOTAL_SHARES,
   quorumVotes: QUORUM_VOTES_REQUIRED,
   reserveRateBps: 1000, // 10%
   ceoSalaryBps: 500,    // 5%
   cogsUsdc: 24.0,
-  priceUsdc: 60.0,
-  supplierName: "Apex PrintWorks (Berlin, DE)",
-  supplierWallet: "9xQeWvG816bUx9EPjHmaT23yvVM2VXmzLsDaA88Wv",
+  priceUsdc: 0.50,
+  supplierName: "Ventrion Core Network",
+  supplierWallet: "2Yt4xXiyTJD1gN2Bz2c3FoyTWWqFZMsWApoe75DrYbPH",
 };

@@ -7,10 +7,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-ventrion_protocol = "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
+ventrion_protocol = "vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY"
 
 [programs.devnet]
-ventrion_protocol = "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
+ventrion_protocol = "vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY"
 
 [registry]
 url = "https://api.apr.dev"

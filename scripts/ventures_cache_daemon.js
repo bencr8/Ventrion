@@ -1,5 +1,5 @@
 const express = require('express');
-const { Connection, PublicKey, Keypair, Transaction, TransactionInstruction, ComputeBudgetProgram, SystemProgram } = require('@solana/web3.js');
+const { Connection, PublicKey, Keypair, Transaction, ComputeBudgetProgram, SystemProgram } = require('@solana/web3.js');
 const crypto = require('crypto');
 let bs58 = require('bs58');
 if (bs58.default) bs58 = bs58.default;
@@ -59,9 +59,9 @@ try {
   }
 }
 
-const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56';
-const DEVNET_WSS = process.env.SOLANA_WS_URL || 'wss://devnet.helius-rpc.com/?api-key=97301aa7-addf-4cd6-86b5-04612d19ad56';
-const VENTRION_PROGRAM_ID = new PublicKey('AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD');
+const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+const DEVNET_WSS = process.env.SOLANA_WS_URL || 'wss://api.devnet.solana.com';
+const VENTRION_PROGRAM_ID = new PublicKey('vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY');
 const METAPLEX_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 const DEVNET_USDC_MINT = new PublicKey('5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt');
 const DEVNET_VENT_MINT = new PublicKey('5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ');
@@ -81,6 +81,7 @@ const connection = new Connection(DEVNET_RPC, { commitment: 'confirmed', wsEndpo
 let deployerKeypair = null;
 const keyPaths = [
   '/root/deployer_key.json',
+  '/root/.config/solana/id.json',
   '/root/.config/solana/deployer_2K9r.json',
   path.resolve(__dirname, 'deployer_2K9r.json'),
   path.resolve(process.env.USERPROFILE || '', '.config/solana/id.json')
@@ -99,13 +100,15 @@ for (const kp of keyPaths) {
 let anchorProgram;
 if (anchor && ventrionIdl) {
   try {
+    const effectiveIdl = { ...ventrionIdl, address: VENTRION_PROGRAM_ID.toBase58() };
     if (deployerKeypair) {
       const wallet = new anchor.Wallet(deployerKeypair);
       const provider = new anchor.AnchorProvider(connection, wallet, { commitment: 'confirmed' });
-      anchorProgram = new anchor.Program(ventrionIdl, provider);
+      anchorProgram = new anchor.Program(effectiveIdl, provider);
     } else {
-      anchorProgram = new anchor.Program(ventrionIdl, { connection });
+      anchorProgram = new anchor.Program(effectiveIdl, { connection });
     }
+    console.log('[VenturesDaemon] Anchor program initialized with official ID:', VENTRION_PROGRAM_ID.toBase58());
   } catch (err) {
     console.warn('[VenturesDaemon] Error initializing Anchor program:', err.message);
   }
@@ -120,89 +123,74 @@ const metadataCache = new Map();
 
 // Known seed metadata for Devnet pilot ventures
 const KNOWN_METADATA = {
-  'Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E': {
-    id: 'Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E',
-    name: 'QuantumCompute Systems ($QCMP)',
-    symbol: 'QCMP',
-    ticker: '$QCMP',
-    tagline: 'Next-Generation Photonic Quantum Computing tokenized under MIDAO DAO LLC framework.',
-    description: 'QuantumCompute Systems ($QCMP) is verified on Solana Devnet with full Metaplex Token Metadata V3, verified 1,000,000 fixed share cap, permanently revoked mint authority, and live graduated Meteora DLMM pool.',
+  '48X1XhQr7rSLKLQsmwUPyQ7snURtVcprFSWQV8x3YeDU': {
+    id: '48X1XhQr7rSLKLQsmwUPyQ7snURtVcprFSWQV8x3YeDU',
+    name: 'Ventrion Protocol ($VENT)',
+    symbol: 'VENT',
+    ticker: '$VENT',
+    tagline: 'Decentralized Autonomous Venture Capital & Primary Capital Formation Protocol.',
+    description: 'Ventrion Protocol ($VENT) is the core governance and economic foundation of Ventrion on Solana Devnet. Primary flat curve raise with milestone escrow security and automatic protocol fee distribution into the $VENT staking vault upon graduation.',
+    category: 'Infrastructure',
+    canonicalStatus: 'Raising',
+    statusBadge: 'Raising',
+    legalEntity: 'MIDAO DAO LLC, Marshall Islands',
+    registrationNumber: 'MIDAO-VENT-00001-REG',
+    logoUrl: 'https://ventrion.fun/ventrion-logo.png',
+    bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
+    targetFundingCapUsdc: 100000,
+    totalCapitalRaisedUsdc: 0,
+    fundingProgressPercent: 0.0,
+    lockedEscrowUsdc: 0,
+    currentDividendYield: 0.0,
+    sharePriceUsdc: 0.50,
+    vol24h: 3200,
+    receiptMint: '6h5hcLoR6GmXgaGtsA5rT7qCWKhDEURb5wiVBC5WDQy3',
+  },
+  'C8UNEaZhDFxy4H8kdhwk3Y4zxDFpPfkLN1E5Hc6ypupJ': {
+    id: 'C8UNEaZhDFxy4H8kdhwk3Y4zxDFpPfkLN1E5Hc6ypupJ',
+    name: 'Apex Quantum ($APEX)',
+    symbol: 'APEX',
+    ticker: '$APEX',
+    tagline: 'Decentralized quantum-resistant encryption & compute lattice on Solana.',
+    description: 'Apex Quantum ($APEX) provides post-quantum cryptographic security and decentralized compute infrastructure on Solana Devnet under the Ventrion Protocol.',
     category: 'AI & Compute',
-    canonicalStatus: 'Funded',
-    statusBadge: 'Funded',
+    canonicalStatus: 'Raising',
+    statusBadge: 'Raising',
     legalEntity: 'MIDAO DAO LLC, Marshall Islands',
-    registrationNumber: 'MIDAO-QC-84920-REG',
-    logoUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&q=80',
-    lockedEscrowUsdc: 14000,
-    currentDividendYield: 0.0,
-    vol24h: 0,
-    dlmmPoolAddress: 'CKfSPXBoLq2Xp5KNPDdp6wKYRBMX5FtMYja8HJKQEvDh',
-  },
-  '5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn': {
-    id: '5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn',
-    name: 'Pioneer Venture 1 ($PVENT)',
-    symbol: 'PVENT',
-    ticker: '$PVENT',
-    tagline: 'First tokenized venture on Ventrion Protocol. 1,000,000 shares mathematically hard-capped, primary flat curve raise.',
-    description: 'Pioneer Venture 1 ($PVENT) is the canonical genesis venture of the Ventrion Protocol on Solana Devnet. Features on-chain $50k USDC primary escrow raise, 14-day $VENT verification voting gate, flat pricing curve, O(1) dividend accumulator, and ragequit floor price backstop.',
-    category: 'Hardware',
-    canonicalStatus: 'Funded',
-    statusBadge: 'Funded',
-    legalEntity: 'MIDAO DAO LLC, Marshall Islands',
-    registrationNumber: 'MIDAO-PV-10291-REG',
-    logoUrl: '/ventrion-logo.png',
+    registrationNumber: 'MIDAO-APEX-84920-REG',
+    logoUrl: 'https://ventrion.fun/ventrion-logo.png',
+    bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
     targetFundingCapUsdc: 50000,
-    totalCapitalRaisedUsdc: 50000,
-    fundingProgressPercent: 100.0,
-    lockedEscrowUsdc: 30000,
+    totalCapitalRaisedUsdc: 0,
+    fundingProgressPercent: 0.0,
+    lockedEscrowUsdc: 0,
     currentDividendYield: 0.0,
-    vol24h: 12400,
-    dlmmPoolAddress: 'Fttz288rQqJX93ayuNGBZyDMdgfhyU76x5n3pR9GSN9h',
-    receiptMint: 'GWyp7KVHoyGZFxsSWMVsDZcpLemPZgsNJAno7X5myKY9',
+    sharePriceUsdc: 0.25,
+    vol24h: 1800,
+    receiptMint: '9XGmReBLjnhXFL9JnNPWrTJWKgt4ux7NUb5T7FPV7xcX',
   },
-  'AWYXNVVsgwy4ouk5qAYoLqTbe2VtrWtpvHJuRzyGXXqX': {
-    id: 'AWYXNVVsgwy4ouk5qAYoLqTbe2VtrWtpvHJuRzyGXXqX',
+  '3VnWqQjw7T7YGSUVYYgrW6SZavMQ24u1FsrEzDvXwUYC': {
+    id: '3VnWqQjw7T7YGSUVYYgrW6SZavMQ24u1FsrEzDvXwUYC',
     name: 'Solana BioDynamics ($SBD)',
     symbol: 'SBD',
     ticker: '$SBD',
     tagline: 'Decentralized bio-simulation & molecular docking compute engine.',
     description: 'Solana BioDynamics ($SBD) is tokenized on Solana Devnet under the Ventrion Protocol. Features primary flat curve raise, milestone escrow security, and continuous backstop liquidity on Meteora DLMM.',
-    category: 'AI & Compute',
-    canonicalStatus: 'Funded',
-    statusBadge: 'Funded',
+    category: 'Biotech',
+    canonicalStatus: 'Raising',
+    statusBadge: 'Raising',
     legalEntity: 'MIDAO DAO LLC, Marshall Islands',
     registrationNumber: 'MIDAO-SBD-91023-REG',
-    logoUrl: '/ventrion-logo.png',
-    targetFundingCapUsdc: 50000,
-    totalCapitalRaisedUsdc: 50000,
-    fundingProgressPercent: 100.0,
-    lockedEscrowUsdc: 37500,
+    logoUrl: 'https://ventrion.fun/ventrion-logo.png',
+    bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
+    targetFundingCapUsdc: 60000,
+    totalCapitalRaisedUsdc: 0,
+    fundingProgressPercent: 0.0,
+    lockedEscrowUsdc: 0,
     currentDividendYield: 0.0,
-    sharePriceUsdc: 0.25,
-    vol24h: 18400,
-    dlmmPoolAddress: 'G7LWK7it9o6pdhPB1gTKLmoUwjsvY1ZY71RXhAztCBfw',
-  },
-  '5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ': {
-    id: '5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ',
-    name: 'Ventrion Protocol ($VENT)',
-    symbol: 'VENT',
-    ticker: '$VENT',
-    tagline: 'Decentralized Autonomous Venture Capital & Primary Capital Formation Protocol.',
-    description: 'Ventrion ($VENT) is the core governance and economic foundation of Ventrion Protocol on Solana Devnet. Stakers govern venture verification, milestone releases, and accumulate protocol dividends.',
-    category: 'Infrastructure',
-    canonicalStatus: 'Funded',
-    statusBadge: 'Funded',
-    legalEntity: 'MIDAO DAO LLC, Marshall Islands',
-    registrationNumber: 'MIDAO-VENT-00001-REG',
-    logoUrl: '/ventrion-logo.png',
-    targetFundingCapUsdc: 100000,
-    totalCapitalRaisedUsdc: 100000,
-    fundingProgressPercent: 100.0,
-    lockedEscrowUsdc: 75000,
-    currentDividendYield: 0.0,
-    sharePriceUsdc: 1.00,
-    vol24h: 31200,
-    dlmmPoolAddress: '2AgsxyGbAkieCU1k59q6pbFd3DCiDu7uYBGfd6gQgQMA',
+    sharePriceUsdc: 0.24,
+    vol24h: 2400,
+    receiptMint: '2rMJ4CsvmjTZQDJbkT6FGmNGxy8fxv2Au8KtkqHSP5xr',
   }
 };
 
@@ -260,7 +248,10 @@ async function fetchOnChainMetadata(mintPubkey) {
       METAPLEX_PROGRAM_ID
     );
     const info = await connection.getAccountInfo(pda);
-    if (!info) return null;
+    if (!info) {
+      metadataCache.set(mintStr, null);
+      return null;
+    }
 
     const buf = info.data;
     let offset = 1 + 32 + 32;
@@ -309,7 +300,7 @@ const dlmmPriceCache = new Map();
 async function getLiveDlmmPricing(poolAddress) {
   if (!DLMM || !poolAddress) return null;
   const cached = dlmmPriceCache.get(poolAddress);
-  if (cached && Date.now() - cached.fetchedAt < 5000) {
+  if (cached && Date.now() - cached.fetchedAt < 30000) {
     return cached;
   }
   try {
@@ -804,16 +795,27 @@ async function syncVenturesFromDevnet() {
       return;
     }
 
-    // 1. Fetch real on-chain VentureState accounts
-    const ventureAccounts = await anchorProgram.account.ventureState.all();
+    // 1. Fetch real on-chain VentureState accounts from the official Program ID
+    let ventureAccounts = [];
+    if (anchorProgram) {
+      ventureAccounts = await anchorProgram.account.ventureState.all().catch((e) => {
+        console.warn('[VenturesDaemon] Notice fetching active venture accounts:', e.message);
+        return [];
+      });
+    }
 
     // 2. Fetch real on-chain FundingRound accounts
-    const roundAccounts = await anchorProgram.account.fundingRound.all();
+    let roundAccounts = [];
+    if (anchorProgram) {
+      roundAccounts = await anchorProgram.account.fundingRound.all().catch(() => []);
+    }
 
     // 3. Fetch real on-chain MilestoneEscrow accounts
     let milestoneEscrowAccounts = [];
     try {
-      milestoneEscrowAccounts = await anchorProgram.account.milestoneEscrow.all();
+      if (anchorProgram) {
+        milestoneEscrowAccounts = await anchorProgram.account.milestoneEscrow.all().catch(() => []);
+      }
     } catch (e) {
       console.warn('[VenturesDaemon] Error fetching milestone escrow accounts:', e.message);
     }
@@ -829,9 +831,11 @@ async function syncVenturesFromDevnet() {
       }
     });
 
-    // Trigger Autonomous On-Chain Migration Keeper
+    // Trigger Autonomous On-Chain Migration Keeper for active executable program ventures
     try {
-      await runAutonomousMigrationKeeper(ventureAccounts, roundAccounts);
+      if (ventureAccounts.length > 0 && roundAccounts.length > 0) {
+        await runAutonomousMigrationKeeper(ventureAccounts, roundAccounts);
+      }
     } catch (keeperErr) {
       console.warn('[VenturesDaemon] Autonomous keeper tick notice:', keeperErr.message);
     }
@@ -941,7 +945,7 @@ async function syncVenturesFromDevnet() {
 
         const resolvedLogo = onChainMeta?.logoUrl || known.logoUrl || '/ventrion-logo.png';
         const rawBanner = onChainMeta?.bannerUrl || known.bannerUrl || null;
-        const resolvedBanner = (rawBanner && rawBanner !== resolvedLogo) ? rawBanner : null;
+        const resolvedBanner = (rawBanner && rawBanner !== resolvedLogo) ? rawBanner : '/flawless_studio_backdrop.png';
 
         const record = {
           id: known.id || mintStr,
@@ -1027,7 +1031,29 @@ async function syncVenturesFromDevnet() {
       }
     });
 
-    // STRICT ZERO-MOCK ENFORCEMENT: ONLY REAL ON-CHAIN VENTURES ARE CACHED!
+    // Enrich DLMM pricing for graduated pools in the background
+    for (const v of processedList) {
+      if (v.meteoraDlmmPool) {
+        try {
+          const livePricing = await getLiveDlmmPricing(v.meteoraDlmmPool);
+          if (livePricing) {
+            v.sharePriceUsdc = livePricing.price;
+            v.marketCapUsdc = livePricing.marketCap;
+            v.activeBinId = livePricing.activeBinId;
+            v.binStep = livePricing.binStep;
+            v.dlmmLive = true;
+          }
+        } catch (e) {}
+      }
+    }
+
+    // STRICT ZERO-MOCK ENFORCEMENT & CACHE PRESERVATION:
+    // If the on-chain fetch failed or returned fewer ventures due to RPC rate limiting, DO NOT wipe existing cache!
+    if (processedList.length < 5 && cachedVentures.length >= 5) {
+      console.warn(`[VenturesDaemon] On-chain scan yielded only ${processedList.length} ventures (likely RPC rate-limit / timeout). Preserving current ${cachedVentures.length} ventures.`);
+      return;
+    }
+
     cachedVentures = processedList;
     lastFetchTimestamp = Date.now();
     console.log(`[VenturesDaemon] Synced ${cachedVentures.length} verified on-chain ventures from Devnet in ${Date.now() - t0}ms`);
@@ -1039,39 +1065,15 @@ async function syncVenturesFromDevnet() {
 }
 
 // Dynamic Request Handler: GET /api/ventures/live
-// Delivers the 10-second cache enriched with ON-DEMAND SUB-SECOND DLMM LIVE PRICING!
-router.get('/live', async (req, res) => {
-  try {
-    // Enrich with sub-second DLMM prices for graduated / funded pools
-    const enrichedList = await Promise.all(
-      cachedVentures.map(async (v) => {
-        if (v.meteoraDlmmPool) {
-          const livePricing = await getLiveDlmmPricing(v.meteoraDlmmPool);
-          if (livePricing) {
-            return {
-              ...v,
-              sharePriceUsdc: livePricing.price,
-              marketCapUsdc: livePricing.marketCap,
-              activeBinId: livePricing.activeBinId,
-              binStep: livePricing.binStep,
-              dlmmLive: true
-            };
-          }
-        }
-        return v;
-      })
-    );
-
-    res.json({
-      success: true,
-      timestamp: Date.now(),
-      cacheTimestamp: lastFetchTimestamp,
-      count: enrichedList.length,
-      data: enrichedList
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
+// Delivers the instant cache pre-enriched with DLMM live pricing without blocking on RPC!
+router.get('/live', (req, res) => {
+  res.json({
+    success: true,
+    timestamp: Date.now(),
+    cacheTimestamp: lastFetchTimestamp,
+    count: cachedVentures.length,
+    data: cachedVentures
+  });
 });
 
 // Root /api/ventures handler (supports ?mint=... or returns all cached ventures)
@@ -1312,7 +1314,7 @@ router.post('/upload-metadata', (req, res) => {
 
     const bannerUrl = hasBannerFile
       ? `https://ventrion.fun/metadata/${bannerFileName}`
-      : (bannerDataUrl && bannerDataUrl.startsWith('http') ? bannerDataUrl : null);
+      : (bannerDataUrl && bannerDataUrl.startsWith('http') ? bannerDataUrl : 'https://ventrion.fun/flawless_studio_backdrop.png');
 
     const metadataJson = {
       name: name || cleanSymbol.toUpperCase(),
@@ -1423,12 +1425,17 @@ async function handlePrepareLaunchGenesis(req, res) {
         symbol: cleanSymbol,
         description: `${cleanName} tokenized venture on Ventrion Protocol.`,
         image: 'https://ventrion.fun/ventrion-logo.png',
+        banner: 'https://ventrion.fun/flawless_studio_backdrop.png',
+        bannerUrl: 'https://ventrion.fun/flawless_studio_backdrop.png',
         attributes: [
           { trait_type: 'Jurisdiction', value: 'MIDAO DAO LLC (Marshall Islands)' },
           { trait_type: 'Total Share Supply', value: '1,000,000 Common Shares' }
         ],
         properties: {
-          files: [{ uri: 'https://ventrion.fun/ventrion-logo.png', type: 'image/png' }],
+          files: [
+            { uri: 'https://ventrion.fun/ventrion-logo.png', type: 'image/png' },
+            { uri: 'https://ventrion.fun/flawless_studio_backdrop.png', type: 'image/png' }
+          ],
           category: 'image'
         }
       };
@@ -2859,25 +2866,6 @@ async function handlePrepareClaimInvestorDividends(req, res) {
     const tx = new Transaction();
     tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }));
 
-    const ataInfo = await connection.getAccountInfo(investorUsdcAta).catch(() => null);
-    if (!ataInfo) {
-      const createAtaIx = splToken?.createAssociatedTokenAccountInstruction
-        ? splToken.createAssociatedTokenAccountInstruction(investorPk, investorUsdcAta, investorPk, DEVNET_USDC_MINT)
-        : new TransactionInstruction({
-            keys: [
-              { pubkey: investorPk, isSigner: true, isWritable: true },
-              { pubkey: investorUsdcAta, isSigner: false, isWritable: true },
-              { pubkey: investorPk, isSigner: false, isWritable: false },
-              { pubkey: DEVNET_USDC_MINT, isSigner: false, isWritable: false },
-              { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-              { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-            ],
-            programId: ASSOCIATED_TOKEN_PROGRAM_ID,
-            data: Buffer.alloc(0),
-          });
-      tx.add(createAtaIx);
-    }
-
     const ix = await anchorProgram.methods
       .claimInvestorDividends()
       .accountsStrict({
@@ -3056,8 +3044,8 @@ let timer = null;
 function start() {
   if (timer) return;
   syncVenturesFromDevnet();
-  timer = setInterval(syncVenturesFromDevnet, 5000);
-  console.log('[VenturesDaemon] 10s Background Venture Cache Daemon Started');
+  timer = setInterval(syncVenturesFromDevnet, 20000);
+  console.log('[VenturesDaemon] 20s Background Venture Cache Daemon Started');
 }
 
 module.exports = {

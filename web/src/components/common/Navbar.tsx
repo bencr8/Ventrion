@@ -18,8 +18,6 @@ import { useDualWallet, encodeBase58 } from "../wallet/DualModeWalletContext";
 import {
   DEVNET_USDC_MINT,
   DEVNET_VENT_MINT,
-  PILOT_VENTURE_1_PVENT_MINT,
-  PILOT_VENTURE_2_QCMP_MINT,
   SOLANA_DEVNET_RPC,
   TOKEN_PROGRAM_ID,
   getVenturePDA,

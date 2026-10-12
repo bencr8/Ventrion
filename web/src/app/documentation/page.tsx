@@ -7,10 +7,9 @@ import {
   VENTRION_PROGRAM_ID,
   DEVNET_VENT_MINT,
   DEVNET_USDC_MINT,
-  PILOT_VENTURE_1_PVENT_MINT,
-  PILOT_VENTURE_2_QCMP_MINT,
-  QCMP_METAPLEX_METADATA_PDA,
-  QCMP_METEORA_DLMM_POOL,
+  VENTRION_VENTURE_MINT,
+  APEX_QUANTUM_MINT,
+  SBD_VENTURE_MINT,
 } from "../../lib/solana/ventrionProgram";
 
 interface SectionItem {
@@ -384,14 +383,14 @@ export default function DocumentationPage() {
                 <div className="pt-3 space-y-2 font-mono text-xs">
                   {[
                     { name: "Program ID", value: VENTRION_PROGRAM_ID.toBase58() },
-                    { name: "Global Config PDA", value: "E8xXQTv9jpeYHGEQYeaPUxTZ6HLJx8KqgzozYqHFUuEa" },
-                    { name: "Live Pioneer ($APEX)", value: "J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn" },
+                    { name: "Global Config PDA", value: "2Hdse1LPfiJRZcxZfKgKZsDXYB1MCBJyBRuZGi9rTzoW" },
+                    { name: "Vent Stake Vault PDA", value: "Bv7CyZCMYnfZYyPRdH34p8F18mAFdeWoLiicXuGY8xYb" },
+                    { name: "Master Fee Vault PDA", value: "CDLo9pYdLKzULbLNVkFuCJJBfSVxhcXWLh1hXvBsVHxh" },
+                    { name: "Ventrion Protocol Venture ($VENT)", value: VENTRION_VENTURE_MINT.toBase58() },
+                    { name: "Apex Quantum ($APEX)", value: APEX_QUANTUM_MINT.toBase58() },
+                    { name: "Solana BioDynamics ($SBD)", value: SBD_VENTURE_MINT.toBase58() },
                     { name: "Mother Token ($VENT)", value: DEVNET_VENT_MINT.toBase58() },
                     { name: "Canonical USDC", value: DEVNET_USDC_MINT.toBase58() },
-                    { name: "Pilot 2 ($QCMP)", value: PILOT_VENTURE_2_QCMP_MINT.toBase58() },
-                    { name: "Meteora DLMM Pool ($QCMP/USDC)", value: QCMP_METEORA_DLMM_POOL.toBase58() },
-                    { name: "Pilot 1 ($PVENT)", value: PILOT_VENTURE_1_PVENT_MINT.toBase58() },
-                    { name: "QCMP Metaplex Metadata", value: QCMP_METAPLEX_METADATA_PDA.toBase58() },
                   ].map((item, idx) => (
                     <div
                       key={idx}

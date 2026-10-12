@@ -33,7 +33,7 @@ pub mod utils;
 use instructions::*;
 use state::MilestoneInput;
 
-declare_id!("AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD");
+declare_id!("vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY");
 
 #[program]
 pub mod ventrion_protocol {

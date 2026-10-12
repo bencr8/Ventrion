@@ -5,7 +5,7 @@ import { VENTRION_PROGRAM_ID } from "./ventrionProgram";
  * VENTRION PROTOCOL SEED CONSTANTS & PDA DERIVATION SUITE
  * 
  * Strict On-Chain Protocol Seeds according to Anchor IDL and VENTRION_MAIN_MANIFEST.md
- * Program ID: AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD
+ * Program ID: vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY
  */
 
 export const PROTOCOL_SEEDS = {

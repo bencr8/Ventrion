@@ -1,7 +1,7 @@
 /**
  * VENTRION PROTOCOL SOLANA SDK BRIDGE
  * 
- * Program ID: AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD (Devnet)
+ * Program ID: vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY (Devnet)
  * Protocol Token: $VENT (5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ)
  * Devnet USDC Mint: 5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt
  */
@@ -19,8 +19,9 @@ import ventrionProtocolIdl from "./idl.json";
 // PROTOCOL CONSTANTS (STRICT TRUTH, LIVE SOLANA DEVNET)
 // =============================================================================
 export const VENTRION_PROGRAM_ID = new PublicKey(
-  "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
+  "vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY"
 );
+export const DEVNET_LEGACY_PROGRAM_ID = VENTRION_PROGRAM_ID;
 export const VENT_TOKEN_MINT = new PublicKey(
   "5MJffbYDKokyemXzu6YXW2jHd9VPq9Sv1HKPt1xZAAgJ"
 );
@@ -28,27 +29,40 @@ export const DEVNET_VENT_MINT = VENT_TOKEN_MINT;
 export const DEVNET_USDC_MINT = new PublicKey(
   "5dPaWuSzqwQiqP4JqmB8d7HxvigZfBEVFKbR3GNnvUYt"
 );
-export const PILOT_VENTURE_1_PVENT_MINT = new PublicKey(
-  "5SgXQXjGZ9grLTYZkZkVHzaLCMqMWN5PsD472Dg9KiSn"
+
+// Ventrion Protocol Native Venture
+export const VENTRION_VENTURE_MINT = new PublicKey(
+  "48X1XhQr7rSLKLQsmwUPyQ7snURtVcprFSWQV8x3YeDU"
 );
-export const PILOT_VENTURE_2_QCMP_MINT = new PublicKey(
-  "Bs2nqzTGTt3EqAjzvpcpnGRagMd9QWELxnENYTh83i1E"
+export const VENTRION_VENTURE_PDA = new PublicKey(
+  "FcLYBmNTL4qDoyRbVkn6ATSEtbLwprZLNbdnjAW8jDck"
 );
-export const QCMP_METAPLEX_METADATA_PDA = new PublicKey(
-  "AAJwDz75nu3oxL23xQzxTUgQYdR7T5F1b9YU5s4b8GzH"
-);
-export const QCMP_METEORA_DLMM_POOL = new PublicKey(
-  "CKfSPXBoLq2Xp5KNPDdp6wKYRBMX5FtMYja8HJKQEvDh"
-);
+
+// Apex Quantum
 export const APEX_QUANTUM_MINT = new PublicKey(
-  "J8krWMkHe24H18BmkWtV4WJZEdJcNcZShcP7RwkAHeWn"
+  "C8UNEaZhDFxy4H8kdhwk3Y4zxDFpPfkLN1E5Hc6ypupJ"
 );
 export const APEX_QUANTUM_VENTURE_PDA = new PublicKey(
-  "9jcEfp6A3Ro6jJ9vic44iFPmW1Px1aeAG2U7naCvcRJv"
+  "5n7DHyU8mT73UpftmemFxHK6jgba7FKiBbPZvan4C3Qn"
 );
 export const APEX_QUANTUM_MILESTONE_ESCROW_PDA = new PublicKey(
-  "GMjcGkmVboouBdoP9k6rEzHhNHgJk7aXYrA1mEUE6ga5"
+  "HQGn3cN7pke8g2CCon3M67GiWbAuNGqfQpvAa3wzVvtc"
 );
+
+// Solana BioDynamics
+export const SBD_VENTURE_MINT = new PublicKey(
+  "3VnWqQjw7T7YGSUVYYgrW6SZavMQ24u1FsrEzDvXwUYC"
+);
+export const SBD_VENTURE_PDA = new PublicKey(
+  "91FMqn4zTLE2WZ1LT8MzPV4NiciAmHYUr3k5yFdu9WRy"
+);
+
+// Backward compatibility exports
+export const PILOT_VENTURE_1_PVENT_MINT = VENTRION_VENTURE_MINT;
+export const PILOT_VENTURE_2_QCMP_MINT = APEX_QUANTUM_MINT;
+export const QCMP_METAPLEX_METADATA_PDA = new PublicKey("11111111111111111111111111111111");
+export const QCMP_METEORA_DLMM_POOL = new PublicKey("11111111111111111111111111111111");
+
 export const METAPLEX_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );

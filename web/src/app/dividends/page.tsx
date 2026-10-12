@@ -24,8 +24,6 @@ import {
   claimInvestorDividends,
   getVenturePDA,
   getInvestorVaultPDA,
-  PILOT_VENTURE_1_PVENT_MINT,
-  PILOT_VENTURE_2_QCMP_MINT,
 } from "../../lib/solana/ventrionProgram";
 import {
   executeClaimDividends,
@@ -737,27 +735,19 @@ export default function DividendsPage() {
           )}
         </AnimatePresence>
 
-        {/* BERKSHIRE HATHAWAY ECOSYSTEM HOLDING DESK ($VENT MOTHER TOKEN) */}
+        {/* PROTOCOL FEE VAULT & $VENT STAKING */}
         <div className="p-6 sm:p-8 rounded-3xl bg-white border border-black/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.02)] space-y-6 font-mono">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-5 border-b border-black/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 pb-5 border-b border-black/[0.06]">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5C18]/10 text-[#FF5C18] uppercase tracking-wider mb-2">
-                <ShieldCheck className="w-3 h-3" />
-                <span>Berkshire Hathaway Conglomerate Model</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#111113] font-jakarta">
-                $VENT Mother Token Holding Dividend Desk
+              <h2 className="text-xl font-bold tracking-tight text-[#111113]">
+                Protocol Staking & Fee Revenue
               </h2>
-              <p className="mt-1 text-xs text-[#7A7672] font-jakarta max-w-2xl">
-                Every venture on Ventrion routes 0.5% (50 bps) of trading fees and 3% graduation proceeds into the on-chain Master Fee Vault. Staking $VENT entitles holders to continuous pro-rata yield across the entire portfolio.
+              <p className="mt-1 text-xs text-[#7A7672]">
+                Continuous revenue share from platform trading fees and venture graduations.
               </p>
             </div>
-
-            <div className="flex items-center gap-2 self-start">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/[0.03] text-xs font-semibold text-[#111113]">
-                <Lock className="w-3.5 h-3.5 text-[#FF5C18]" />
-                <span>Min Stake: 500k $VENT Gate (Satisfied)</span>
-              </span>
+            <div className="text-xs text-[#7A7672] font-mono">
+              Fee Split: 50 bps Trading • 3% Graduation
             </div>
           </div>
 
@@ -770,9 +760,8 @@ export default function DividendsPage() {
               <div className="text-xl font-extrabold text-[#111113] tabular-nums">
                 {(ventStakingInfo?.globalConfig?.totalVentStaked || 500000).toLocaleString()} $VENT
               </div>
-              <span className="text-[10px] text-[#00875A] font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-2.5 h-2.5" />
-                <span>Global Governance Bootstrapped</span>
+              <span className="text-[10px] text-[#7A7672]">
+                Platform Stake
               </span>
             </div>
 
@@ -881,7 +870,7 @@ export default function DividendsPage() {
             <div className="p-4 rounded-2xl border border-[#FF5C18]/20 bg-[#FF5C18]/[0.02] flex flex-col justify-between space-y-3">
               <div>
                 <div className="flex items-center justify-between text-xs font-bold text-[#111113] mb-1">
-                  <span>Holding Dividends</span>
+                  <span>Protocol Dividends</span>
                   <span className="text-[10px] text-[#FF5C18] font-bold">Continuous Stream</span>
                 </div>
                 <div className="mt-2 text-xs text-[#7A7672] leading-relaxed">
@@ -893,7 +882,7 @@ export default function DividendsPage() {
                 onClick={handleClaimVentDividends}
                 className="w-full py-2.5 rounded-xl bg-[#FF5C18] hover:bg-[#e04e10] text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 shadow-xs"
               >
-                Claim $VENT Holding Dividends
+                Claim Protocol Dividends
               </button>
             </div>
           </div>

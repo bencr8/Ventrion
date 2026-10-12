@@ -6,7 +6,7 @@ import ventrionProtocolIdl from "./idl/ventrion_protocol.json";
 // PROGRAM CONSTANTS & CANONICAL PROGRAM ID
 // =============================================================================
 export const VENTRION_PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_VENTRION_PROGRAM_ID || "AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD"
+  process.env.NEXT_PUBLIC_VENTRION_PROGRAM_ID || "vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY"
 );
 
 export const VENTRION_PROTOCOL_IDL = ventrionProtocolIdl;
