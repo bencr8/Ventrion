@@ -2,7 +2,8 @@
 
 ## 1. Protocol Architecture & Deployment Overview
 * **Network:** Solana Devnet (`https://api.devnet.solana.com`)
-* **Program ID:** [`AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD`](https://explorer.solana.com/address/AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD?cluster=devnet)
+* **Canonical Program ID:** [`vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY`](https://explorer.solana.com/address/vENT66Zyif8JMrb6GbkpwmRYhhYYgguZpfErJnrjEpY?cluster=devnet)
+* **Pioneer Program ID:** [`AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD`](https://explorer.solana.com/address/AFjLicxsyXYB2sCPpfHtsgDzSeRjTXxnZk8x6zN25mvD?cluster=devnet)
 * **Program Data Account:** [`HT6pXjhA57GPjGMyhZmVSFWJU8pqkEAY895aX7SnLeGp`](https://explorer.solana.com/address/HT6pXjhA57GPjGMyhZmVSFWJU8pqkEAY895aX7SnLeGp?cluster=devnet)
 * **Deployed Slot:** `509591014`
 * **Deployed At:** October 10, 2026
